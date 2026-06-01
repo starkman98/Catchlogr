@@ -23,7 +23,7 @@
 ### Development Environment
 - [x] Docker Compose for local PostgreSQL
 - [x] API appsettings.Development.json with connection strings
-- [ ] User secrets configuration for sensitive data
+- [x] User secrets configuration for sensitive data
 - [x] Mobile appsettings.json with API base URL
 - [x] README.md with setup instructions
 - [x] .gitignore properly configured
