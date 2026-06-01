@@ -1,5 +1,5 @@
 ﻿using FishingLog.Application.Interfaces;
-using FishingLog.Contracts;
+using FishingLog.Contracts.FishingTripDTOs;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 

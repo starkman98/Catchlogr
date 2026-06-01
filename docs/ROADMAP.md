@@ -147,7 +147,7 @@
 ### 1.11 Testing & Validation
 - [x] Unit tests for FishingTripService (Application layer)
 - [x] Unit tests for CreateFishingTripRequestValidator (FluentValidation)
-- [ ] Unit tests for FishingTripSyncService (blocked — see Phase 4 refactor)
+- [x] Unit tests for FishingTripSyncService (blocked — see Phase 4 refactor)
 - [ ] Integration test: Create trip on Mobile → Sync → Verify in API
 - [ ] Integration test: Create trip on API → Sync → Verify on Mobile
 - [ ] Manual test: Offline mode (airplane mode, create trips, go online, sync)
@@ -164,23 +164,23 @@
 ## Phase 1.x: Technical Improvements
 
 ### 1.x SyncService Testability Refactor
-- [ ] Extract `FishingTripSyncService` from `FishingLog.Mobile` into a new `FishingLog.Sync` class library
-- [ ] Reference `FishingLog.Sync` from both `FishingLog.Mobile` and `FishingLog.Tests`
-- [ ] Add unit tests for `FishingTripSyncService` (mock `IFishingTripApiClient`, mock `IFishingTripLocalRepository`)
+- [x] Extract `FishingTripSyncService` from `FishingLog.Mobile` into a new `FishingLog.Sync` class library
+- [x] Reference `FishingLog.Sync` from both `FishingLog.Mobile` and `FishingLog.Tests`
+- [x] Add unit tests for `FishingTripSyncService` (mock `IFishingTripApiClient`, mock `IFishingTripLocalRepository`)
 
 ---
 
 ## Phase 2: Catches (Fish Records per Trip)
 
 ### 2.1 Domain & Database
-- [ ] Create `Catch` domain entity (Id, FishingTripId, Species, Length, Weight, PhotoUrl, Notes, CaughtAt)
-- [ ] Create `ICatchRepository` and `ICatchService` interfaces
+- [x] Create `Catch` domain entity (Id, FishingTripId, Species, Length, Weight, PhotoUrl, Notes, CaughtAt)
+- [x] Create `ICatchRepository` and `ICatchService` interfaces
 - [ ] EF Core migration for Catches table (with FK to FishingTrips)
 - [ ] Create CatchLocalEntity for Mobile
 
 ### 2.2 API Implementation
 - [ ] Implement CatchRepository and CatchService
-- [ ] Create Catch DTOs (CreateCatchRequest, CatchResponse)
+- [x] Create Catch DTOs (CreateCatchRequest, CatchResponse)
 - [ ] Create CatchEndpoints (nested under trips: `/api/fishing-trips/{tripId}/catches`)
 - [ ] Test CRUD operations
 

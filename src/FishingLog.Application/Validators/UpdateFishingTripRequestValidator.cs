@@ -1,4 +1,4 @@
-﻿using FishingLog.Contracts;
+﻿using FishingLog.Contracts.FishingTripDTOs;
 using FluentValidation;
 
 namespace FishingLog.Application.Validators;

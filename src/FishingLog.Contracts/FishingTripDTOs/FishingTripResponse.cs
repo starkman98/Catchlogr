@@ -1,4 +1,4 @@
-﻿namespace FishingLog.Contracts;
+﻿namespace FishingLog.Contracts.FishingTripDTOs;
 
 /// <summary>
 /// Read model returned by the API for a fishing trip.

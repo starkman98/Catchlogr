@@ -6,6 +6,7 @@ namespace FishingLog.Infrastructure.Persistence;
 public class FishingLogDbContext : DbContext
 {
     public DbSet<FishingTrip> FishingTrips => Set<FishingTrip>();
+    public DbSet<Catch> Catches => Set<Catch>();
 
     public FishingLogDbContext(DbContextOptions<FishingLogDbContext> options)
         : base(options)

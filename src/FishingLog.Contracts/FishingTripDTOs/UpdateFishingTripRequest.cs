@@ -1,10 +1,10 @@
-﻿namespace FishingLog.Contracts;
+﻿namespace FishingLog.Contracts.FishingTripDTOs;
 
 /// <summary>
-/// Request model for creating a new fishing trip.
-/// Sent from the mobile app (or any API client) to POST /api/fishing-trips.
+/// Request model for updating an existing fishing trip.
+/// Sent to PUT /api/fishing-trips/{id} — full replacement (all fields required).
 /// </summary>
-public record CreateFishingTripRequest(
+public record UpdateFishingTripRequest(
     string Name,
     string? LocationName,
     double? WaterTemp,

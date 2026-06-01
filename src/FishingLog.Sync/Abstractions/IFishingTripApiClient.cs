@@ -1,4 +1,4 @@
-﻿using FishingLog.Contracts;
+﻿using FishingLog.Contracts.FishingTripDTOs;
 
 namespace FishingLog.Sync.Abstractions;
 

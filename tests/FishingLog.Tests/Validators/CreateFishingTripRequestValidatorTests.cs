@@ -1,5 +1,5 @@
 ﻿using FishingLog.Application.Validators;
-using FishingLog.Contracts;
+using FishingLog.Contracts.FishingTripDTOs;
 using FluentValidation.TestHelper;
 
 namespace FishingLog.Tests.Validators;

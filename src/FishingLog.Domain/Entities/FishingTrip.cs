@@ -47,4 +47,7 @@ public class FishingTrip
     /// Indexed in the database — used as the sync cursor by the mobile app.
     /// </summary>
     public DateTime LastModified { get; set; } = DateTime.UtcNow;
+
+    /// <summary>The catches recorded during this trip.</summary>
+    public ICollection<Catch> Catches { get; set; } = [];
 }

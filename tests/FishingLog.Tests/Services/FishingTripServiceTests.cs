@@ -1,6 +1,6 @@
 ﻿using FishingLog.Application.Exceptions;
 using FishingLog.Application.Services;
-using FishingLog.Contracts;
+using FishingLog.Contracts.FishingTripDTOs;
 using FishingLog.Domain.Entities;
 using FishingLog.Domain.Interfaces;
 using FluentAssertions;
