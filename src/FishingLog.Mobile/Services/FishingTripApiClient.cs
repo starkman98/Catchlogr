@@ -1,4 +1,5 @@
 ﻿using FishingLog.Contracts;
+using FishingLog.Sync.Abstractions;
 using System.Net;
 using System.Net.Http.Json;
 

@@ -4,6 +4,8 @@ using FishingLog.Mobile.Data.Repositories;
 using FishingLog.Mobile.Pages;
 using FishingLog.Mobile.Services;
 using FishingLog.Mobile.ViewModels;
+using FishingLog.Sync.Abstractions;
+using FishingLog.Sync.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FishingLog.Mobile;

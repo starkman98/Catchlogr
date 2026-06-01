@@ -1,4 +1,4 @@
-﻿namespace FishingLog.Mobile.Data;
+﻿namespace FishingLog.Sync;
 
 /// <summary>
 /// String constants for entity type keys used in <see cref="Entities.SyncMetadataEntity"/>.

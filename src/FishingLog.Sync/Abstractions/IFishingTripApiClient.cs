@@ -1,6 +1,6 @@
 ﻿using FishingLog.Contracts;
 
-namespace FishingLog.Mobile.Services;
+namespace FishingLog.Sync.Abstractions;
 
 /// <summary>
 /// Abstraction for calling the FishingLog REST API.

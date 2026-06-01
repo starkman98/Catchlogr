@@ -1,8 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FishingLog.Mobile.Data.Entities;
-using FishingLog.Mobile.Data.Repositories;
-using FishingLog.Mobile.Services;
+using FishingLog.Sync.Abstractions;
+using FishingLog.Sync.Entities;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 

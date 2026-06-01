@@ -1,4 +1,4 @@
-﻿namespace FishingLog.Mobile.Services;
+﻿namespace FishingLog.Sync.Abstractions;
 
 /// <summary>
 /// Orchestrates the two-way sync between the local SQLite database and the remote API.

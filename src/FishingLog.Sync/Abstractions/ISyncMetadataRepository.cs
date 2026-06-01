@@ -1,4 +1,4 @@
-﻿namespace FishingLog.Mobile.Data.Repositories;
+﻿namespace FishingLog.Sync.Abstractions;
 
 /// <summary>
 /// Repository for reading and writing sync timestamps.

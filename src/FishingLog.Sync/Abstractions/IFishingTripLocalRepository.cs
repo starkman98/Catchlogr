@@ -1,6 +1,6 @@
-﻿using FishingLog.Mobile.Data.Entities;
+﻿using FishingLog.Sync.Entities;
 
-namespace FishingLog.Mobile.Data.Repositories;
+namespace FishingLog.Sync.Abstractions;
 
 /// <summary>
 /// Repository interface for local SQLite fishing trip data access.

@@ -1,4 +1,5 @@
-﻿using FishingLog.Mobile.Data.Entities;
+﻿using FishingLog.Sync.Abstractions;
+using FishingLog.Sync.Entities;
 using SQLite;
 
 namespace FishingLog.Mobile.Data.Repositories;

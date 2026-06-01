@@ -1,10 +1,9 @@
 ﻿using FishingLog.Contracts;
-using FishingLog.Mobile.Data;
-using FishingLog.Mobile.Data.Entities;
-using FishingLog.Mobile.Data.Repositories;
+using FishingLog.Sync.Abstractions;
+using FishingLog.Sync.Entities;
 using Microsoft.Extensions.Logging;
 
-namespace FishingLog.Mobile.Services;
+namespace FishingLog.Sync.Services;
 
 /// <summary>
 /// Two-way sync between the local SQLite database and the FishingLog REST API.

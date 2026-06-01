@@ -1,5 +1,5 @@
 ﻿using FishingLog.Mobile.Configuration;
-using FishingLog.Mobile.Data.Entities;
+using FishingLog.Sync.Entities;
 using SQLite;
 
 namespace FishingLog.Mobile.Data;

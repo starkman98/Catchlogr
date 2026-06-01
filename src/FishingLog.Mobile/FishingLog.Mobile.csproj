@@ -73,6 +73,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\FishingLog.Contracts\FishingLog.Contracts.csproj" />
+	  <ProjectReference Include="..\FishingLog.Sync\FishingLog.Sync.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

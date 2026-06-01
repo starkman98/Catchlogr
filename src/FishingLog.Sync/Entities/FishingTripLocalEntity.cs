@@ -1,6 +1,6 @@
 ﻿using SQLite;
 
-namespace FishingLog.Mobile.Data.Entities;
+namespace FishingLog.Sync.Entities;
 
 public class FishingTripLocalEntity
 {
