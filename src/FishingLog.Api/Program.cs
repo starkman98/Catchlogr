@@ -1,5 +1,5 @@
 using FishingLog.Api.Endpoints;
-using FishingLog.Application.Exceptions;
+using FishingLog.Api.Infrastructure;
 using FishingLog.Application.Interfaces;
 using FishingLog.Application.Services;
 using FishingLog.Application.Validators;
@@ -44,32 +44,13 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<FishingLogDbContext>();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseExceptionHandler(errApp =>
-{
-    errApp.Run(async context =>
-    {
-        var exceptionFeature = context.Features
-            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
-
-        if (exceptionFeature?.Error is BusinessRuleException businessEx)
-        {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new { error = businessEx.Message });
-            return;
-        }
-
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(new
-        {
-            error = "An unexpected error occurred."
-        });
-    });
-});
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

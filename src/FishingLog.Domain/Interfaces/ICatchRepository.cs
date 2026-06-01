@@ -20,10 +20,10 @@ public interface ICatchRepository
     Task<List<Catch>> GetModifiedSinceAsync(DateTime since, CancellationToken ct = default);
 
     /// <summary>Persists a new Catch to the database.</summary>
-    Task AddAsync(Catch newCatch, CancellationToken ct = default);
+    Task AddAsync(Catch catchToAdd, CancellationToken ct = default);
 
     /// <summary>Saves changes to an existing Catch.</summary>
-    Task UpdateAsync(Catch newCatch, CancellationToken ct = default);
+    Task UpdateAsync(Catch catchToUpdate, CancellationToken ct = default);
 
     /// <summary>Deletes a Catch by GUID. No-op if not found.</summary>
     Task DeleteAsync(Guid id, CancellationToken ct = default);

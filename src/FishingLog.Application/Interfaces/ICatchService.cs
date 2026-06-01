@@ -21,10 +21,10 @@ public interface ICatchService
     Task<List<CatchResponse>> GetModifiedSinceAsync(DateTime since, CancellationToken ct = default);
 
     /// <summary>Creates a new catch and returns the persisted record.</summary>
-    Task<CatchResponse> CreateAsync(CreateFishingTripRequest request, CancellationToken ct = default);
+    Task<CatchResponse> CreateAsync(Guid tripId, CreateCatchRequest request, CancellationToken ct = default);
 
     /// <summary>Updates an existing catch. Returns null if not found.</summary>
-    Task<CatchResponse?> UpdateAsync(Guid id, UpdateFishingTripRequest request, CancellationToken ct = default);
+    Task<CatchResponse?> UpdateAsync(Guid id, UpdateCatchRequest request, CancellationToken ct = default);
 
     /// <summary>Deletes a catch. Returns false if not found.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);

@@ -175,7 +175,7 @@
 ### 2.1 Domain & Database
 - [x] Create `Catch` domain entity (Id, FishingTripId, Species, Length, Weight, PhotoUrl, Notes, CaughtAt)
 - [x] Create `ICatchRepository` and `ICatchService` interfaces
-- [ ] EF Core migration for Catches table (with FK to FishingTrips)
+- [x] EF Core migration for Catches table (with FK to FishingTrips)
 - [ ] Create CatchLocalEntity for Mobile
 
 ### 2.2 API Implementation
