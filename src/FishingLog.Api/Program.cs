@@ -63,6 +63,6 @@ app.UseCors("AllowedConfiguredOrigins");
 
 app.MapHealthChecks("/health");
 app.MapFishingTripEndpoints();
+app.MapCatchEndpoints();
 
 app.Run();
-

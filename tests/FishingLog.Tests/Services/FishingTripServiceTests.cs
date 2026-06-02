@@ -74,16 +74,14 @@ public class FishingTripServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_Should_Return_Null_When_Trip_Not_Found()
+    public async Task GetByIdAsync_Should_Throw_When_Trip_Not_Found()
     {
         // Arrange — repo returns null (trip doesn't exist)
         _repository.GetByIdAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken).ReturnsNull();
 
-        // Act
-        var result = await _sut.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().BeNull();
+        // Act & Assert
+        await _sut.Invoking(s => s.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<NotFoundException>();   
     }
 
     // -----------------------------------------------------------------------
@@ -143,17 +141,16 @@ public class FishingTripServiceTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task UpdateAsync_Should_Return_Null_When_Trip_Not_Found()
+    public async Task UpdateAsync_Should_Throw_When_Trip_Not_Found()
     {
         // Arrange
         _repository.GetByIdAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken).ReturnsNull();
         var request = BuildUpdateRequest();
 
-        // Act
-        var result = await _sut.UpdateAsync(Guid.NewGuid(), request, TestContext.Current.CancellationToken);
+        // Act & Assert
+        await _sut.Invoking(s => s.UpdateAsync(Guid.NewGuid(), request, TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<NotFoundException>();
 
-        // Assert
-        result.Should().BeNull();
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<FishingTrip>(), TestContext.Current.CancellationToken);
     }
 
@@ -179,31 +176,29 @@ public class FishingTripServiceTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task DeleteAsync_Should_Return_False_When_Trip_Not_Found()
+    public async Task DeleteAsync_Should_Throw_When_Trip_Not_Found()
     {
         // Arrange
         _repository.GetByIdAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken).ReturnsNull();
 
-        // Act
-        var result = await _sut.DeleteAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        // Act & Assert
+        await _sut.Invoking(s => s.DeleteAsync(Guid.NewGuid(), TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<NotFoundException>();
 
-        // Assert
-        result.Should().BeFalse();
         await _repository.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task DeleteAsync_Should_Return_True_And_Call_Repository()
+    public async Task DeleteAsync_Should_Delete_When_Trip_Exists()
     {
         // Arrange
         var id = Guid.NewGuid();
         _repository.GetByIdAsync(id, TestContext.Current.CancellationToken).Returns(BuildTrip("Trip to delete", id));
 
         // Act
-        var result = await _sut.DeleteAsync(id, TestContext.Current.CancellationToken);
+        await _sut.DeleteAsync(id, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().BeTrue();
         await _repository.Received(1).DeleteAsync(id, TestContext.Current.CancellationToken);
     }
 
