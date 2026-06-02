@@ -26,14 +26,15 @@ public class FishingTripService : IFishingTripService
     public async Task<List<FishingTripResponse>> GetAllAsync(CancellationToken ct = default)
     {
         var trips = await _repository.GetAllAsync(ct);
-        return trips.Select(MapToResponse).ToList();
+        return trips.Select(MapFromTripToResponse).ToList();
     }
 
     /// <inheritdoc/>
-    public async Task<FishingTripResponse?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<FishingTripResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var trip = await _repository.GetByIdAsync(id, ct);
-        return trip is null ? null : MapToResponse(trip);
+        var trip = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Trip {id} not found.");
+        return MapFromTripToResponse(trip);
     }
 
     /// <inheritdoc/>
@@ -43,7 +44,7 @@ public class FishingTripService : IFishingTripService
             since = DateTime.SpecifyKind(since, DateTimeKind.Utc);
 
         var trips = await _repository.GetModifiedSinceAsync(since, ct);
-        return trips.Select(MapToResponse).ToList();
+        return trips.Select(MapFromTripToResponse).ToList();
     }
 
     /// <inheritdoc/>
@@ -52,71 +53,41 @@ public class FishingTripService : IFishingTripService
         if (request.EndTime.HasValue && request.EndTime.Value <= request.StartTime)
             throw new BusinessRuleException("EndTime must be after StartTime.");
 
-        var trip = new FishingTrip
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            LocationName = request.LocationName,
-            WaterTemp = request.WaterTemp,
-            WeatherDescription = request.WeatherDescription,
-            Latitude = request.Latitude,
-            Longitude = request.Longitude,
-            StartTime = DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc),
-            EndTime = request.EndTime.HasValue
-            ?   DateTime.SpecifyKind(request.EndTime.Value, DateTimeKind.Utc)
-                : null,
-            Note = request.Note,
-            CreatedAt = DateTime.UtcNow,
-            LastModified = DateTime.UtcNow
-        };
+        var trip = MapFromCreateToTrip(request);
 
         await _repository.AddAsync(trip, ct);
-        return MapToResponse(trip);
+        return MapFromTripToResponse(trip);
     }
 
     /// <inheritdoc/>
-    public async Task<FishingTripResponse?> UpdateAsync(Guid id, UpdateFishingTripRequest request, CancellationToken ct = default)
+    public async Task<FishingTripResponse> UpdateAsync(Guid id, UpdateFishingTripRequest request, CancellationToken ct = default)
     {
         if (request.EndTime.HasValue && request.EndTime.Value <= request.StartTime)
             throw new BusinessRuleException("EndTime must be after StartTime.");
 
-        var trip = await _repository.GetByIdAsync(id, ct);
-        if (trip is null)
-            return null;
+        var trip = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Trip {id} not found");
 
-        trip.Name = request.Name;
-        trip.LocationName = request.LocationName;
-        trip.WaterTemp = request.WaterTemp;
-        trip.WeatherDescription = request.WeatherDescription;
-        trip.Latitude = request.Latitude;
-        trip.Longitude = request.Longitude;
-        trip.StartTime = DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc);
-        trip.EndTime = request.EndTime.HasValue
-            ? DateTime.SpecifyKind(request.EndTime.Value, DateTimeKind.Utc)
-            : null;
-        trip.Note = request.Note;
-        trip.LastModified = DateTime.UtcNow;
+        ApplyUpdate(trip, request);
 
         await _repository.UpdateAsync(trip, ct);
-        return MapToResponse(trip);
+        return MapFromTripToResponse(trip);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var trip = await _repository.GetByIdAsync(id, ct);
-        if (trip is null)
-            return false;
+        var trip = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Trip {id} not found.");
 
         await _repository.DeleteAsync(id, ct);
-        return true;
     }
 
     // -------------------------------------------------------------------------
     // Private mapping — keeps the service methods readable
     // -------------------------------------------------------------------------
 
-    private static FishingTripResponse MapToResponse(FishingTrip t) => new(
+    private static FishingTripResponse MapFromTripToResponse(FishingTrip t) => new(
         t.Id,
         t.Name,
         t.LocationName,
@@ -129,4 +100,38 @@ public class FishingTripService : IFishingTripService
         t.Note,
         t.CreatedAt,
         t.LastModified);
+
+    private static FishingTrip MapFromCreateToTrip(CreateFishingTripRequest request) => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = request.Name,
+        LocationName = request.LocationName,
+        WaterTemp = request.WaterTemp,
+        WeatherDescription = request.WeatherDescription,
+        Latitude = request.Latitude,
+        Longitude = request.Longitude,
+        StartTime = DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc),
+        EndTime = request.EndTime.HasValue
+            ? DateTime.SpecifyKind(request.EndTime.Value, DateTimeKind.Utc)
+                : null,
+        Note = request.Note,
+        CreatedAt = DateTime.UtcNow,
+        LastModified = DateTime.UtcNow
+    };
+
+    private static void ApplyUpdate(FishingTrip existing, UpdateFishingTripRequest request)
+    {
+        existing.Name = request.Name;
+        existing.LocationName = request.LocationName;
+        existing.WaterTemp = request.WaterTemp;
+        existing.WeatherDescription = request.WeatherDescription;
+        existing.Latitude = request.Latitude;
+        existing.Longitude = request.Longitude;
+        existing.StartTime = DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc);
+        existing.EndTime = request.EndTime.HasValue
+            ? DateTime.SpecifyKind(request.EndTime.Value, DateTimeKind.Utc)
+            : null;
+        existing.Note = request.Note;
+        existing.LastModified = DateTime.UtcNow;
+    }
 }

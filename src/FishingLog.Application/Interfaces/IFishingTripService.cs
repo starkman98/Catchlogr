@@ -12,7 +12,7 @@ public interface IFishingTripService
     Task<List<FishingTripResponse>> GetAllAsync(CancellationToken ct = default);
 
     /// <summary>Returns a single trip, or null if not found.</summary>
-    Task<FishingTripResponse?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<FishingTripResponse> GetByIdAsync(Guid id, CancellationToken ct = default);
 
     /// <summary>
     /// Returns all trips modified after the given UTC timestamp.
@@ -24,8 +24,8 @@ public interface IFishingTripService
     Task<FishingTripResponse> CreateAsync(CreateFishingTripRequest request, CancellationToken ct = default);
 
     /// <summary>Updates an existing trip. Returns null if not found.</summary>
-    Task<FishingTripResponse?> UpdateAsync(Guid id, UpdateFishingTripRequest request, CancellationToken ct = default);
+    Task<FishingTripResponse> UpdateAsync(Guid id, UpdateFishingTripRequest request, CancellationToken ct = default);
 
     /// <summary>Deletes a trip. Returns false if not found.</summary>
-    Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

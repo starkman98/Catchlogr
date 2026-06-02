@@ -69,7 +69,7 @@ public static class FishingTripEndpoints
         CancellationToken ct)
     {
         var trip = await service.GetByIdAsync(id, ct);
-        return trip is null ? Results.NotFound() : Results.Ok(trip);
+        return Results.Ok(trip);
     }
 
     /// <summary>POST /api/fishing-trips → 201 Created</summary>
@@ -100,7 +100,7 @@ public static class FishingTripEndpoints
             return Results.ValidationProblem(validation.ToDictionary());
 
         var updated = await service.UpdateAsync(id, request, ct);
-        return updated is null ? Results.NotFound() : Results.Ok(updated);
+        return Results.Ok(updated);
     }
 
     /// <summary>DELETE /api/fishing-trips/{id} → 204 No Content or 404</summary>
@@ -109,7 +109,7 @@ public static class FishingTripEndpoints
         IFishingTripService service,
         CancellationToken ct)
     {
-        var deleted = await service.DeleteAsync(id, ct);
-        return deleted ? Results.NoContent() : Results.NotFound();
+        await service.DeleteAsync(id, ct);
+        return Results.NoContent();
     }
 }
