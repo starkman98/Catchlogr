@@ -11,7 +11,6 @@ public record CreateCatchRequest(
     string? PhotoUrl,
     string? Note,
     DateTime CaughtAt,
-    DateTime LastModifiedAt,
     double? Depth,
     double? Latitude,
     double? Longitude,
