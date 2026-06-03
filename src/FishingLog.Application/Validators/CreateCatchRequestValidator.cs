@@ -23,7 +23,7 @@ public sealed class CreateCatchRequestValidator : AbstractValidator<CreateCatchR
             .When(c => c.Weight is not null);
 
         RuleFor(c => c.Depth)
-            .GreaterThanOrEqualTo(0).WithMessage("Depth cannot be negative.")
+            .GreaterThan(0).WithMessage("Depth cannot be negative.")
             .When(c => c.Depth is not null);
 
         RuleFor(c => c.Latitude)

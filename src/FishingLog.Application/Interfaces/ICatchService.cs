@@ -27,5 +27,5 @@ public interface ICatchService
     Task<CatchResponse> UpdateAsync(Guid id, UpdateCatchRequest request, CancellationToken ct = default);
 
     /// <summary>Deletes a catch. Returns false if not found.</summary>
-    Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

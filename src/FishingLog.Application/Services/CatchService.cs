@@ -35,13 +35,12 @@ public class CatchService : ICatchService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var existingCatch = await _repo.GetByIdAsync(id, ct);
-        if (existingCatch is null) return false;
+        var existingCatch = await _repo.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Catch {id} not found");
 
         await _repo.DeleteAsync(id, ct);
-        return true;
     }
 
     /// <inheritdoc/>
