@@ -176,18 +176,18 @@
 - [x] Create `Catch` domain entity (Id, FishingTripId, Species, Length, Weight, PhotoUrl, Notes, CaughtAt)
 - [x] Create `ICatchRepository` and `ICatchService` interfaces
 - [x] EF Core migration for Catches table (with FK to FishingTrips)
-- [ ] Create CatchLocalEntity for Mobile
+- [x] Create CatchLocalEntity for Mobile
 
 ### 2.2 API Implementation
-- [ ] Implement CatchRepository and CatchService
+- [x] Implement CatchRepository and CatchService
 - [x] Create Catch DTOs (CreateCatchRequest, CatchResponse)
-- [ ] Create CatchEndpoints (nested under trips: `/api/fishing-trips/{tripId}/catches`)
-- [ ] Test CRUD operations
+- [x] Create CatchEndpoints (nested under trips: `/api/fishing-trips/{tripId}/catches`)
+- [x] Test CRUD operations
 
 ### 2.3 Mobile Implementation
-- [ ] Create CatchLocalRepository
-- [ ] Create CatchApiClient
-- [ ] Extend FishingTripSyncService to sync catches
+- [x] Create CatchLocalRepository
+- [x] Create CatchApiClient
+- [x] Extend FishingTripSyncService to sync catches
 - [ ] Create CatchesViewModel and UI
 - [ ] Add "Add Catch" button on trip details page
 - [ ] Test sync with catches

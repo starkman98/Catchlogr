@@ -8,6 +8,7 @@ using FishingLog.Infrastructure.Persistence;
 using FishingLog.Infrastructure.Repositories;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,12 +25,19 @@ builder.Services.AddDbContext<FishingLogDbContext>(options =>
 
 // --- Repositories ---
 builder.Services.AddScoped<IFishingTripRepository, FishingTripRepository>();
+builder.Services.AddScoped<ICatchRepository, CatchRepository>();
 
 // --- Services ---
 builder.Services.AddScoped<IFishingTripService, FishingTripService>();
+builder.Services.AddScoped<ICatchService, CatchService>();
 
 // --- Validators (registers all validators in the Application assembly) ---
 builder.Services.AddValidatorsFromAssemblyContaining<CreateFishingTripRequestValidator>();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")

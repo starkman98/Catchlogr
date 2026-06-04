@@ -1,4 +1,5 @@
 ﻿using SQLite;
+using System.Text.RegularExpressions;
 
 namespace FishingLog.Sync.Entities;
 

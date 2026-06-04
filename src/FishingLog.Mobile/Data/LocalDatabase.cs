@@ -36,6 +36,7 @@ public class LocalDatabase : ILocalDatabase
         // Add a CreateTableAsync call here for every new entity you add later
         await _connection.CreateTableAsync<FishingTripLocalEntity>();
         await _connection.CreateTableAsync<SyncMetadataEntity>();
+        await _connection.CreateTableAsync<CatchLocalEntity>();
 
         _initialized = true;
     }

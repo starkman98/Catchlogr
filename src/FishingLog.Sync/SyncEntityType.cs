@@ -8,4 +8,5 @@ public static class SyncEntityType
 {
     /// <summary>Key for fishing trip sync metadata.</summary>
     public const string FishingTrip = "FishingTrip";
+    public const string Catch = "Catch";
 }

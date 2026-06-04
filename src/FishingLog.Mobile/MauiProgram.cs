@@ -41,6 +41,7 @@ public static class MauiProgram
         // --- Local repositories ---
         // Transient: cheap to create, no state of their own
         builder.Services.AddTransient<IFishingTripLocalRepository, FishingTripLocalRepository>();
+		builder.Services.AddTransient<ICatchLocalRepository, CatchLocalRepository>();
 		builder.Services.AddTransient<ISyncMetadataRepository, SyncMetadataRepository>();
 
         // --- API client ---
@@ -51,9 +52,17 @@ public static class MauiProgram
 			client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
 			client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
 		});
+        builder.Services.AddHttpClient<ICatchApiClient, CatchApiClient>(client =>
+        {
+            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
+        });
 
         // --- Sync service ---
         builder.Services.AddTransient<IFishingTripSyncService, FishingTripSyncService>();
+		builder.Services.AddTransient<ICatchSyncService, CatchSyncService>();
+        builder.Services.AddTransient<ISyncOrchestrator, SyncOrchestrator>();
 
         // --- ViewModels ---
         builder.Services.AddTransient<FishingTripsViewModel>();

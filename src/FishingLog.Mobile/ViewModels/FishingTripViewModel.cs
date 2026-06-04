@@ -14,7 +14,7 @@ namespace FishingLog.Mobile.ViewModels;
 public partial class FishingTripsViewModel : BaseViewModel
 {
     private readonly IFishingTripLocalRepository _repository;
-    private readonly IFishingTripSyncService _syncService;
+    private readonly ISyncOrchestrator _syncOrchestrator;
     private readonly ILogger<FishingTripsViewModel> _logger;
 
     private readonly SemaphoreSlim _syncLock = new(1, 1);
@@ -47,11 +47,11 @@ public partial class FishingTripsViewModel : BaseViewModel
     /// </summary>
     public FishingTripsViewModel(
         IFishingTripLocalRepository repository,
-        IFishingTripSyncService syncService,
+        ISyncOrchestrator syncOrchestrator,
         ILogger<FishingTripsViewModel> logger)
     {
         _repository = repository;
-        _syncService = syncService;
+        _syncOrchestrator = syncOrchestrator;
         _logger = logger;
         Title = "Fishing Trips";
     }
@@ -106,7 +106,7 @@ public partial class FishingTripsViewModel : BaseViewModel
             var localTrips = await _repository.GetAllAsync();
             Trips = new ObservableCollection<FishingTripLocalEntity>(localTrips);
             
-            await _syncService.SyncAsync();
+            await _syncOrchestrator.SyncAsync();
             
             var syncedTrips = await _repository.GetAllAsync();
             Trips = new ObservableCollection<FishingTripLocalEntity>(syncedTrips);
