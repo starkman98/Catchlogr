@@ -58,6 +58,12 @@ public static class MauiProgram
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
         });
+        builder.Services.AddHttpClient<IApiHealthClient, ApiHealthClient>(client =>
+        {
+            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
 
         // --- Sync service ---
         builder.Services.AddTransient<IFishingTripSyncService, FishingTripSyncService>();

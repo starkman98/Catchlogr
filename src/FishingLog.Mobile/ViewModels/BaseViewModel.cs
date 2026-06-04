@@ -17,16 +17,20 @@ public abstract partial class BaseViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotBusy))]
-    private bool _isBusy;
+    public partial bool IsBusy { get; set; }
 
     /// <summary>
     /// Page or section title. Bind to the shell title bar.
     /// </summary>
     [ObservableProperty]
-    private string _title = string.Empty;
+    public partial string Title { get; set; } = string.Empty;
 
     /// <summary>
     /// Convenience inverse of <see cref="IsBusy"/> for button IsEnabled bindings.
     /// </summary>
     public bool IsNotBusy => !IsBusy;
+    
+    protected BaseViewModel()
+    {
+    }
 }

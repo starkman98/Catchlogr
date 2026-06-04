@@ -15,6 +15,7 @@ public partial class FishingTripsViewModel : BaseViewModel
 {
     private readonly IFishingTripLocalRepository _repository;
     private readonly ISyncOrchestrator _syncOrchestrator;
+    private readonly IApiHealthClient _healthClient;
     private readonly ILogger<FishingTripsViewModel> _logger;
 
     private readonly SemaphoreSlim _syncLock = new(1, 1);
@@ -48,10 +49,12 @@ public partial class FishingTripsViewModel : BaseViewModel
     public FishingTripsViewModel(
         IFishingTripLocalRepository repository,
         ISyncOrchestrator syncOrchestrator,
+        IApiHealthClient healthClient,
         ILogger<FishingTripsViewModel> logger)
     {
         _repository = repository;
         _syncOrchestrator = syncOrchestrator;
+        _healthClient = healthClient;
         _logger = logger;
         Title = "Fishing Trips";
     }
@@ -105,6 +108,18 @@ public partial class FishingTripsViewModel : BaseViewModel
 
             var localTrips = await _repository.GetAllAsync();
             Trips = new ObservableCollection<FishingTripLocalEntity>(localTrips);
+
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                _ = ShowStatusMessageAsync("No internet - will sync later.");
+                return;
+            }
+
+            if (!await _healthClient.IsHealthyAsync())
+            {
+                _ = ShowStatusMessageAsync("Server unavailable - will sync later.");
+                return;
+            }
             
             await _syncOrchestrator.SyncAsync();
             
