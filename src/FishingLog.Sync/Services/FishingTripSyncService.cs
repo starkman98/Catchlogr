@@ -93,8 +93,14 @@ public class FishingTripSyncService : IFishingTripSyncService
     {
         var response = await _apiClient.CreateAsync(MapToCreateRequest(trip), ct);
 
-        if (response is not null)
-            await _localRepository.MarkAsSyncedAsync(trip.Id, response.Id, response.LastModified, ct);
+        //if (response is not null)
+        //    await _localRepository.MarkAsSyncedAsync(trip.Id, response.Id, response.LastModified, ct);
+
+        if (response is null)
+            return;
+
+        ApplyRemoteToLocal(trip, response);
+        await _localRepository.SaveFromServerAsync(trip, ct);
     }
 
     private async Task UpdateTripOnServerAsync(FishingTripLocalEntity trip, CancellationToken ct)
@@ -235,6 +241,7 @@ public class FishingTripSyncService : IFishingTripSyncService
 
     private static void ApplyRemoteToLocal(FishingTripLocalEntity local, FishingTripResponse remote)
     {
+        local.ServerId = remote.Id.ToString();
         local.Name = remote.Name;
         local.LocationName = remote.LocationName;
         local.WaterTemp = remote.WaterTemp;
@@ -246,5 +253,6 @@ public class FishingTripSyncService : IFishingTripSyncService
         local.Note = remote.Note;
         local.LastModifiedUtc = remote.LastModified;
         local.IsDirty = false;
+        local.IsDeleted = false;
     }
 }

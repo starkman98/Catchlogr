@@ -13,7 +13,7 @@ namespace FishingLog.Mobile.ViewModels;
 /// </summary>
 public partial class FishingTripsViewModel : BaseViewModel
 {
-    private readonly IFishingTripLocalRepository _repository;
+    private readonly IFishingTripLocalRepository _tripRepo;
     private readonly ISyncOrchestrator _syncOrchestrator;
     private readonly IApiHealthClient _healthClient;
     private readonly ILogger<FishingTripsViewModel> _logger;
@@ -47,12 +47,12 @@ public partial class FishingTripsViewModel : BaseViewModel
     /// Initializes a new instance of <see cref="FishingTripsViewModel"/>.
     /// </summary>
     public FishingTripsViewModel(
-        IFishingTripLocalRepository repository,
+        IFishingTripLocalRepository tripRepo,
         ISyncOrchestrator syncOrchestrator,
         IApiHealthClient healthClient,
         ILogger<FishingTripsViewModel> logger)
     {
-        _repository = repository;
+        _tripRepo = tripRepo;
         _syncOrchestrator = syncOrchestrator;
         _healthClient = healthClient;
         _logger = logger;
@@ -67,7 +67,7 @@ public partial class FishingTripsViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            var trips = await _repository.GetAllAsync();
+            var trips = await _tripRepo.GetAllAsync();
             Trips = new ObservableCollection<FishingTripLocalEntity>(trips);
         }
         finally
@@ -106,7 +106,7 @@ public partial class FishingTripsViewModel : BaseViewModel
             if (showRefreshSpinner)
                 IsRefreshing = true;
 
-            var localTrips = await _repository.GetAllAsync();
+            var localTrips = await _tripRepo.GetAllAsync();
             Trips = new ObservableCollection<FishingTripLocalEntity>(localTrips);
 
             if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
@@ -123,7 +123,7 @@ public partial class FishingTripsViewModel : BaseViewModel
             
             await _syncOrchestrator.SyncAsync();
             
-            var syncedTrips = await _repository.GetAllAsync();
+            var syncedTrips = await _tripRepo.GetAllAsync();
             Trips = new ObservableCollection<FishingTripLocalEntity>(syncedTrips);
             _logger.LogInformation("[VM] SyncCommand finished. Trips loaded: {Count}", Trips.Count);
         }
@@ -158,10 +158,10 @@ public partial class FishingTripsViewModel : BaseViewModel
     private async Task AddTripAsync()
         => await Shell.Current.GoToAsync("AddEditFishingTripPage");
 
-    /// <summary>Navigates to the edit page for the selected trip.</summary>
+    /// <summary>Navigates to the details page for the selected trip.</summary>
     [RelayCommand]
     private async Task SelectTripAsync(FishingTripLocalEntity trip)
-        => await Shell.Current.GoToAsync($"AddEditFishingTripPage?localId={trip.Id}");
+        => await Shell.Current.GoToAsync($"FishingTripDetailsPage?tripLocalId={trip.Id}");
 
     /// <summary>Soft-deletes a trip after confirmation.</summary>
     [RelayCommand]
@@ -175,7 +175,8 @@ public partial class FishingTripsViewModel : BaseViewModel
 
         if (!confirmed) return;
 
-        await _repository.DeleteAsync(trip.Id);
+        await _tripRepo.DeleteAsync(trip.Id);
         Trips.Remove(trip);
     }
 }
+

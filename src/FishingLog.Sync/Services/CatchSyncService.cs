@@ -1,4 +1,4 @@
-﻿using FishingLog.Contracts.CatchDTOs;
+using FishingLog.Contracts.CatchDTOs;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Entities;
 using Microsoft.Extensions.Logging;
@@ -41,16 +41,11 @@ public class CatchSyncService : ICatchSyncService
     /// <inheritdoc/>
     public async Task SyncAsync(CancellationToken ct = default)
     {
-        _logger.LogInformation("[Sync] Starting sync. BaseAddress={BaseAddress}",
-            _apiClient.GetType().Name);
+        _logger.LogInformation("[Sync] Starting catch sync using {ApiClient}.", _apiClient.GetType().Name);
         await UploadDirtyCatchesAsync(ct);
         await DownloadRemoteChangesAsync(ct);
-        _logger.LogInformation("[Sync] Sync complete.");
+        _logger.LogInformation("[Sync] Catch sync complete.");
     }
-
-    // -------------------------------------------------------------------------
-    // Step 1 — Upload
-    // -------------------------------------------------------------------------
 
     private async Task UploadDirtyCatchesAsync(CancellationToken ct)
     {
@@ -66,28 +61,27 @@ public class CatchSyncService : ICatchSyncService
             {
                 if (dirtyCatch.ServerId is null)
                 {
-                    _logger.LogInformation("[Sync] Uploading new trip LocalId={Id} Species={Species}", dirtyCatch.Id, dirtyCatch.Species);
+                    _logger.LogInformation("[Sync] Uploading new catch LocalId={Id} Species={Species}", dirtyCatch.Id, dirtyCatch.Species);
                     await UploadNewCatchAsync(dirtyCatch, ct);
-                    _logger.LogInformation("[Sync] Upload succeeded for LocalId={Id}", dirtyCatch.Id);
                 }
                 else if (dirtyCatch.IsDeleted)
                 {
-                    _logger.LogInformation("[Sync] Deleting trip ServerId={ServerId}", dirtyCatch.ServerId);
+                    _logger.LogInformation("[Sync] Deleting catch ServerId={ServerId}", dirtyCatch.ServerId);
                     await DeleteCatchOnServerAsync(dirtyCatch, ct);
                 }
                 else
                 {
-                    _logger.LogInformation("[Sync] Updating trip ServerId={ServerId}", dirtyCatch.ServerId);
+                    _logger.LogInformation("[Sync] Updating catch ServerId={ServerId}", dirtyCatch.ServerId);
                     await UpdateCatchOnServerAsync(dirtyCatch, ct);
                 }
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                _logger.LogWarning(ex, "[Sync] Network error uploading LocalId={Id} — will retry next sync.", dirtyCatch.Id);
+                _logger.LogWarning(ex, "[Sync] Network error uploading catch LocalId={Id}; will retry next sync.", dirtyCatch.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[Sync] Unexpected error uploading LocalId={Id}", dirtyCatch.Id);
+                _logger.LogError(ex, "[Sync] Unexpected error uploading catch LocalId={Id}.", dirtyCatch.Id);
             }
         }
     }
@@ -105,13 +99,15 @@ public class CatchSyncService : ICatchSyncService
         }
 
         var response = await _apiClient.CreateAsync(fishingTripServerId.Value, MapToCreateRequest(localCatch), ct);
+        if (response is null)
+            return;
 
-        if (response is not null)
-        {
-            localCatch.FishingTripServerId = fishingTripServerId.Value.ToString();
-            await _localRepository.SaveFromServerAsync(localCatch, ct);
-            await _localRepository.MarkAsSyncedAsync(localCatch.Id, response.Id, response.LastModifiedAt, ct);
-        }
+        var trip = await _tripRepository.GetByServerIdAsync(response.FishingTripId, ct);
+        if (trip is null)
+            return;
+
+        ApplyRemoteToLocal(localCatch, response, trip);
+        await _localRepository.SaveFromServerAsync(localCatch, ct);
     }
 
     private async Task UpdateCatchOnServerAsync(CatchLocalEntity localCatch, CancellationToken ct)
@@ -120,9 +116,15 @@ public class CatchSyncService : ICatchSyncService
             return;
 
         var response = await _apiClient.UpdateAsync(serverId, MapToUpdateRequest(localCatch), ct);
+        if (response is null)
+            return;
 
-        if (response is not null)
-            await _localRepository.MarkAsSyncedAsync(localCatch.Id, serverId, response.LastModifiedAt, ct);
+        var trip = await _tripRepository.GetByServerIdAsync(response.FishingTripId, ct);
+        if (trip is null)
+            return;
+
+        ApplyRemoteToLocal(localCatch, response, trip);
+        await _localRepository.SaveFromServerAsync(localCatch, ct);
     }
 
     private async Task DeleteCatchOnServerAsync(CatchLocalEntity localCatch, CancellationToken ct)
@@ -137,37 +139,31 @@ public class CatchSyncService : ICatchSyncService
         await _localRepository.PermanentlyDeleteAsync(localCatch.Id, ct);
     }
 
-    // -------------------------------------------------------------------------
-    // Step 2 — Download
-    // -------------------------------------------------------------------------
-
     private async Task DownloadRemoteChangesAsync(CancellationToken ct)
     {
         var lastSync = await _syncMetadata.GetLastSyncAsync(SyncEntityType.Catch, ct);
-
-        // Use a safe minimum date rather than DateTime.MinValue — some serialisers/APIs reject year 0001
         var syncFrom = lastSync ?? new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        _logger.LogInformation("[Sync] Download: fetching trips modified since {SyncFrom}", syncFrom);
+        _logger.LogInformation("[Sync] Download: fetching catches modified since {SyncFrom}.", syncFrom);
 
         List<CatchResponse> remoteCatches;
         try
         {
             remoteCatches = await _apiClient.GetModifiedSinceAsync(syncFrom, ct);
-            _logger.LogInformation("[Sync] Download: received {Count} remote trip(s).", remoteCatches.Count);
+            _logger.LogInformation("[Sync] Download: received {Count} remote catch(es).", remoteCatches.Count);
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "[Sync] Network error during download.");
+            _logger.LogWarning(ex, "[Sync] Network error during catch download.");
             return;
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogWarning(ex, "[Sync] Timeout during download.");
+            _logger.LogWarning(ex, "[Sync] Timeout during catch download.");
             return;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[Sync] Unexpected error during download.");
+            _logger.LogError(ex, "[Sync] Unexpected error during catch download.");
             return;
         }
 
@@ -179,9 +175,8 @@ public class CatchSyncService : ICatchSyncService
             await UpsertRemoteCatchAsync(remoteCatch, ct);
         }
 
-        // Advance the sync cursor so the next sync only downloads new changes
         if (remoteCatches.Count > 0)
-            await _syncMetadata.SetLastSyncAsync(SyncEntityType.Catch, DateTime.UtcNow, ct);
+            await _syncMetadata.SetLastSyncAsync(SyncEntityType.Catch, remoteCatches.Max(c => c.LastModifiedAt), ct);
     }
 
     private async Task UpsertRemoteCatchAsync(CatchResponse remoteCatch, CancellationToken ct)
@@ -200,25 +195,18 @@ public class CatchSyncService : ICatchSyncService
 
         if (existing is null)
         {
-            // Not in local DB at all — insert as a clean record
             await _localRepository.SaveFromServerAsync(MapToLocalEntity(remoteCatch, localTrip), ct);
         }
         else if (existing.IsDirty && existing.LastModifiedUtc > remoteCatch.LastModifiedAt)
         {
-            // Local is dirty and newer — local wins, skip
-            // The upload step above will push local changes to the server
+            // Local is dirty and newer. Upload step will push it to the server.
         }
         else
         {
-            // Server is newer, or local is clean — apply server changes
             ApplyRemoteToLocal(existing, remoteCatch, localTrip);
             await _localRepository.SaveFromServerAsync(existing, ct);
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Mapping helpers
-    // -------------------------------------------------------------------------
 
     private static CreateCatchRequest MapToCreateRequest(CatchLocalEntity c) => new(
         c.Species,
@@ -230,8 +218,7 @@ public class CatchSyncService : ICatchSyncService
         c.Depth,
         c.Latitude,
         c.Longitude,
-        MapToBaitDto(c)
-        );
+        MapToBaitDto(c));
 
     private static UpdateCatchRequest MapToUpdateRequest(CatchLocalEntity c) => new(
         c.Species,
@@ -243,8 +230,7 @@ public class CatchSyncService : ICatchSyncService
         c.Depth,
         c.Latitude,
         c.Longitude,
-        MapToBaitDto(c)
-        );
+        MapToBaitDto(c));
 
     private static CatchLocalEntity MapToLocalEntity(CatchResponse r, FishingTripLocalEntity trip) => new()
     {
@@ -263,11 +249,11 @@ public class CatchSyncService : ICatchSyncService
         Depth = r.Depth,
         Latitude = r.Latitude,
         Longitude = r.Longitude,
-        BaitName = r?.Bait?.Name,
-        BaitType = r?.Bait?.Type.ToString(),
-        BaitColor = r?.Bait?.Color,
-        BaitWeightGrams = r?.Bait?.WeightGrams,
-        BaitLengthMm = r?.Bait?.LengthMm
+        BaitName = r.Bait?.Name,
+        BaitType = r.Bait?.Type.ToString(),
+        BaitColor = r.Bait?.Color,
+        BaitWeightGrams = r.Bait?.WeightGrams,
+        BaitLengthMm = r.Bait?.LengthMm
     };
 
     private static void ApplyRemoteToLocal(
@@ -275,6 +261,7 @@ public class CatchSyncService : ICatchSyncService
         CatchResponse remote,
         FishingTripLocalEntity trip)
     {
+        local.ServerId = remote.Id.ToString();
         local.FishingTripLocalId = trip.Id;
         local.FishingTripServerId = remote.FishingTripId.ToString();
         local.Species = remote.Species;
@@ -286,13 +273,14 @@ public class CatchSyncService : ICatchSyncService
         local.Depth = remote.Depth;
         local.Latitude = remote.Latitude;
         local.Longitude = remote.Longitude;
-        local.BaitName = remote?.Bait?.Name;
-        local.BaitType = remote?.Bait?.Type.ToString();
-        local.BaitColor = remote?.Bait?.Color;
-        local.BaitWeightGrams = remote?.Bait?.WeightGrams;
-        local.BaitLengthMm = remote?.Bait?.LengthMm;
-        local.LastModifiedUtc = remote!.LastModifiedAt;
+        local.BaitName = remote.Bait?.Name;
+        local.BaitType = remote.Bait?.Type.ToString();
+        local.BaitColor = remote.Bait?.Color;
+        local.BaitWeightGrams = remote.Bait?.WeightGrams;
+        local.BaitLengthMm = remote.Bait?.LengthMm;
+        local.LastModifiedUtc = remote.LastModifiedAt;
         local.IsDirty = false;
+        local.IsDeleted = false;
     }
 
     private async Task<Guid?> GetFishingTripServerIdAsync(CatchLocalEntity localCatch, CancellationToken ct)

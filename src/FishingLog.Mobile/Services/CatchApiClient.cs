@@ -2,6 +2,8 @@
 using FishingLog.Sync.Abstractions;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FishingLog.Mobile.Services;
 
@@ -19,6 +21,8 @@ public class CatchApiClient : ICatchApiClient
 {
     private readonly HttpClient _httpClient;
 
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
     /// <summary>
     /// Initializes a new instance of <see cref="CatchApiClient"/>.
     /// BaseAddress and Timeout are configured in MauiProgram.cs.
@@ -28,12 +32,19 @@ public class CatchApiClient : ICatchApiClient
         _httpClient = httpClient;
     }
 
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
+    }
+
     /// <inheritdoc/>
     public async Task<List<CatchResponse>> GetAllAsync(CancellationToken ct = default)
     {
         var response = await _httpClient.GetAsync("api/catches", ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<CatchResponse>>(ct) ?? [];
+        return await response.Content.ReadFromJsonAsync<List<CatchResponse>>(JsonOptions ,ct) ?? [];
     }
 
     /// <inheritdoc/>
@@ -43,7 +54,7 @@ public class CatchApiClient : ICatchApiClient
         var encoded = Uri.EscapeDataString(since.ToString("O"));
         var response = await _httpClient.GetAsync($"api/catches?modifiedSince={encoded}", ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<CatchResponse>>(ct) ?? [];
+        return await response.Content.ReadFromJsonAsync<List<CatchResponse>>(JsonOptions, ct) ?? [];
     }
 
     /// <inheritdoc/>
@@ -55,7 +66,7 @@ public class CatchApiClient : ICatchApiClient
             return null;
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<CatchResponse>(ct);
+        return await response.Content.ReadFromJsonAsync<CatchResponse>(JsonOptions, ct);
     }
 
     public async Task<List<CatchResponse>> GetByTripIdAsync(Guid tripId, CancellationToken ct = default)
@@ -63,30 +74,30 @@ public class CatchApiClient : ICatchApiClient
         var response = await _httpClient.GetAsync($"api/fishing-trips/{tripId}/catches", ct);
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<CatchResponse>>(ct) ?? [];
+        return await response.Content.ReadFromJsonAsync<List<CatchResponse>>(JsonOptions, ct) ?? [];
     }
 
     /// <inheritdoc/>
     public async Task<CatchResponse?> CreateAsync(Guid tripId, CreateCatchRequest request, CancellationToken ct = default)
     {
-        var response = await _httpClient.PostAsJsonAsync($"api/fishing-trips/{tripId}/catches", request, ct);
+        var response = await _httpClient.PostAsJsonAsync($"api/fishing-trips/{tripId}/catches", request, JsonOptions, ct);
 
         if (!response.IsSuccessStatusCode)
             return null;
 
-        return await response.Content.ReadFromJsonAsync<CatchResponse>(ct);
+        return await response.Content.ReadFromJsonAsync<CatchResponse>(JsonOptions, ct);
     }
 
     /// <inheritdoc/>
     public async Task<CatchResponse?> UpdateAsync(Guid id, UpdateCatchRequest request, CancellationToken ct = default)
     {
-        var response = await _httpClient.PutAsJsonAsync($"api/catches/{id}", request, ct);
+        var response = await _httpClient.PutAsJsonAsync($"api/catches/{id}", request, JsonOptions, ct);
 
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             return null;
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<CatchResponse>(ct);
+        return await response.Content.ReadFromJsonAsync<CatchResponse>(JsonOptions, ct);
     }
 
     /// <inheritdoc/>

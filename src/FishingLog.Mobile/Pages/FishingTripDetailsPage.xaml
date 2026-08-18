@@ -1,12 +1,122 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="FishingLog.Mobile.Pages.FishingTripDetailsPage"
-             Title="FishingTripDetailsPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="FishingLog.Mobile.Pages.FishingTripDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:entities="clr-namespace:FishingLog.Sync.Entities;assembly=FishingLog.Sync"
+    xmlns:vm="clr-namespace:FishingLog.Mobile.ViewModels"
+    x:DataType="vm:FishingTripDetailsViewModel"
+    x:Name="page"
+    Title="{Binding Title}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Edit" Command="{Binding EditTripCommand}" Order="Primary" Priority="0" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="20" RowSpacing="16">
+        <VerticalStackLayout Grid.Row="0" Spacing="8">
+            <Label
+                FontAttributes="Bold"
+                FontSize="24"
+                Text="{Binding Name}" />
+
+            <Label
+                FontSize="14"
+                Text="{Binding LocationName}"
+                TextColor="Gray" />
+
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                <Label Grid.Row="0" Grid.Column="0" FontAttributes="Bold" Text="Start" />
+                <Label Grid.Row="0" Grid.Column="1" Text="{Binding StartDate, StringFormat='{0:MMM dd, yyyy}'}" />
+
+                <Label Grid.Row="1" Grid.Column="0" FontAttributes="Bold" IsVisible="{Binding HasEndDate}" Text="End" />
+                <Label Grid.Row="1" Grid.Column="1" IsVisible="{Binding HasEndDate}" Text="{Binding EndDate, StringFormat='{0:MMM dd, yyyy}'}" />
+            </Grid>
+
+            <Label
+                FontSize="14"
+                Text="{Binding Note}" />
+        </VerticalStackLayout>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <Label
+                FontAttributes="Bold"
+                FontSize="18"
+                Text="{Binding CatchesCount, StringFormat='Catches ({0})'}"
+                VerticalOptions="Center" />
+
+            <Button
+                Grid.Column="1"
+                Command="{Binding AddCatchCommand}"
+                Text="Add Catch" />
+        </Grid>
+
+        <RefreshView Grid.Row="2" Command="{Binding SyncCommand}" IsRefreshing="{Binding IsRefreshing, Mode=TwoWay}">
+            <CollectionView ItemsSource="{Binding Catches}" SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <Label
+                        HorizontalTextAlignment="Center"
+                        Text="No catches added yet."
+                        TextColor="Gray"
+                        VerticalOptions="Center" />
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="entities:CatchLocalEntity">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem
+                                        BackgroundColor="Red"
+                                        Command="{Binding Source={x:Reference page}, Path=BindingContext.DeleteCatchCommand}"
+                                        CommandParameter="{Binding .}"
+                                        Text="Delete" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Grid Padding="0,12" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={x:Reference page}, Path=BindingContext.SelectCatchCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+
+                                <Label
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    FontAttributes="Bold"
+                                    FontSize="16"
+                                    Text="{Binding Species}" />
+
+                                <Label
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    FontSize="13"
+                                    Text="{Binding CaughtAt, StringFormat='{0:MMM dd, yyyy HH:mm}'}"
+                                    TextColor="Gray" />
+
+                                <Label
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    FontSize="13"
+                                    Text="{Binding BaitName}"
+                                    TextColor="Gray" />
+
+                                <BoxView
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Grid.RowSpan="3"
+                                    WidthRequest="8"
+                                    HeightRequest="8"
+                                    CornerRadius="4"
+                                    Color="Orange"
+                                    IsVisible="{Binding IsDirty}"
+                                    VerticalOptions="Center" />
+                            </Grid>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
 </ContentPage>

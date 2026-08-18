@@ -13,5 +13,8 @@ public partial class AppShell : Shell
 
         // Register routes that are navigated to programmatically (not in the shell tab bar)
         Routing.RegisterRoute("AddEditFishingTripPage", typeof(AddEditFishingTripPage));
+        Routing.RegisterRoute("FishingTripDetailsPage", typeof(FishingTripDetailsPage));
+        Routing.RegisterRoute("AddEditCatchPage", typeof(AddEditCatchPage));
     }
 }
+

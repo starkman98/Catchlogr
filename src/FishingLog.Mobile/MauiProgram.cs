@@ -73,12 +73,17 @@ public static class MauiProgram
         // --- ViewModels ---
         builder.Services.AddTransient<FishingTripsViewModel>();
         builder.Services.AddTransient<AddEditFishingTripViewModel>();
+        builder.Services.AddTransient<FishingTripDetailsViewModel>();
+        builder.Services.AddTransient<AddEditCatchViewModel>();
 
         // --- Pages ---
         builder.Services.AddTransient<FishingTripsPage>();
         builder.Services.AddTransient<AddEditFishingTripPage>();
+        builder.Services.AddTransient<FishingTripDetailsPage>();
+        builder.Services.AddTransient<AddEditCatchPage>();
 
 
         return builder.Build();
 	}
 }
+
