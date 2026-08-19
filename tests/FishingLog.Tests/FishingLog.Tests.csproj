@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\FishingLog.Application\FishingLog.Application.csproj" />
     <ProjectReference Include="..\..\src\FishingLog.Contracts\FishingLog.Contracts.csproj" />
 	<ProjectReference Include="..\..\src\FishingLog.Domain\FishingLog.Domain.csproj" />
+	<ProjectReference Include="..\..\src\FishingLog.Infrastructure\FishingLog.Infrastructure.csproj" />
 	<ProjectReference Include="..\..\src\FishingLog.Sync\FishingLog.Sync.csproj" />
   </ItemGroup>
 

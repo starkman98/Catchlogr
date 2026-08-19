@@ -6,6 +6,7 @@ using FishingLog.Application.Validators;
 using FishingLog.Domain.Interfaces;
 using FishingLog.Infrastructure.Persistence;
 using FishingLog.Infrastructure.Repositories;
+using FishingLog.Infrastructure.Weather;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
@@ -54,6 +55,17 @@ builder.Services.AddHealthChecks()
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+builder.Services.AddOptions<OpenMeteoOptions>()
+    .Bind(builder.Configuration.GetSection(
+        OpenMeteoOptions.SectionName));
+
+builder.Services.AddSingleton(TimeProvider.System);
+
+builder.Services.AddHttpClient<IWeatherService, OpenMeteoWeatherService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 var app = builder.Build();
 
