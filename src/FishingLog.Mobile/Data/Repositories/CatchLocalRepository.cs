@@ -85,19 +85,6 @@ public class CatchLocalRepository : ICatchLocalRepository
         => _db.DeleteAsync<CatchLocalEntity>(id);
 
     /// <inheritdoc/>
-    public async Task MarkAsSyncedAsync(int id, Guid serverId, DateTime lastModifiedUtc, CancellationToken ct = default)
-    {
-        var localCatch = await GetByIdAsync(id, ct);
-        if (localCatch is null)
-            return;
-
-        localCatch.ServerId = serverId.ToString();
-        localCatch.IsDirty = false;
-        localCatch.LastModifiedUtc = lastModifiedUtc;
-        await _db.UpdateAsync(localCatch);
-    }
-
-    /// <inheritdoc/>
     public async Task SaveFromServerAsync(CatchLocalEntity localCatch, CancellationToken ct = default)
     {
         // Id == 0 means sqlite-net-pcl has not assigned a local key yet → new record

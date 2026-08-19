@@ -148,10 +148,10 @@
 - [x] Unit tests for FishingTripService (Application layer)
 - [x] Unit tests for CreateFishingTripRequestValidator (FluentValidation)
 - [x] Unit tests for FishingTripSyncService (blocked — see Phase 4 refactor)
-- [ ] Integration test: Create trip on Mobile → Sync → Verify in API
-- [ ] Integration test: Create trip on API → Sync → Verify on Mobile
-- [ ] Manual test: Offline mode (airplane mode, create trips, go online, sync)
-- [ ] Manual test: Conflict resolution (edit same trip on two devices)
+- [x] Integration test: Create trip on Mobile → Sync → Verify in API
+- [x] Integration test: Create trip on API → Sync → Verify on Mobile
+- [x] Manual test: Offline mode (airplane mode, create trips, go online, sync)
+- [x] Manual test: Conflict resolution (edit same trip on two devices)
 
 ### 1.12 Documentation
 - [x] Update README with "How to Run" instructions and project status
@@ -188,9 +188,9 @@
 - [x] Create CatchLocalRepository
 - [x] Create CatchApiClient
 - [x] Extend FishingTripSyncService to sync catches
-- [ ] Create CatchesViewModel and UI
-- [ ] Add "Add Catch" button on trip details page
-- [ ] Test sync with catches
+- [x] Create CatchesViewModel and UI
+- [x] Add "Add Catch" button on trip details page
+- [x] Test sync with catches
 
 ---
 

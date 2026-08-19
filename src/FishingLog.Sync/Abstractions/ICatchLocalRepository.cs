@@ -38,12 +38,6 @@ public interface ICatchLocalRepository
     Task PermanentlyDeleteAsync(int id, CancellationToken ct = default);
 
     /// <summary>
-    /// Called by the sync service after a successful upload.
-    /// Stamps the record with the server's GUID and clears the dirty flag.
-    /// </summary>
-    Task MarkAsSyncedAsync(int id, Guid serverId, DateTime lastModifiedUtc, CancellationToken ct = default);
-
-    /// <summary>
     /// Inserts or updates a record that came from the server.
     /// Does NOT touch IsDirty or LastModifiedUtc — the entity's values are saved as-is.
     /// Used during the download step of sync.

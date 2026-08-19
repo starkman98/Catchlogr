@@ -82,19 +82,6 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
         => _db.DeleteAsync<FishingTripLocalEntity>(id);
 
     /// <inheritdoc/>
-    public async Task MarkAsSyncedAsync(int id, Guid serverId, DateTime lastModifiedUtc, CancellationToken ct = default)
-    {
-        var trip = await GetByIdAsync(id, ct);
-        if (trip is null)
-            return;
-
-        trip.ServerId = serverId.ToString();
-        trip.IsDirty = false;
-        trip.LastModifiedUtc = lastModifiedUtc;
-        await _db.UpdateAsync(trip);
-    }
-
-    /// <inheritdoc/>
     public async Task SaveFromServerAsync(FishingTripLocalEntity trip, CancellationToken ct = default)
     {
         // Id == 0 means sqlite-net-pcl has not assigned a local key yet → new record

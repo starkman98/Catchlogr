@@ -93,9 +93,6 @@ public class FishingTripSyncService : IFishingTripSyncService
     {
         var response = await _apiClient.CreateAsync(MapToCreateRequest(trip), ct);
 
-        //if (response is not null)
-        //    await _localRepository.MarkAsSyncedAsync(trip.Id, response.Id, response.LastModified, ct);
-
         if (response is null)
             return;
 
@@ -110,8 +107,11 @@ public class FishingTripSyncService : IFishingTripSyncService
 
         var response = await _apiClient.UpdateAsync(serverId, MapToUpdateRequest(trip), ct);
 
-        if (response is not null)
-            await _localRepository.MarkAsSyncedAsync(trip.Id, serverId, response.LastModified, ct);
+        if (response is null)
+            return;
+
+        ApplyRemoteToLocal(trip, response);
+        await _localRepository.SaveFromServerAsync(trip, ct);
     }
 
     private async Task DeleteTripOnServerAsync(FishingTripLocalEntity trip, CancellationToken ct)

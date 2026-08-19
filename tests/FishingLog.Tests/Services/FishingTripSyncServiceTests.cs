@@ -62,7 +62,7 @@ public class FishingTripSyncServiceTests
     }
 
     [Fact]
-    public async Task SyncAsync_NewLocalTrip_MarksAsSyncedAfterCreate()
+    public async Task SyncAsync_NewLocalTrip_AppliesServerResponseAfterCreate()
     {
         var serverTrip = BuildServerTrip();
         _localRepo.GetDirtyAsync(Arg.Any<CancellationToken>())
@@ -73,8 +73,15 @@ public class FishingTripSyncServiceTests
 
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
 
-        await _localRepo.Received(1)
-            .MarkAsSyncedAsync(1, serverTrip.Id, serverTrip.LastModified, Arg.Any<CancellationToken>());
+        await _localRepo.Received(1).SaveFromServerAsync(
+            Arg.Is<FishingTripLocalEntity>(trip =>
+                trip.Id == 1
+                && trip.ServerId == serverTrip.Id.ToString()
+                && trip.Name == serverTrip.Name
+                && trip.LastModifiedUtc == serverTrip.LastModified
+                && !trip.IsDirty
+                && !trip.IsDeleted),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
