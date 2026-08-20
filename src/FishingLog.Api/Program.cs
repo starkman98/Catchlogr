@@ -6,6 +6,7 @@ using FishingLog.Application.Validators;
 using FishingLog.Domain.Interfaces;
 using FishingLog.Infrastructure.Persistence;
 using FishingLog.Infrastructure.Repositories;
+using FishingLog.Infrastructure.Location;
 using FishingLog.Infrastructure.Weather;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -60,12 +61,33 @@ builder.Services.AddOptions<OpenMeteoOptions>()
     .Bind(builder.Configuration.GetSection(
         OpenMeteoOptions.SectionName));
 
+builder.Services.AddOptions<LocationIqOptions>()
+    .Bind(builder.Configuration.GetSection(
+        LocationIqOptions.SectionName))
+    .Validate(
+        options => options.BaseUri.IsAbsoluteUri &&
+                   options.BaseUri.Scheme == Uri.UriSchemeHttps,
+        "LocationIQ base URI must be an absolute HTTPS URI.")
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.ApiKey),
+        "LocationIQ API key is required.")
+    .ValidateOnStart();
+
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddHttpClient<IWeatherService, OpenMeteoWeatherService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(10);
 });
+
+builder.Services
+    .AddHttpClient<ILocationSearchService, LocationIqLocationSearchService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(10);
+    })
+    // LocationIQ requires its key in the URL, so request logging is disabled
+    // for this client to prevent the secret from being written to logs.
+    .RemoveAllLoggers();
 
 var app = builder.Build();
 
@@ -84,5 +106,6 @@ app.UseCors("AllowedConfiguredOrigins");
 app.MapHealthChecks("/health");
 app.MapFishingTripEndpoints();
 app.MapCatchEndpoints();
+app.MapLocationEndpoints();
 
 app.Run();

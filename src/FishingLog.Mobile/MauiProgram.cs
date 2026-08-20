@@ -7,11 +7,16 @@ using FishingLog.Mobile.ViewModels;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Devices.Sensors;
 
 namespace FishingLog.Mobile;
 
+/// <summary>
+/// Configures and creates the FishingLog mobile application.
+/// </summary>
 public static class MauiProgram
 {
+	/// <summary>Creates the configured MAUI application.</summary>
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder();
@@ -44,6 +49,10 @@ public static class MauiProgram
 		builder.Services.AddTransient<ICatchLocalRepository, CatchLocalRepository>();
 		builder.Services.AddTransient<ISyncMetadataRepository, SyncMetadataRepository>();
 
+        // --- Device capabilities ---
+        builder.Services.AddSingleton<IGeolocation>(Geolocation.Default);
+        builder.Services.AddSingleton<IDeviceLocationService, DeviceLocationService>();
+
         // --- API client ---
         // Typed HttpClient: BaseAddress and Timeout come from appsettings
 		builder.Services.AddHttpClient<IFishingTripApiClient, FishingTripApiClient>(client =>
@@ -63,6 +72,12 @@ public static class MauiProgram
             var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        builder.Services.AddHttpClient<ILocationSearchApiClient, LocationSearchApiClient>(client =>
+        {
+            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
         });
 
         // --- Sync service ---
@@ -86,4 +101,3 @@ public static class MauiProgram
         return builder.Build();
 	}
 }
-

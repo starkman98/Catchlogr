@@ -12,6 +12,10 @@ Enrich a fishing trip with weather for its location and start time while preserv
 
 The initial provider is [Open-Meteo](https://open-meteo.com/en/docs). All provider-specific models and HTTP behavior remain in `FishingLog.Infrastructure`, behind an Application-layer interface, so the provider can be replaced later.
 
+Users can provide weather coordinates through device location or a named lake and
+place search. The latter uses LocationIQ through the FishingLog API and is
+documented in [Location Search Integration](LOCATION_SEARCH_INTEGRATION.md).
+
 ## MVP decision
 
 Store one weather sample per fishing trip: the hourly sample nearest to `FishingTrip.StartTime`.
