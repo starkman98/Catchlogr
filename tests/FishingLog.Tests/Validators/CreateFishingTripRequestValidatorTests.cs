@@ -60,6 +60,42 @@ public class CreateFishingTripRequestValidatorTests
     }
 
     [Fact]
+    public void Should_Fail_When_Only_Latitude_Is_Provided()
+    {
+        var result = _validator.TestValidate(ValidRequest() with
+        {
+            Latitude = 58.9,
+            Longitude = null
+        });
+
+        result.ShouldHaveValidationErrorFor(x => x.Longitude);
+    }
+
+    [Fact]
+    public void Should_Fail_When_Only_Longitude_Is_Provided()
+    {
+        var result = _validator.TestValidate(ValidRequest() with
+        {
+            Latitude = null,
+            Longitude = 13.5
+        });
+
+        result.ShouldHaveValidationErrorFor(x => x.Latitude);
+    }
+
+    [Fact]
+    public void Should_Pass_When_Both_Coordinates_Are_Null()
+    {
+        var result = _validator.TestValidate(ValidRequest() with
+        {
+            Latitude = null,
+            Longitude = null
+        });
+
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
     public void Should_Fail_When_Name_Exceeds_Max_Length()
     {
         var result = _validator.TestValidate(ValidRequest() with { Name = new string('x', 201) });

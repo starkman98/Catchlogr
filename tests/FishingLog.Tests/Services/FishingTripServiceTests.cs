@@ -1,6 +1,7 @@
 ﻿using FishingLog.Application.Exceptions;
 using FishingLog.Application.Interfaces;
 using FishingLog.Application.Services;
+using FishingLog.Application.Weather;
 using FishingLog.Contracts.FishingTripDTOs;
 using FishingLog.Domain.Entities;
 using FishingLog.Domain.Interfaces;
@@ -119,6 +120,91 @@ public class FishingTripServiceTests
 
         // Verify the repo's AddAsync was actually called once
         await _repository.Received(1).AddAsync(Arg.Any<FishingTrip>(), TestContext.Current.CancellationToken);
+        await _weatherService.DidNotReceive().GetWeatherAsync(
+            Arg.Any<double>(),
+            Arg.Any<double>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithCoordinates_AppliesWeatherSnapshot()
+    {
+        var startTime = Utc(2026, 8, 20, 10);
+        var snapshot = BuildWeatherSnapshot();
+        var request = BuildCreateRequest(startTime, 58.9, 13.5);
+
+        _weatherService.GetWeatherAsync(
+                58.9,
+                13.5,
+                startTime,
+                TestContext.Current.CancellationToken)
+            .Returns(snapshot);
+
+        var result = await _sut.CreateAsync(
+            request,
+            TestContext.Current.CancellationToken);
+
+        result.AirTemperatureC.Should().Be(snapshot.AirTemperatureC);
+        result.WeatherCode.Should().Be(snapshot.WeatherCode);
+        result.WindSpeedMps.Should().Be(snapshot.WindSpeedMps);
+        result.WindDirectionDegrees.Should().Be(snapshot.WindDirectionDegrees);
+        result.PressureHpa.Should().Be(snapshot.PressureHpa);
+        result.WeatherSampleTimeUtc.Should().Be(snapshot.WeatherSampleTimeUtc);
+        result.WeatherProvider.Should().Be(snapshot.WeatherProvider);
+
+        await _repository.Received(1).AddAsync(
+            Arg.Is<FishingTrip>(trip =>
+                trip.AirTemperatureC == snapshot.AirTemperatureC
+                && trip.WeatherSampleTimeUtc == snapshot.WeatherSampleTimeUtc),
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenWeatherProviderFails_StillSavesTrip()
+    {
+        var startTime = Utc(2026, 8, 20, 10);
+        var request = BuildCreateRequest(startTime, 58.9, 13.5);
+
+        _weatherService.GetWeatherAsync(
+                Arg.Any<double>(),
+                Arg.Any<double>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException<WeatherSnapshot?>(
+                new HttpRequestException("Provider unavailable")));
+
+        var result = await _sut.CreateAsync(
+            request,
+            TestContext.Current.CancellationToken);
+
+        result.WeatherSampleTimeUtc.Should().BeNull();
+        await _repository.Received(1).AddAsync(
+            Arg.Any<FishingTrip>(),
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenCallerCancels_PropagatesCancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var request = BuildCreateRequest(Utc(2026, 8, 20, 10), 58.9, 13.5);
+
+        _weatherService.GetWeatherAsync(
+                Arg.Any<double>(),
+                Arg.Any<double>(),
+                Arg.Any<DateTime>(),
+                cts.Token)
+            .Returns(_ => Task.FromException<WeatherSnapshot?>(
+                new OperationCanceledException(cts.Token)));
+
+        var action = () => _sut.CreateAsync(request, cts.Token);
+
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        await _repository.DidNotReceive().AddAsync(
+            Arg.Any<FishingTrip>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -177,6 +263,89 @@ public class FishingTripServiceTests
         await _repository.Received(1).UpdateAsync(Arg.Any<FishingTrip>(), TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public async Task UpdateAsync_ChangingNotesOnly_DoesNotRefetchWeather()
+    {
+        var trip = BuildTripWithWeather();
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        var request = BuildMatchingUpdateRequest(trip, note: "Updated notes");
+
+        await _sut.UpdateAsync(
+            trip.Id,
+            request,
+            TestContext.Current.CancellationToken);
+
+        await _weatherService.DidNotReceive().GetWeatherAsync(
+            Arg.Any<double>(),
+            Arg.Any<double>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangingCoordinates_RefetchesWeather()
+    {
+        var trip = BuildTripWithWeather();
+        var snapshot = BuildWeatherSnapshot();
+        const double newLatitude = 59.1;
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        _weatherService.GetWeatherAsync(
+                newLatitude,
+                trip.Longitude!.Value,
+                trip.StartTime,
+                TestContext.Current.CancellationToken)
+            .Returns(snapshot);
+        var request = BuildMatchingUpdateRequest(trip) with
+        {
+            Latitude = newLatitude
+        };
+
+        var result = await _sut.UpdateAsync(
+            trip.Id,
+            request,
+            TestContext.Current.CancellationToken);
+
+        result.WeatherSampleTimeUtc.Should().Be(snapshot.WeatherSampleTimeUtc);
+        await _weatherService.Received(1).GetWeatherAsync(
+            newLatitude,
+            trip.Longitude.Value,
+            trip.StartTime,
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangingStartTime_RefetchesWeather()
+    {
+        var trip = BuildTripWithWeather();
+        var snapshot = BuildWeatherSnapshot();
+        var newStartTime = trip.StartTime.AddHours(1);
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        _weatherService.GetWeatherAsync(
+                trip.Latitude!.Value,
+                trip.Longitude!.Value,
+                newStartTime,
+                TestContext.Current.CancellationToken)
+            .Returns(snapshot);
+        var request = BuildMatchingUpdateRequest(trip) with
+        {
+            StartTime = newStartTime
+        };
+
+        await _sut.UpdateAsync(
+            trip.Id,
+            request,
+            TestContext.Current.CancellationToken);
+
+        await _weatherService.Received(1).GetWeatherAsync(
+            trip.Latitude.Value,
+            trip.Longitude.Value,
+            newStartTime,
+            TestContext.Current.CancellationToken);
+    }
+
     // -----------------------------------------------------------------------
     // DeleteAsync
     // -----------------------------------------------------------------------
@@ -220,6 +389,63 @@ public class FishingTripServiceTests
         CreatedAt = DateTime.UtcNow,
         LastModified = DateTime.UtcNow
     };
+
+    private static FishingTrip BuildTripWithWeather() => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = "Weather trip",
+        Latitude = 58.9,
+        Longitude = 13.5,
+        StartTime = Utc(2026, 8, 20, 10),
+        CreatedAt = Utc(2026, 8, 20, 9),
+        LastModified = Utc(2026, 8, 20, 9),
+        AirTemperatureC = 12.3,
+        WeatherCode = 1,
+        WindSpeedMps = 2.2,
+        WindDirectionDegrees = 180,
+        PressureHpa = 1010,
+        WeatherSampleTimeUtc = Utc(2026, 8, 20, 10),
+        WeatherProvider = "Open-Meteo"
+    };
+
+    private static CreateFishingTripRequest BuildCreateRequest(
+        DateTime startTime,
+        double? latitude,
+        double? longitude) => new(
+        Name: "Weather trip",
+        LocationName: "Lake",
+        WaterTemp: null,
+        WeatherDescription: null,
+        Latitude: latitude,
+        Longitude: longitude,
+        StartTime: startTime,
+        EndTime: null,
+        Note: null);
+
+    private static UpdateFishingTripRequest BuildMatchingUpdateRequest(
+        FishingTrip trip,
+        string? note = null) => new(
+        Name: trip.Name,
+        LocationName: trip.LocationName,
+        WaterTemp: trip.WaterTemp,
+        WeatherDescription: trip.WeatherDescription,
+        Latitude: trip.Latitude,
+        Longitude: trip.Longitude,
+        StartTime: trip.StartTime,
+        EndTime: trip.EndTime,
+        Note: note ?? trip.Note);
+
+    private static WeatherSnapshot BuildWeatherSnapshot() => new(
+        AirTemperatureC: 14.2,
+        WeatherCode: 2,
+        WindSpeedMps: 3.1,
+        WindDirectionDegrees: 225,
+        PressureHpa: 1012.4,
+        WeatherSampleTimeUtc: Utc(2026, 8, 20, 10),
+        WeatherProvider: "Open-Meteo");
+
+    private static DateTime Utc(int year, int month, int day, int hour)
+        => new(year, month, day, hour, 0, 0, DateTimeKind.Utc);
 
     private static UpdateFishingTripRequest BuildUpdateRequest(string name = "Updated trip") => new(
         Name: name,

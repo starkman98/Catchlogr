@@ -170,7 +170,7 @@ public class FishingTripSyncService : IFishingTripSyncService
 
         // Advance the sync cursor so the next sync only downloads new changes
         if (remoteTrips.Count > 0)
-            await _syncMetadata.SetLastSyncAsync(SyncEntityType.FishingTrip, DateTime.UtcNow, ct);
+            await _syncMetadata.SetLastSyncAsync(SyncEntityType.FishingTrip, remoteTrips.Max(t => t.LastModified), ct);
     }
 
     private async Task UpsertRemoteTripAsync(FishingTripResponse remoteTrip, CancellationToken ct)

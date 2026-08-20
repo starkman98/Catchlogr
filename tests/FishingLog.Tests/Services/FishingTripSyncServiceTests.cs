@@ -80,7 +80,8 @@ public class FishingTripSyncServiceTests
                 && trip.Name == serverTrip.Name
                 && trip.LastModifiedUtc == serverTrip.LastModified
                 && !trip.IsDirty
-                && !trip.IsDeleted),
+                && !trip.IsDeleted
+                && HasWeatherFrom(trip, serverTrip)),
             Arg.Any<CancellationToken>());
     }
 
@@ -100,6 +101,29 @@ public class FishingTripSyncServiceTests
 
         await _apiClient.Received(1)
             .UpdateAsync(serverId, Arg.Any<UpdateFishingTripRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SyncAsync_ExistingDirtyTrip_AppliesWeatherFromUpdateResponse()
+    {
+        var serverId = Guid.NewGuid();
+        var localTrip = BuildExistingLocalTrip(serverId);
+        var serverTrip = BuildServerTrip(serverId);
+        _localRepo.GetDirtyAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity> { localTrip });
+        _apiClient.UpdateAsync(
+                serverId,
+                Arg.Any<UpdateFishingTripRequest>(),
+                Arg.Any<CancellationToken>())
+            .Returns(serverTrip);
+
+        await _sut.SyncAsync(TestContext.Current.CancellationToken);
+
+        await _localRepo.Received(1).SaveFromServerAsync(
+            Arg.Is<FishingTripLocalEntity>(trip =>
+                trip.Id == localTrip.Id
+                && HasWeatherFrom(trip, serverTrip)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -156,7 +180,10 @@ public class FishingTripSyncServiceTests
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
 
         await _localRepo.Received(1)
-            .SaveFromServerAsync(Arg.Any<FishingTripLocalEntity>(), Arg.Any<CancellationToken>());
+            .SaveFromServerAsync(
+                Arg.Is<FishingTripLocalEntity>(trip =>
+                    HasWeatherFrom(trip, serverTrip)),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -199,14 +226,25 @@ public class FishingTripSyncServiceTests
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
 
         await _localRepo.Received(1)
-            .SaveFromServerAsync(Arg.Any<FishingTripLocalEntity>(), Arg.Any<CancellationToken>());
+            .SaveFromServerAsync(
+                Arg.Is<FishingTripLocalEntity>(trip =>
+                    HasWeatherFrom(trip, serverTrip)),
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task SyncAsync_DownloadSucceeds_AdvancesSyncCursor()
+    public async Task SyncAsync_DownloadSucceeds_UsesNewestServerTimestampAsCursor()
     {
+        var olderTimestamp = new DateTime(
+            2026, 8, 20, 10, 0, 0, DateTimeKind.Utc);
+        var newerTimestamp = olderTimestamp.AddMinutes(10);
+
         _apiClient.GetModifiedSinceAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
-            .Returns(new List<FishingTripResponse> { BuildServerTrip() });
+            .Returns(new List<FishingTripResponse>
+            {
+                BuildServerTrip(lastModified: olderTimestamp),
+                BuildServerTrip(lastModified: newerTimestamp)
+            });
 
         _localRepo.GetByServerIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((FishingTripLocalEntity?)null);
@@ -214,7 +252,10 @@ public class FishingTripSyncServiceTests
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
 
         await _syncRepo.Received(1)
-            .SetLastSyncAsync(SyncEntityType.FishingTrip, Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+            .SetLastSyncAsync(
+                SyncEntityType.FishingTrip,
+                newerTimestamp,
+                Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -279,4 +320,15 @@ public class FishingTripSyncServiceTests
         WeatherSampleTimeUtc: DateTime.UtcNow,
         WeatherProvider: "Open-Meteo"
         );
+
+    private static bool HasWeatherFrom(
+        FishingTripLocalEntity local,
+        FishingTripResponse remote) =>
+        local.AirTemperatureC == remote.AirTemperatureC
+        && local.WeatherCode == remote.WeatherCode
+        && local.WindSpeedMps == remote.WindSpeedMps
+        && local.WindDirectionDegrees == remote.WindDirectionDegrees
+        && local.PressureHpa == remote.PressureHpa
+        && local.WeatherSampleTimeUtc == remote.WeatherSampleTimeUtc
+        && local.WeatherProvider == remote.WeatherProvider;
 }

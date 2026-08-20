@@ -3,8 +3,14 @@ using FluentValidation;
 
 namespace FishingLog.Application.Validators;
 
+/// <summary>
+/// Validates requests that create fishing trips.
+/// </summary>
 public sealed class CreateFishingTripRequestValidator : AbstractValidator<CreateFishingTripRequest>
 {
+    /// <summary>
+    /// Initializes the validation rules for fishing-trip creation.
+    /// </summary>
     public CreateFishingTripRequestValidator()
     {
         RuleFor(x => x.Name)
@@ -30,6 +36,14 @@ public sealed class CreateFishingTripRequestValidator : AbstractValidator<Create
         RuleFor(x => x.Longitude)
             .InclusiveBetween(-180, 180).WithMessage("Longitude must be between -180 and 180.")
             .When(x => x.Longitude is not null);
+
+        RuleFor(x => x.Latitude)
+            .NotNull().WithMessage("Latitude is required when longitude is provided.")
+            .When(x => x.Longitude.HasValue);
+
+        RuleFor(x => x.Longitude)
+            .NotNull().WithMessage("Longitude is required when latitude is provided.")
+            .When(x => x.Latitude.HasValue);
 
         RuleFor(x => x.WaterTemp)
             .InclusiveBetween(0, 100).WithMessage("WaterTemp must be between 0 and 100 °C.")
