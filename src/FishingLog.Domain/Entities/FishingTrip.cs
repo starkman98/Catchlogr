@@ -50,4 +50,26 @@ public class FishingTrip
 
     /// <summary>The catches recorded during this trip.</summary>
     public ICollection<Catch> Catches { get; set; } = [];
+
+
+    /// <summary>Air temperature in degrees Celsius.</summary>
+    public double? AirTemperatureC { get; set; }
+
+    /// <summary>WMO weather interpretation code.</summary>
+    public int? WeatherCode { get; set; }
+
+    /// <summary>Wind speed at 10 metres in metres per second.</summary>
+    public double? WindSpeedMps { get; set; }
+
+    /// <summary>Wind direction at 10 metres in degrees.</summary>
+    public double? WindDirectionDegrees { get; set; }
+
+    /// <summary>Mean sea-level pressure in hectopascals.</summary>
+    public double? PressureHpa { get; set; }
+
+    /// <summary>UTC timestamp represented by the weather sample.</summary>
+    public DateTime? WeatherSampleTimeUtc { get; set; }
+
+    /// <summary>Name of the weather-data provider.</summary>
+    public string? WeatherProvider { get; set; }
 }

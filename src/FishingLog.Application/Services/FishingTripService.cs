@@ -99,7 +99,14 @@ public class FishingTripService : IFishingTripService
         t.EndTime,
         t.Note,
         t.CreatedAt,
-        t.LastModified);
+        t.LastModified,
+        t.AirTemperatureC,
+        t.WeatherCode,
+        t.WindSpeedMps,
+        t.WindDirectionDegrees,
+        t.PressureHpa,
+        t.WeatherSampleTimeUtc,
+        t.WeatherProvider);
 
     private static FishingTrip MapFromCreateToTrip(CreateFishingTripRequest request) => new()
     {

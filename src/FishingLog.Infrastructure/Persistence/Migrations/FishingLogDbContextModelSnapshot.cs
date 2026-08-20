@@ -17,7 +17,7 @@ namespace FishingLog.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -79,6 +79,9 @@ namespace FishingLog.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<double?>("AirTemperatureC")
+                        .HasColumnType("double precision");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -107,15 +110,34 @@ namespace FishingLog.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<double?>("PressureHpa")
+                        .HasColumnType("double precision");
+
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<double?>("WaterTemp")
                         .HasColumnType("double precision");
 
+                    b.Property<int?>("WeatherCode")
+                        .HasColumnType("integer");
+
                     b.Property<string>("WeatherDescription")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("WeatherProvider")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("WeatherSampleTimeUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("WindDirectionDegrees")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("WindSpeedMps")
+                        .HasColumnType("double precision");
 
                     b.HasKey("Id");
 

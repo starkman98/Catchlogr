@@ -16,4 +16,11 @@ public record FishingTripResponse(
     DateTime? EndTime,
     string? Note,
     DateTime CreatedAt,
-    DateTime LastModified);
+    DateTime LastModified,
+    double? AirTemperatureC,
+    int? WeatherCode,
+    double? WindSpeedMps,
+    double? WindDirectionDegrees,
+    double? PressureHpa,
+    DateTime? WeatherSampleTimeUtc,
+    string? WeatherProvider);

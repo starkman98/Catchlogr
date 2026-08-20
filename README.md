@@ -13,14 +13,17 @@ A cross-platform fishing log application built with .NET MAUI (mobile) and ASP.N
 ## 🧠 Tech Stack
 
 ### Backend
+
 - ASP.NET Core Web API
 - Entity Framework Core
 - PostgreSQL (Docker)
 
 ### Frontend (Mobile)
+
 - .NET MAUI
 
 ### Testing
+
 - xUnit
 
 ---
@@ -82,6 +85,7 @@ docker-compose up -d
 ```
 
 This starts a local PostgreSQL instance:
+
 - **Host**: `localhost`
 - **Port**: `5432`
 - **Database**: `fishinglog_dev`
@@ -96,6 +100,7 @@ dotnet ef database update
 ```
 
 > **Note**: If you don't have EF Core tools installed:
+>
 > ```bash
 > dotnet tool install --global dotnet-ef
 > ```
@@ -108,6 +113,7 @@ dotnet run
 ```
 
 The API will be available at:
+
 - HTTPS: `https://localhost:5001`
 - HTTP: `http://localhost:5000`
 - Swagger UI: `https://localhost:5001/swagger`
@@ -115,11 +121,13 @@ The API will be available at:
 ### 5. Run the Mobile App
 
 **Option A: Visual Studio**
+
 1. Set `FishingLog.Mobile` as the startup project
 2. Select your target platform (Android/iOS/Windows)
 3. Press F5 to run
 
 **Option B: Command Line**
+
 ```bash
 cd src/FishingLog.Mobile
 
@@ -139,7 +147,8 @@ dotnet build -t:Run -f net10.0-windows10.0.19041.0
 
 The API uses standard ASP.NET Core configuration files:
 
-**`src/FishingLog.Api/appsettings.Development.json`** (local dev):
+`src/FishingLog.Api/appsettings.Development.json` (local dev):
+
 ```json
 {
   "ConnectionStrings": {
@@ -152,7 +161,8 @@ The API uses standard ASP.NET Core configuration files:
 
 The mobile app uses embedded JSON configuration files:
 
-**`src/FishingLog.Mobile/appsettings.Development.json`** (Debug builds):
+`src/FishingLog.Mobile/appsettings.Development.json` (Debug builds):
+
 ```json
 {
   "Api": {
@@ -161,7 +171,8 @@ The mobile app uses embedded JSON configuration files:
 }
 ```
 
-**`src/FishingLog.Mobile/appsettings.json`** (Release builds):
+`src/FishingLog.Mobile/appsettings.json` (Release builds):
+
 ```json
 {
   "Api": {
@@ -177,16 +188,16 @@ See [docs/MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) for details.
 ### Running Both API and Mobile Together
 
 1. **Terminal 1** - Start PostgreSQL:
+
    ```bash
    docker-compose up
    ```
-
 2. **Terminal 2** - Run API:
+
    ```bash
    cd src/FishingLog.Api
    dotnet watch run
    ```
-
 3. **Visual Studio** - Run Mobile app (F5)
 
 ### Testing API Endpoints
@@ -204,6 +215,7 @@ curl https://localhost:5001/api/fishing-trips
 ### Connecting Mobile to API
 
 **Android Emulator**: Use `10.0.2.2` instead of `localhost`:
+
 ```json
 {
   "Api": {
@@ -213,6 +225,7 @@ curl https://localhost:5001/api/fishing-trips
 ```
 
 **Physical Device**: Use your computer's local IP address:
+
 ```json
 {
   "Api": {
@@ -291,6 +304,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the detailed development roadmap.
 ## 🛠️ Tech Stack
 
 ### Backend
+
 - **.NET 10** - Runtime
 - **ASP.NET Core** - Web API framework
 - **Entity Framework Core** - ORM
@@ -298,11 +312,13 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the detailed development roadmap.
 - **Minimal APIs** - Endpoint definition
 
 ### Mobile
+
 - **.NET MAUI** - Cross-platform framework
 - **sqlite-net-pcl** - Local SQLite database
 - **CommunityToolkit.Mvvm** - MVVM helpers
 
 ### DevOps
+
 - **Docker** - Containerization
 - **Docker Compose** - Local development orchestration
 
