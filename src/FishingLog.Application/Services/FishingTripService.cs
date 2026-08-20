@@ -3,6 +3,8 @@ using FishingLog.Application.Interfaces;
 using FishingLog.Contracts.FishingTripDTOs;
 using FishingLog.Domain.Entities;
 using FishingLog.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace FishingLog.Application.Services;
 
@@ -13,13 +15,17 @@ namespace FishingLog.Application.Services;
 public class FishingTripService : IFishingTripService
 {
     private readonly IFishingTripRepository _repository;
+    private readonly IWeatherService _weatherService;
+    private readonly ILogger<FishingTripService> _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="FishingTripService"/>.
     /// </summary>
-    public FishingTripService(IFishingTripRepository repository)
+    public FishingTripService(IFishingTripRepository repository, IWeatherService weatherService, ILogger<FishingTripService> logger)
     {
         _repository = repository;
+        _weatherService = weatherService;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -55,6 +61,8 @@ public class FishingTripService : IFishingTripService
 
         var trip = MapFromCreateToTrip(request);
 
+        await TryEnrichWeatherAsync(trip, ct);
+
         await _repository.AddAsync(trip, ct);
         return MapFromTripToResponse(trip);
     }
@@ -68,8 +76,22 @@ public class FishingTripService : IFishingTripService
         var trip = await _repository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Trip {id} not found");
 
+        var requestStartTimeUtc = DateTime.SpecifyKind(
+            request.StartTime, DateTimeKind.Utc);
+
+        var weatherInputsChanged =
+            trip.Latitude != request.Latitude ||
+            trip.Longitude != request.Longitude ||
+            trip.StartTime != requestStartTimeUtc;
+
         ApplyUpdate(trip, request);
 
+        if (weatherInputsChanged)
+            ClearWeather(trip);
+
+        if (trip.WeatherSampleTimeUtc is null)
+            await TryEnrichWeatherAsync(trip, ct);
+        
         await _repository.UpdateAsync(trip, ct);
         return MapFromTripToResponse(trip);
     }
@@ -81,6 +103,53 @@ public class FishingTripService : IFishingTripService
             ?? throw new NotFoundException($"Trip {id} not found.");
 
         await _repository.DeleteAsync(id, ct);
+    }
+
+    private async Task TryEnrichWeatherAsync(FishingTrip trip, CancellationToken ct = default)
+    {
+        if (trip.Latitude is null || trip.Longitude is null) return;
+
+        try
+        {
+            var weather = await _weatherService.GetWeatherAsync(trip.Latitude.Value, trip.Longitude.Value, trip.StartTime, ct);
+            if (weather is null) return;
+
+            trip.AirTemperatureC = weather.AirTemperatureC;
+            trip.WeatherCode = weather.WeatherCode;
+            trip.WindSpeedMps = weather.WindSpeedMps;
+            trip.WindDirectionDegrees = weather.WindDirectionDegrees;
+            trip.PressureHpa = weather.PressureHpa;
+            trip.WeatherSampleTimeUtc = weather.WeatherSampleTimeUtc;
+            trip.WeatherProvider = weather.WeatherProvider;
+        }
+        catch (OperationCanceledException)
+            when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                or OperationCanceledException
+                or TimeoutException
+                or JsonException
+                or NotSupportedException)
+        {
+            _logger.LogWarning(
+                "Failed to enrich weather for trip {TripId}. Error type {ErrorType}",
+                trip.Id,
+                ex.GetType().Name);
+        }
+    }
+
+    private static void ClearWeather(FishingTrip trip)
+    {
+        trip.AirTemperatureC = null;
+        trip.WeatherCode = null;
+        trip.WindSpeedMps = null;
+        trip.WindDirectionDegrees = null;
+        trip.PressureHpa = null;
+        trip.WeatherSampleTimeUtc = null;
+        trip.WeatherProvider = null;
     }
 
     // -------------------------------------------------------------------------

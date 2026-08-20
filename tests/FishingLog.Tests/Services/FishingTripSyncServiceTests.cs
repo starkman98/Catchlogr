@@ -270,6 +270,13 @@ public class FishingTripSyncServiceTests
         EndTime: null,
         Note: null,
         CreatedAt: DateTime.UtcNow,
-        LastModified: lastModified ?? DateTime.UtcNow
+        LastModified: lastModified ?? DateTime.UtcNow,
+        AirTemperatureC: 14.2,
+        WeatherCode: 2,
+        WindSpeedMps: 3.1,
+        WindDirectionDegrees: 225,
+        PressureHpa: 1012.4,
+        WeatherSampleTimeUtc: DateTime.UtcNow,
+        WeatherProvider: "Open-Meteo"
         );
 }

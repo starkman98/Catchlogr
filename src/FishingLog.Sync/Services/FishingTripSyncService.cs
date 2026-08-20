@@ -236,7 +236,14 @@ public class FishingTripSyncService : IFishingTripSyncService
         StartTime = r.StartTime,
         EndTime = r.EndTime,
         Note = r.Note,
-        CreatedAt = r.CreatedAt
+        CreatedAt = r.CreatedAt,
+        AirTemperatureC = r.AirTemperatureC,
+        WeatherCode = r.WeatherCode,
+        WindSpeedMps = r.WindSpeedMps,
+        WindDirectionDegrees = r.WindDirectionDegrees,
+        PressureHpa = r.PressureHpa,
+        WeatherSampleTimeUtc = r.WeatherSampleTimeUtc,
+        WeatherProvider = r.WeatherProvider
     };
 
     private static void ApplyRemoteToLocal(FishingTripLocalEntity local, FishingTripResponse remote)
@@ -254,5 +261,12 @@ public class FishingTripSyncService : IFishingTripSyncService
         local.LastModifiedUtc = remote.LastModified;
         local.IsDirty = false;
         local.IsDeleted = false;
+        local.AirTemperatureC = remote.AirTemperatureC;
+        local.WeatherCode = remote.WeatherCode;
+        local.WindSpeedMps = remote.WindSpeedMps;
+        local.WindDirectionDegrees = remote.WindDirectionDegrees;
+        local.PressureHpa = remote.PressureHpa;
+        local.WeatherSampleTimeUtc = remote.WeatherSampleTimeUtc;
+        local.WeatherProvider = remote.WeatherProvider;
     }
 }

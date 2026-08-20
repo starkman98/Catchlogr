@@ -1,9 +1,11 @@
 ﻿using FishingLog.Application.Exceptions;
+using FishingLog.Application.Interfaces;
 using FishingLog.Application.Services;
 using FishingLog.Contracts.FishingTripDTOs;
 using FishingLog.Domain.Entities;
 using FishingLog.Domain.Interfaces;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 
@@ -20,12 +22,16 @@ public class FishingTripServiceTests
     // The fake repository lets us control what it "returns" in each test.
     // -----------------------------------------------------------------------
     private readonly IFishingTripRepository _repository;
+    private readonly IWeatherService _weatherService;
+    private readonly ILogger<FishingTripService> _logger;
     private readonly FishingTripService _sut; // sut = System Under Test
 
     public FishingTripServiceTests()
     {
         _repository = Substitute.For<IFishingTripRepository>();
-        _sut = new FishingTripService(_repository);
+        _weatherService = Substitute.For<IWeatherService>();
+        _logger = Substitute.For<ILogger<FishingTripService>>();
+        _sut = new FishingTripService(_repository, _weatherService, _logger);
     }
 
     // -----------------------------------------------------------------------
