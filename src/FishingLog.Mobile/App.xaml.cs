@@ -2,7 +2,7 @@
 
 namespace FishingLog.Mobile;
 
-public partial class App : Application
+public partial class App : Microsoft.Maui.Controls.Application
 {
 	private readonly ILocalDatabase _localDatabase;
 	public App(ILocalDatabase localDatabase)

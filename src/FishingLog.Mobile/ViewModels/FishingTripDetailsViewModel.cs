@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FishingLog.Application.Weather;
+using FishingLog.Mobile.Presentation;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Entities;
 using System.Collections.ObjectModel;
@@ -12,6 +14,8 @@ namespace FishingLog.Mobile.ViewModels;
 [QueryProperty(nameof(TripLocalIdQuery), "tripLocalId")]
 public partial class FishingTripDetailsViewModel : BaseViewModel
 {
+    private static readonly Uri WeatherProviderUri = new("https://open-meteo.com/");
+
     private readonly IFishingTripLocalRepository _tripRepo;
     private readonly ICatchLocalRepository _catchRepo;
     private readonly ISyncOrchestrator _syncOrchestrator;
@@ -52,6 +56,36 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
 
     /// <summary>True while the page is running pull-to-refresh sync.</summary>
     [ObservableProperty] public partial bool IsRefreshing { get; set; }
+
+    /// <summary>True when provider weather is available for the selected trip.</summary>
+    [ObservableProperty] public partial bool IsWeatherAvailable { get; set; }
+
+    /// <summary>App-native symbol representing the WMO weather condition.</summary>
+    [ObservableProperty] public partial string WeatherIcon { get; set; } = string.Empty;
+
+    /// <summary>Readable description of the WMO weather condition.</summary>
+    [ObservableProperty] public partial string WeatherCondition { get; set; } = string.Empty;
+
+    /// <summary>Formatted air temperature measured in degrees Celsius.</summary>
+    [ObservableProperty] public partial string AirTemperature { get; set; } = string.Empty;
+
+    /// <summary>Formatted wind speed measured in metres per second.</summary>
+    [ObservableProperty] public partial string WindSpeed { get; set; } = string.Empty;
+
+    /// <summary>Arrow showing the direction in which the wind travels.</summary>
+    [ObservableProperty] public partial string WindDirectionArrow { get; set; } = string.Empty;
+
+    /// <summary>Formatted meteorological direction from which the wind originates.</summary>
+    [ObservableProperty] public partial string WindDirectionDegrees { get; set; } = string.Empty;
+
+    /// <summary>Formatted mean sea-level pressure measured in hectopascals.</summary>
+    [ObservableProperty] public partial string Pressure { get; set; } = string.Empty;
+
+    /// <summary>Local display time represented by the provider weather sample.</summary>
+    [ObservableProperty] public partial string WeatherSampleTime { get; set; } = string.Empty;
+
+    /// <summary>Visible attribution for the weather-data provider.</summary>
+    [ObservableProperty] public partial string WeatherAttribution { get; set; } = string.Empty;
 
     /// <summary>Controls visibility of the end date fields.</summary>
     public bool IsEndDateVisible => HasEndDate;
@@ -101,6 +135,7 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
         Name = trip.Name;
         LocationName = trip.LocationName;
         Note = trip.Note;
+        PopulateWeather(trip);
 
         var localStart = trip.StartTime.ToLocalTime();
         StartDate = localStart.Date;
@@ -119,6 +154,40 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
         var catches = await _catchRepo.GetByTripIdAsync(_tripLocalId);
         Catches = new ObservableCollection<CatchLocalEntity>(catches);
     }
+
+    private void PopulateWeather(FishingTripLocalEntity trip)
+    {
+        IsWeatherAvailable = trip.WeatherSampleTimeUtc.HasValue;
+
+        if (!IsWeatherAvailable)
+        {
+            WeatherIcon = string.Empty;
+            WeatherCondition = string.Empty;
+            AirTemperature = string.Empty;
+            WindSpeed = string.Empty;
+            WindDirectionArrow = string.Empty;
+            WindDirectionDegrees = string.Empty;
+            Pressure = string.Empty;
+            WeatherSampleTime = string.Empty;
+            WeatherAttribution = string.Empty;
+            return;
+        }
+
+        WeatherIcon = WeatherPresentationFormatter.GetConditionIcon(trip.WeatherCode);
+        WeatherCondition = WmoWeatherCodeDescriptions.GetDescription(trip.WeatherCode);
+        AirTemperature = WeatherPresentationFormatter.FormatTemperature(trip.AirTemperatureC);
+        WindSpeed = WeatherPresentationFormatter.FormatWindSpeed(trip.WindSpeedMps);
+        WindDirectionArrow = WeatherPresentationFormatter.GetWindDirectionArrow(trip.WindDirectionDegrees);
+        WindDirectionDegrees = WeatherPresentationFormatter.FormatWindDirectionDegrees(trip.WindDirectionDegrees);
+        Pressure = WeatherPresentationFormatter.FormatPressure(trip.PressureHpa);
+        WeatherSampleTime = WeatherPresentationFormatter.FormatSampleTime(trip.WeatherSampleTimeUtc!.Value);
+        WeatherAttribution = WeatherPresentationFormatter.FormatAttribution(trip.WeatherProvider);
+    }
+
+    /// <summary>Opens the weather provider's website for attribution details.</summary>
+    [RelayCommand]
+    private async Task OpenWeatherProviderAsync()
+        => await Launcher.Default.OpenAsync(WeatherProviderUri);
 
     /// <summary>Runs a full sync and reloads the selected trip and its catches.</summary>
     [RelayCommand]
