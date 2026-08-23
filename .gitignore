@@ -462,3 +462,4 @@ Temporary Items
 # Entity Framework Core
 **/Migrations/*.Designer.cs
 !**/Migrations/*_Initial.Designer.cs
+!**/Migrations/*_AddFishingTripMoonPhase.Designer.cs

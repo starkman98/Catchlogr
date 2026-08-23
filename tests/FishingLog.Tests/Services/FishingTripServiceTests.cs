@@ -4,6 +4,7 @@ using FishingLog.Application.Services;
 using FishingLog.Application.Weather;
 using FishingLog.Contracts.FishingTripDTOs;
 using FishingLog.Domain.Entities;
+using FishingLog.Domain.Enums;
 using FishingLog.Domain.Interfaces;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public class FishingTripServiceTests
     // -----------------------------------------------------------------------
     private readonly IFishingTripRepository _repository;
     private readonly IWeatherService _weatherService;
+    private readonly IMoonPhaseService _moonPhaseService;
     private readonly ILogger<FishingTripService> _logger;
     private readonly FishingTripService _sut; // sut = System Under Test
 
@@ -31,8 +33,14 @@ public class FishingTripServiceTests
     {
         _repository = Substitute.For<IFishingTripRepository>();
         _weatherService = Substitute.For<IWeatherService>();
+        _moonPhaseService = Substitute.For<IMoonPhaseService>();
+        _moonPhaseService.Calculate(Arg.Any<DateTime>()).Returns(MoonPhase.FullMoon);
         _logger = Substitute.For<ILogger<FishingTripService>>();
-        _sut = new FishingTripService(_repository, _weatherService, _logger);
+        _sut = new FishingTripService(
+            _repository,
+            _weatherService,
+            _moonPhaseService,
+            _logger);
     }
 
     // -----------------------------------------------------------------------
@@ -117,9 +125,11 @@ public class FishingTripServiceTests
         result.Should().NotBeNull();
         result.Id.Should().NotBeEmpty();
         result.Name.Should().Be("Test trip");
+        result.MoonPhase.Should().Be(nameof(MoonPhase.FullMoon));
 
         // Verify the repo's AddAsync was actually called once
         await _repository.Received(1).AddAsync(Arg.Any<FishingTrip>(), TestContext.Current.CancellationToken);
+        _moonPhaseService.Received(1).Calculate(request.StartTime);
         await _weatherService.DidNotReceive().GetWeatherAsync(
             Arg.Any<double>(),
             Arg.Any<double>(),
@@ -344,6 +354,49 @@ public class FishingTripServiceTests
             trip.Longitude.Value,
             newStartTime,
             TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangingStartTime_RecalculatesExistingMoonPhase()
+    {
+        var trip = BuildTripWithWeather();
+        trip.MoonPhase = MoonPhase.FirstQuarter;
+        var newStartTime = trip.StartTime.AddDays(4);
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        _moonPhaseService.Calculate(newStartTime).Returns(MoonPhase.FullMoon);
+        var request = BuildMatchingUpdateRequest(trip) with
+        {
+            StartTime = newStartTime
+        };
+
+        var result = await _sut.UpdateAsync(
+            trip.Id,
+            request,
+            TestContext.Current.CancellationToken);
+
+        result.MoonPhase.Should().Be(nameof(MoonPhase.FullMoon));
+        _moonPhaseService.Received(1).Calculate(newStartTime);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_LegacyTrip_DoesNotAddMoonPhase()
+    {
+        var trip = BuildTrip("Legacy trip");
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        var request = BuildMatchingUpdateRequest(trip) with
+        {
+            StartTime = trip.StartTime.AddDays(1)
+        };
+
+        var result = await _sut.UpdateAsync(
+            trip.Id,
+            request,
+            TestContext.Current.CancellationToken);
+
+        result.MoonPhase.Should().BeNull();
+        _moonPhaseService.DidNotReceive().Calculate(Arg.Any<DateTime>());
     }
 
     // -----------------------------------------------------------------------

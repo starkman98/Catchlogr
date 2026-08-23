@@ -72,4 +72,10 @@ public class FishingTrip
 
     /// <summary>Name of the weather-data provider.</summary>
     public string? WeatherProvider { get; set; }
+
+    /// <summary>
+    /// Server-calculated lunar phase at the trip start time.
+    /// Null for trips created before moon-phase enrichment was introduced.
+    /// </summary>
+    public Enums.MoonPhase? MoonPhase { get; set; }
 }

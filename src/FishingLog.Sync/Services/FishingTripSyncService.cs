@@ -319,7 +319,8 @@ public class FishingTripSyncService : IFishingTripSyncService
         WindDirectionDegrees = r.WindDirectionDegrees,
         PressureHpa = r.PressureHpa,
         WeatherSampleTimeUtc = r.WeatherSampleTimeUtc,
-        WeatherProvider = r.WeatherProvider
+        WeatherProvider = r.WeatherProvider,
+        MoonPhase = r.MoonPhase
     };
 
     private static void ApplyRemoteToLocal(FishingTripLocalEntity local, FishingTripResponse remote)
@@ -344,5 +345,6 @@ public class FishingTripSyncService : IFishingTripSyncService
         local.PressureHpa = remote.PressureHpa;
         local.WeatherSampleTimeUtc = remote.WeatherSampleTimeUtc;
         local.WeatherProvider = remote.WeatherProvider;
+        local.MoonPhase = remote.MoonPhase;
     }
 }

@@ -16,15 +16,21 @@ public class FishingTripService : IFishingTripService
 {
     private readonly IFishingTripRepository _repository;
     private readonly IWeatherService _weatherService;
+    private readonly IMoonPhaseService _moonPhaseService;
     private readonly ILogger<FishingTripService> _logger;
 
     /// <summary>
     /// Initializes a new instance of <see cref="FishingTripService"/>.
     /// </summary>
-    public FishingTripService(IFishingTripRepository repository, IWeatherService weatherService, ILogger<FishingTripService> logger)
+    public FishingTripService(
+        IFishingTripRepository repository,
+        IWeatherService weatherService,
+        IMoonPhaseService moonPhaseService,
+        ILogger<FishingTripService> logger)
     {
         _repository = repository;
         _weatherService = weatherService;
+        _moonPhaseService = moonPhaseService;
         _logger = logger;
     }
 
@@ -60,6 +66,7 @@ public class FishingTripService : IFishingTripService
             throw new BusinessRuleException("EndTime must be after StartTime.");
 
         var trip = MapFromCreateToTrip(request);
+        trip.MoonPhase = _moonPhaseService.Calculate(trip.StartTime);
 
         await TryEnrichWeatherAsync(trip, ct);
 
@@ -83,8 +90,14 @@ public class FishingTripService : IFishingTripService
             trip.Latitude != request.Latitude ||
             trip.Longitude != request.Longitude ||
             trip.StartTime != requestStartTimeUtc;
+        var shouldRecalculateMoonPhase =
+            trip.MoonPhase.HasValue &&
+            trip.StartTime != requestStartTimeUtc;
 
         ApplyUpdate(trip, request);
+
+        if (shouldRecalculateMoonPhase)
+            trip.MoonPhase = _moonPhaseService.Calculate(trip.StartTime);
 
         if (weatherInputsChanged)
             ClearWeather(trip);
@@ -202,7 +215,8 @@ public class FishingTripService : IFishingTripService
         t.WindDirectionDegrees,
         t.PressureHpa,
         t.WeatherSampleTimeUtc,
-        t.WeatherProvider);
+        t.WeatherProvider,
+        t.MoonPhase?.ToString());
 
     private static FishingTrip MapFromCreateToTrip(CreateFishingTripRequest request) => new()
     {

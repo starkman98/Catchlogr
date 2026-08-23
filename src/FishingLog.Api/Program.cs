@@ -32,6 +32,7 @@ builder.Services.AddScoped<ICatchRepository, CatchRepository>();
 // --- Services ---
 builder.Services.AddScoped<IFishingTripService, FishingTripService>();
 builder.Services.AddScoped<ICatchService, CatchService>();
+builder.Services.AddSingleton<IMoonPhaseService, MoonPhaseService>();
 
 // --- Validators (registers all validators in the Application assembly) ---
 builder.Services.AddValidatorsFromAssemblyContaining<CreateFishingTripRequestValidator>();

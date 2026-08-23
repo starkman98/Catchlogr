@@ -230,10 +230,10 @@
 
 ### 3.2 Moon Phase Calculation
 
-- [ ] Create `IMoonPhaseService` interface
-- [ ] Implement MoonPhaseService (calculate phase based on date)
-- [ ] Add MoonPhase property to FishingTrip
-- [ ] Display moon phase icon on trip cards
+- [x] Create `IMoonPhaseService` interface
+- [x] Implement MoonPhaseService (calculate phase based on date)
+- [x] Add MoonPhase property to FishingTrip
+- [x] Display moon phase icon in the trip-details weather card
 
 ---
 

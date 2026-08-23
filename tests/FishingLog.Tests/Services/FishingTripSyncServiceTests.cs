@@ -446,7 +446,8 @@ public class FishingTripSyncServiceTests
         WindDirectionDegrees: 225,
         PressureHpa: 1012.4,
         WeatherSampleTimeUtc: DateTime.UtcNow,
-        WeatherProvider: "Open-Meteo"
+        WeatherProvider: "Open-Meteo",
+        MoonPhase: "WaxingGibbous"
         );
 
     private static FishingTripResponse BuildServerTripWithoutWeather(Guid? id = null) => new(
@@ -468,7 +469,8 @@ public class FishingTripSyncServiceTests
         WindDirectionDegrees: null,
         PressureHpa: null,
         WeatherSampleTimeUtc: null,
-        WeatherProvider: null);
+        WeatherProvider: null,
+        MoonPhase: "WaxingGibbous");
 
     private static bool HasWeatherFrom(
         FishingTripLocalEntity local,
@@ -479,5 +481,6 @@ public class FishingTripSyncServiceTests
         && local.WindDirectionDegrees == remote.WindDirectionDegrees
         && local.PressureHpa == remote.PressureHpa
         && local.WeatherSampleTimeUtc == remote.WeatherSampleTimeUtc
-        && local.WeatherProvider == remote.WeatherProvider;
+        && local.WeatherProvider == remote.WeatherProvider
+        && local.MoonPhase == remote.MoonPhase;
 }

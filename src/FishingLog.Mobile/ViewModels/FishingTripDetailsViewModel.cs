@@ -58,7 +58,20 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
     [ObservableProperty] public partial bool IsRefreshing { get; set; }
 
     /// <summary>True when provider weather is available for the selected trip.</summary>
-    [ObservableProperty] public partial bool IsWeatherAvailable { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConditionsCardAvailable))]
+    public partial bool IsWeatherAvailable { get; set; }
+
+    /// <summary>True when a server-calculated moon phase is available.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConditionsCardAvailable))]
+    public partial bool IsMoonPhaseAvailable { get; set; }
+
+    /// <summary>Lunar symbol representing the moon phase at the trip start.</summary>
+    [ObservableProperty] public partial string MoonPhaseIcon { get; set; } = string.Empty;
+
+    /// <summary>Readable moon-phase name at the trip start.</summary>
+    [ObservableProperty] public partial string MoonPhaseName { get; set; } = string.Empty;
 
     /// <summary>App-native symbol representing the WMO weather condition.</summary>
     [ObservableProperty] public partial string WeatherIcon { get; set; } = string.Empty;
@@ -89,6 +102,9 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
 
     /// <summary>Controls visibility of the end date fields.</summary>
     public bool IsEndDateVisible => HasEndDate;
+
+    /// <summary>Controls visibility of the combined weather and moon-phase card.</summary>
+    public bool IsConditionsCardAvailable => IsWeatherAvailable || IsMoonPhaseAvailable;
 
     /// <summary>Number of catches connected to the selected trip.</summary>
     public int CatchesCount => Catches.Count;
@@ -136,6 +152,7 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
         LocationName = trip.LocationName;
         Note = trip.Note;
         PopulateWeather(trip);
+        PopulateMoonPhase(trip);
 
         var localStart = trip.StartTime.ToLocalTime();
         StartDate = localStart.Date;
@@ -182,6 +199,13 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
         Pressure = WeatherPresentationFormatter.FormatPressure(trip.PressureHpa);
         WeatherSampleTime = WeatherPresentationFormatter.FormatSampleTime(trip.WeatherSampleTimeUtc!.Value);
         WeatherAttribution = WeatherPresentationFormatter.FormatAttribution(trip.WeatherProvider);
+    }
+
+    private void PopulateMoonPhase(FishingTripLocalEntity trip)
+    {
+        MoonPhaseIcon = MoonPhasePresentationFormatter.GetIcon(trip.MoonPhase);
+        MoonPhaseName = MoonPhasePresentationFormatter.GetDisplayName(trip.MoonPhase);
+        IsMoonPhaseAvailable = !string.IsNullOrEmpty(MoonPhaseIcon);
     }
 
     /// <summary>Opens the weather provider's website for attribution details.</summary>

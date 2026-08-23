@@ -32,6 +32,10 @@ public sealed class FishingTripConfiguration
         builder.Property(t => t.WeatherProvider)
             .HasMaxLength(100);
 
+        builder.Property(t => t.MoonPhase)
+            .HasConversion<string>()
+            .HasMaxLength(32);
+
         builder.Property(t => t.StartTime)
             .HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
 

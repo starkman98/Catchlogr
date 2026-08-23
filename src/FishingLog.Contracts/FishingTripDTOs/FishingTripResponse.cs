@@ -23,4 +23,5 @@ public record FishingTripResponse(
     double? WindDirectionDegrees,
     double? PressureHpa,
     DateTime? WeatherSampleTimeUtc,
-    string? WeatherProvider);
+    string? WeatherProvider,
+    string? MoonPhase);
