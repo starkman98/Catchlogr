@@ -199,37 +199,54 @@
                                 </SwipeItems>
                             </SwipeView.RightItems>
 
-                            <Grid Padding="0,12" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                            <Grid Padding="0,12" ColumnDefinitions="72,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12">
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer
                                         Command="{Binding Source={x:Reference page}, Path=BindingContext.SelectCatchCommand}"
                                         CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
 
-                                <Label
+                                <Border
                                     Grid.Row="0"
                                     Grid.Column="0"
+                                    Grid.RowSpan="3"
+                                    HeightRequest="64"
+                                    IsVisible="{Binding HasPhoto}"
+                                    StrokeThickness="0"
+                                    WidthRequest="64">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="8" />
+                                    </Border.StrokeShape>
+                                    <Image
+                                        Aspect="AspectFill"
+                                        SemanticProperties.Description="{Binding Species, StringFormat='Photo of {0}'}"
+                                        Source="{Binding DisplayPhotoSource}" />
+                                </Border>
+
+                                <Label
+                                    Grid.Row="0"
+                                    Grid.Column="1"
                                     FontAttributes="Bold"
                                     FontSize="16"
                                     Text="{Binding Species}" />
 
                                 <Label
                                     Grid.Row="1"
-                                    Grid.Column="0"
+                                    Grid.Column="1"
                                     FontSize="13"
                                     Text="{Binding CaughtAt, StringFormat='{0:MMM dd, yyyy HH:mm}'}"
                                     TextColor="Gray" />
 
                                 <Label
                                     Grid.Row="2"
-                                    Grid.Column="0"
+                                    Grid.Column="1"
                                     FontSize="13"
                                     Text="{Binding BaitName}"
                                     TextColor="Gray" />
 
                                 <BoxView
                                     Grid.Row="0"
-                                    Grid.Column="1"
+                                    Grid.Column="2"
                                     Grid.RowSpan="3"
                                     WidthRequest="8"
                                     HeightRequest="8"

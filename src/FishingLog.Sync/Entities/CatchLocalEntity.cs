@@ -2,6 +2,9 @@
 
 namespace FishingLog.Sync.Entities;
 
+/// <summary>
+/// Represents an offline-first catch stored in the mobile SQLite database.
+/// </summary>
 public class CatchLocalEntity
 {
     /// <summary>Local auto-increment primary key. Never sent to the server.</summary>
@@ -47,6 +50,23 @@ public class CatchLocalEntity
 
     /// <summary>An URL to a photo of the catch.</summary>
     public string? PhotoUrl { get; set; }
+
+    /// <summary>Private on-device path used for offline photo display and upload.</summary>
+    public string? LocalPhotoPath { get; set; }
+
+    /// <summary>True when <see cref="LocalPhotoPath"/> still needs to be uploaded.</summary>
+    public bool IsPhotoUploadPending { get; set; }
+
+    /// <summary>Previous server photo URL that should be deleted after catch sync succeeds.</summary>
+    public string? PhotoUrlPendingDeletion { get; set; }
+
+    /// <summary>Best available source for displaying the photo on this device.</summary>
+    [Ignore]
+    public string? DisplayPhotoSource => LocalPhotoPath ?? PhotoUrl;
+
+    /// <summary>True when a local or remote photo is available.</summary>
+    [Ignore]
+    public bool HasPhoto => !string.IsNullOrWhiteSpace(DisplayPhotoSource);
 
     /// <summary>Free-text note about the catch.</summary>
     public string? Note { get; set; }

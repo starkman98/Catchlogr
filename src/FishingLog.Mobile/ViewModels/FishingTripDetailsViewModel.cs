@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using FishingLog.Application.Weather;
 using FishingLog.Mobile.Presentation;
+using FishingLog.Mobile.Services.Photos;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Entities;
 using System.Collections.ObjectModel;
@@ -19,6 +20,7 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
     private readonly IFishingTripLocalRepository _tripRepo;
     private readonly ICatchLocalRepository _catchRepo;
     private readonly ISyncOrchestrator _syncOrchestrator;
+    private readonly IPhotoCaptureService _photoCaptureService;
 
     private readonly SemaphoreSlim _syncLock = new(1, 1);
     private int _tripLocalId;
@@ -130,11 +132,13 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
     public FishingTripDetailsViewModel(
         IFishingTripLocalRepository tripRepo,
         ICatchLocalRepository catchRepo,
-        ISyncOrchestrator syncOrchestrator)
+        ISyncOrchestrator syncOrchestrator,
+        IPhotoCaptureService photoCaptureService)
     {
         _tripRepo = tripRepo;
         _catchRepo = catchRepo;
         _syncOrchestrator = syncOrchestrator;
+        _photoCaptureService = photoCaptureService;
         Title = "Trip Details";
     }
 
@@ -262,6 +266,7 @@ public partial class FishingTripDetailsViewModel : BaseViewModel
             return;
 
         await _catchRepo.DeleteAsync(localCatch.Id);
+        await _photoCaptureService.DeleteAsync(localCatch.LocalPhotoPath);
         Catches.Remove(localCatch);
         OnPropertyChanged(nameof(CatchesCount));
     }

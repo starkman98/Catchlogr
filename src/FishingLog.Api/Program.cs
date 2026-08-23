@@ -8,7 +8,9 @@ using FishingLog.Infrastructure.Persistence;
 using FishingLog.Infrastructure.Repositories;
 using FishingLog.Infrastructure.Location;
 using FishingLog.Infrastructure.Weather;
+using FishingLog.Infrastructure.Photos;
 using FluentValidation;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -33,6 +35,12 @@ builder.Services.AddScoped<ICatchRepository, CatchRepository>();
 builder.Services.AddScoped<IFishingTripService, FishingTripService>();
 builder.Services.AddScoped<ICatchService, CatchService>();
 builder.Services.AddSingleton<IMoonPhaseService, MoonPhaseService>();
+builder.Services.AddSingleton<IPhotoStorage>(_ =>
+{
+    var webRoot = builder.Environment.WebRootPath
+        ?? Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+    return new LocalPhotoStorage(Path.Combine(webRoot, "uploads"));
+});
 
 // --- Validators (registers all validators in the Application assembly) ---
 builder.Services.AddValidatorsFromAssemblyContaining<CreateFishingTripRequestValidator>();
@@ -103,10 +111,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowedConfiguredOrigins");
+var photoContentTypes = new FileExtensionContentTypeProvider();
+photoContentTypes.Mappings[".heic"] = "image/heic";
+photoContentTypes.Mappings[".heif"] = "image/heif";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = photoContentTypes
+});
 
 app.MapHealthChecks("/health");
 app.MapFishingTripEndpoints();
 app.MapCatchEndpoints();
 app.MapLocationEndpoints();
+app.MapPhotoEndpoints();
 
 app.Run();

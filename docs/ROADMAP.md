@@ -241,24 +241,24 @@
 
 ### 4.1 Photo Capture (Mobile)
 
-- [ ] Add camera permission to AndroidManifest.xml and Info.plist
-- [ ] Create photo capture service using MediaPicker
-- [ ] Save photo locally (app data folder)
-- [ ] Reference photo path in CatchLocalEntity
+- [x] Add camera permission to AndroidManifest.xml and Info.plist
+- [x] Create photo capture service using MediaPicker
+- [x] Save photo locally (app data folder)
+- [x] Reference photo path in CatchLocalEntity
 
 ### 4.2 Photo Upload (API)
 
-- [ ] Create blob storage account (Azure Blob or local file storage)
-- [ ] Create photo upload endpoint (`POST /api/photos`)
-- [ ] Accept multipart/form-data
-- [ ] Return photo URL
+- [x] Create blob storage account (Azure Blob or local file storage)
+- [x] Create photo upload endpoint (`POST /api/photos`)
+- [x] Accept multipart/form-data
+- [x] Return photo URL
 
 ### 4.3 Photo Sync
 
-- [ ] Extend CatchSyncService to upload photos before syncing catch
-- [ ] Store PhotoUrl from server in CatchLocalEntity
-- [ ] Display photos in catch list and details
-- [ ] Handle photo deletion
+- [x] Extend CatchSyncService to upload photos before syncing catch
+- [x] Store PhotoUrl from server in CatchLocalEntity
+- [x] Display photos in catch list and details
+- [x] Handle photo deletion
 
 ---
 

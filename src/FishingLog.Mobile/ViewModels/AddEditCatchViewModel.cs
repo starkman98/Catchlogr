@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FishingLog.Contracts.CatchDTOs;
+using FishingLog.Mobile.Services.Photos;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Entities;
 using System.Collections.ObjectModel;
@@ -14,9 +15,12 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly ICatchLocalRepository _catchRepo;
     private readonly IFishingTripLocalRepository _tripRepo;
+    private readonly IPhotoCaptureService _photoCaptureService;
 
     private int _tripLocalId;
     private int _catchLocalId;
+    private string? _originalLocalPhotoPath;
+    private string? _localPhotoPathPendingDeletion;
 
     /// <summary>Available bait type names for the picker.</summary>
     public ObservableCollection<string> BaitTypes { get; } = new(Enum.GetNames<BaitType>());
@@ -29,6 +33,24 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
 
     /// <summary>Optional catch weight in grams.</summary>
     [ObservableProperty] public partial int? Weight { get; set; }
+
+    /// <summary>Private on-device path used to preview and upload a captured photo.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PhotoSource))]
+    [NotifyPropertyChangedFor(nameof(HasPhoto))]
+    public partial string? LocalPhotoPath { get; set; }
+
+    /// <summary>Public URL assigned by the API after photo upload.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PhotoSource))]
+    [NotifyPropertyChangedFor(nameof(HasPhoto))]
+    public partial string? PhotoUrl { get; set; }
+
+    /// <summary>True when the local photo must be uploaded during the next sync.</summary>
+    [ObservableProperty] public partial bool IsPhotoUploadPending { get; set; }
+
+    /// <summary>Old server photo URL to remove after the catch update succeeds.</summary>
+    [ObservableProperty] public partial string? PhotoUrlPendingDeletion { get; set; }
 
     /// <summary>Optional notes for the catch.</summary>
     [ObservableProperty] public partial string? Note { get; set; }
@@ -66,15 +88,23 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
     /// <summary>True when editing an existing catch.</summary>
     public bool IsEditMode => _catchLocalId > 0;
 
+    /// <summary>Best available source for the photo preview.</summary>
+    public string? PhotoSource => LocalPhotoPath ?? PhotoUrl;
+
+    /// <summary>True when the form currently has a photo.</summary>
+    public bool HasPhoto => !string.IsNullOrWhiteSpace(PhotoSource);
+
     /// <summary>
     /// Initializes a new instance of <see cref="AddEditCatchViewModel"/>.
     /// </summary>
     public AddEditCatchViewModel(
         ICatchLocalRepository catchRepo,
-        IFishingTripLocalRepository tripRepo)
+        IFishingTripLocalRepository tripRepo,
+        IPhotoCaptureService photoCaptureService)
     {
         _catchRepo = catchRepo;
         _tripRepo = tripRepo;
+        _photoCaptureService = photoCaptureService;
         ResetForm();
     }
 
@@ -113,13 +143,77 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
         else
             await AddNewCatchAsync(caughtAtUtc);
 
+        await _photoCaptureService.DeleteAsync(_localPhotoPathPendingDeletion);
+        _localPhotoPathPendingDeletion = null;
         await Shell.Current.GoToAsync("..");
     }
 
     /// <summary>Navigates back without saving.</summary>
     [RelayCommand]
     private async Task CancelAsync()
-        => await Shell.Current.GoToAsync("..");
+    {
+        if (!string.Equals(LocalPhotoPath, _originalLocalPhotoPath, StringComparison.Ordinal))
+            await _photoCaptureService.DeleteAsync(LocalPhotoPath);
+
+        await Shell.Current.GoToAsync("..");
+    }
+
+    /// <summary>Opens the device camera and stores the captured photo privately.</summary>
+    [RelayCommand]
+    private async Task CapturePhotoAsync()
+    {
+        try
+        {
+            var capturedPath = await _photoCaptureService.CaptureAsync();
+            if (capturedPath is null)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(LocalPhotoPath))
+            {
+                if (string.Equals(LocalPhotoPath, _originalLocalPhotoPath, StringComparison.Ordinal))
+                    _localPhotoPathPendingDeletion = LocalPhotoPath;
+                else
+                    await _photoCaptureService.DeleteAsync(LocalPhotoPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(PhotoUrl))
+                PhotoUrlPendingDeletion ??= PhotoUrl;
+
+            LocalPhotoPath = capturedPath;
+            IsPhotoUploadPending = true;
+        }
+        catch (NotSupportedException ex)
+        {
+            await Shell.Current.DisplayAlertAsync("Camera unavailable", ex.Message, "OK");
+        }
+        catch (Exception)
+        {
+            await Shell.Current.DisplayAlertAsync(
+                "Photo error",
+                "The photo could not be captured. Please check the camera permission and try again.",
+                "OK");
+        }
+    }
+
+    /// <summary>Removes the selected photo from this catch.</summary>
+    [RelayCommand]
+    private async Task RemovePhotoAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(LocalPhotoPath))
+        {
+            if (string.Equals(LocalPhotoPath, _originalLocalPhotoPath, StringComparison.Ordinal))
+                _localPhotoPathPendingDeletion = LocalPhotoPath;
+            else
+                await _photoCaptureService.DeleteAsync(LocalPhotoPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(PhotoUrl))
+            PhotoUrlPendingDeletion ??= PhotoUrl;
+
+        LocalPhotoPath = null;
+        PhotoUrl = null;
+        IsPhotoUploadPending = false;
+    }
 
     private async Task LoadCatchAsync(int id)
     {
@@ -131,6 +225,11 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
         Species = localCatch.Species;
         Length = localCatch.Length;
         Weight = localCatch.Weight;
+        LocalPhotoPath = localCatch.LocalPhotoPath;
+        PhotoUrl = localCatch.PhotoUrl;
+        IsPhotoUploadPending = localCatch.IsPhotoUploadPending;
+        PhotoUrlPendingDeletion = localCatch.PhotoUrlPendingDeletion;
+        _originalLocalPhotoPath = localCatch.LocalPhotoPath;
         Note = localCatch.Note;
         Depth = localCatch.Depth;
         Latitude = localCatch.Latitude;
@@ -159,6 +258,10 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
             Species = Species.Trim(),
             Length = Length,
             Weight = Weight,
+            LocalPhotoPath = LocalPhotoPath,
+            PhotoUrl = PhotoUrl,
+            IsPhotoUploadPending = IsPhotoUploadPending,
+            PhotoUrlPendingDeletion = PhotoUrlPendingDeletion,
             Note = Note,
             CaughtAt = caughtAtUtc,
             Depth = Depth,
@@ -187,6 +290,10 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
         localCatch.Species = Species.Trim();
         localCatch.Length = Length;
         localCatch.Weight = Weight;
+        localCatch.LocalPhotoPath = LocalPhotoPath;
+        localCatch.PhotoUrl = PhotoUrl;
+        localCatch.IsPhotoUploadPending = IsPhotoUploadPending;
+        localCatch.PhotoUrlPendingDeletion = PhotoUrlPendingDeletion;
         localCatch.Note = Note;
         localCatch.CaughtAt = caughtAtUtc;
         localCatch.Depth = Depth;
@@ -207,6 +314,12 @@ public partial class AddEditCatchViewModel : BaseViewModel, IQueryAttributable
         Species = string.Empty;
         Length = null;
         Weight = null;
+        LocalPhotoPath = null;
+        PhotoUrl = null;
+        IsPhotoUploadPending = false;
+        PhotoUrlPendingDeletion = null;
+        _originalLocalPhotoPath = null;
+        _localPhotoPathPendingDeletion = null;
         Note = null;
         CaughtDate = DateTime.Today;
         CaughtTimeOfDay = DateTime.Now.TimeOfDay;

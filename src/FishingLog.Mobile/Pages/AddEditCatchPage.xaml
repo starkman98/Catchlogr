@@ -12,6 +12,35 @@
             <Label FontAttributes="Bold" Text="Species *" />
             <Entry Placeholder="e.g. Pike" Text="{Binding Species}" />
 
+            <Label FontAttributes="Bold" Margin="0,10,0,0" Text="Photo" />
+            <Border
+                HeightRequest="220"
+                IsVisible="{Binding HasPhoto}"
+                Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                StrokeThickness="1">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Image
+                    Aspect="AspectFill"
+                    SemanticProperties.Description="Photo of this catch"
+                    Source="{Binding PhotoSource}" />
+            </Border>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Button
+                    Grid.Column="0"
+                    Command="{Binding CapturePhotoCommand}"
+                    Text="Take Photo" />
+                <Button
+                    Grid.Column="1"
+                    BackgroundColor="Gray"
+                    Command="{Binding RemovePhotoCommand}"
+                    IsVisible="{Binding HasPhoto}"
+                    Text="Remove Photo"
+                    TextColor="White" />
+            </Grid>
+
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,10,0,0">
                 <VerticalStackLayout Grid.Column="0" Spacing="8">
                     <Label FontAttributes="Bold" Text="Length (cm)" />

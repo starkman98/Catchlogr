@@ -19,6 +19,7 @@ public class CatchSyncService : ICatchSyncService
     private readonly IFishingTripLocalRepository _tripRepository;
     private readonly ISyncMetadataRepository _syncMetadata;
     private readonly ICatchApiClient _apiClient;
+    private readonly IPhotoApiClient _photoApiClient;
     private readonly ILogger<CatchSyncService> _logger;
 
     /// <summary>
@@ -29,12 +30,14 @@ public class CatchSyncService : ICatchSyncService
         IFishingTripLocalRepository tripRepository,
         ISyncMetadataRepository syncMetadata,
         ICatchApiClient apiClient,
+        IPhotoApiClient photoApiClient,
         ILogger<CatchSyncService> logger)
     {
         _localRepository = localRepository;
         _tripRepository = tripRepository;
         _syncMetadata = syncMetadata;
         _apiClient = apiClient;
+        _photoApiClient = photoApiClient;
         _logger = logger;
     }
 
@@ -59,15 +62,15 @@ public class CatchSyncService : ICatchSyncService
 
             try
             {
-                if (dirtyCatch.ServerId is null)
-                {
-                    _logger.LogInformation("[Sync] Uploading new catch LocalId={Id} Species={Species}", dirtyCatch.Id, dirtyCatch.Species);
-                    await UploadNewCatchAsync(dirtyCatch, ct);
-                }
-                else if (dirtyCatch.IsDeleted)
+                if (dirtyCatch.IsDeleted)
                 {
                     _logger.LogInformation("[Sync] Deleting catch ServerId={ServerId}", dirtyCatch.ServerId);
                     await DeleteCatchOnServerAsync(dirtyCatch, ct);
+                }
+                else if (dirtyCatch.ServerId is null)
+                {
+                    _logger.LogInformation("[Sync] Uploading new catch LocalId={Id} Species={Species}", dirtyCatch.Id, dirtyCatch.Species);
+                    await UploadNewCatchAsync(dirtyCatch, ct);
                 }
                 else
                 {
@@ -98,7 +101,11 @@ public class CatchSyncService : ICatchSyncService
             return;
         }
 
-        var response = await _apiClient.CreateAsync(fishingTripServerId.Value, MapToCreateRequest(localCatch), ct);
+        var photoUrl = await UploadPhotoIfNeededAsync(localCatch, ct);
+        var response = await _apiClient.CreateAsync(
+            fishingTripServerId.Value,
+            MapToCreateRequest(localCatch, photoUrl),
+            ct);
         if (response is null)
             return;
 
@@ -107,7 +114,7 @@ public class CatchSyncService : ICatchSyncService
             return;
 
         ApplyRemoteToLocal(localCatch, response, trip);
-        await _localRepository.SaveFromServerAsync(localCatch, ct);
+        await CompletePhotoSyncAsync(localCatch, ct);
     }
 
     private async Task UpdateCatchOnServerAsync(CatchLocalEntity localCatch, CancellationToken ct)
@@ -115,7 +122,11 @@ public class CatchSyncService : ICatchSyncService
         if (!Guid.TryParse(localCatch.ServerId, out var serverId))
             return;
 
-        var response = await _apiClient.UpdateAsync(serverId, MapToUpdateRequest(localCatch), ct);
+        var photoUrl = await UploadPhotoIfNeededAsync(localCatch, ct);
+        var response = await _apiClient.UpdateAsync(
+            serverId,
+            MapToUpdateRequest(localCatch, photoUrl),
+            ct);
         if (response is null)
             return;
 
@@ -124,18 +135,20 @@ public class CatchSyncService : ICatchSyncService
             return;
 
         ApplyRemoteToLocal(localCatch, response, trip);
-        await _localRepository.SaveFromServerAsync(localCatch, ct);
+        await CompletePhotoSyncAsync(localCatch, ct);
     }
 
     private async Task DeleteCatchOnServerAsync(CatchLocalEntity localCatch, CancellationToken ct)
     {
         if (!Guid.TryParse(localCatch.ServerId, out var serverId))
         {
+            await DeleteRemotePhotosAsync(localCatch, ct);
             await _localRepository.PermanentlyDeleteAsync(localCatch.Id, ct);
             return;
         }
 
         await _apiClient.DeleteAsync(serverId, ct);
+        await DeleteRemotePhotosAsync(localCatch, ct);
         await _localRepository.PermanentlyDeleteAsync(localCatch.Id, ct);
     }
 
@@ -204,15 +217,17 @@ public class CatchSyncService : ICatchSyncService
         else
         {
             ApplyRemoteToLocal(existing, remoteCatch, localTrip);
+            existing.IsPhotoUploadPending = false;
+            existing.PhotoUrlPendingDeletion = null;
             await _localRepository.SaveFromServerAsync(existing, ct);
         }
     }
 
-    private static CreateCatchRequest MapToCreateRequest(CatchLocalEntity c) => new(
+    private static CreateCatchRequest MapToCreateRequest(CatchLocalEntity c, string? photoUrl) => new(
         c.Species,
         c.Length,
         c.Weight,
-        c.PhotoUrl,
+        photoUrl,
         c.Note,
         c.CaughtAt,
         c.Depth,
@@ -220,11 +235,11 @@ public class CatchSyncService : ICatchSyncService
         c.Longitude,
         MapToBaitDto(c));
 
-    private static UpdateCatchRequest MapToUpdateRequest(CatchLocalEntity c) => new(
+    private static UpdateCatchRequest MapToUpdateRequest(CatchLocalEntity c, string? photoUrl) => new(
         c.Species,
         c.Length,
         c.Weight,
-        c.PhotoUrl,
+        photoUrl,
         c.Note,
         c.CaughtAt,
         c.Depth,
@@ -261,6 +276,12 @@ public class CatchSyncService : ICatchSyncService
         CatchResponse remote,
         FishingTripLocalEntity trip)
     {
+        if (!local.IsPhotoUploadPending
+            && !string.Equals(local.PhotoUrl, remote.PhotoUrl, StringComparison.Ordinal))
+        {
+            local.LocalPhotoPath = null;
+        }
+
         local.ServerId = remote.Id.ToString();
         local.FishingTripLocalId = trip.Id;
         local.FishingTripServerId = remote.FishingTripId.ToString();
@@ -281,6 +302,53 @@ public class CatchSyncService : ICatchSyncService
         local.LastModifiedUtc = remote.LastModifiedAt;
         local.IsDirty = false;
         local.IsDeleted = false;
+    }
+
+    private async Task<string?> UploadPhotoIfNeededAsync(
+        CatchLocalEntity localCatch,
+        CancellationToken ct)
+    {
+        if (!localCatch.IsPhotoUploadPending)
+            return localCatch.PhotoUrl;
+
+        if (string.IsNullOrWhiteSpace(localCatch.LocalPhotoPath))
+            return null;
+
+        _logger.LogInformation("[Sync] Uploading photo for catch LocalId={Id}.", localCatch.Id);
+        var uploadedUrl = await _photoApiClient.UploadAsync(localCatch.LocalPhotoPath, ct);
+
+        // Persist the URL before syncing the catch. If the following catch request fails,
+        // the next sync reuses this upload instead of creating an orphaned duplicate.
+        localCatch.PhotoUrl = uploadedUrl;
+        localCatch.IsPhotoUploadPending = false;
+        await _localRepository.SaveFromServerAsync(localCatch, ct);
+
+        return uploadedUrl;
+    }
+
+    private async Task CompletePhotoSyncAsync(CatchLocalEntity localCatch, CancellationToken ct)
+    {
+        localCatch.IsPhotoUploadPending = false;
+        localCatch.IsDirty = !string.IsNullOrWhiteSpace(localCatch.PhotoUrlPendingDeletion);
+        await _localRepository.SaveFromServerAsync(localCatch, ct);
+
+        if (string.IsNullOrWhiteSpace(localCatch.PhotoUrlPendingDeletion))
+            return;
+
+        await _photoApiClient.DeleteAsync(localCatch.PhotoUrlPendingDeletion, ct);
+        localCatch.PhotoUrlPendingDeletion = null;
+        localCatch.IsDirty = false;
+        await _localRepository.SaveFromServerAsync(localCatch, ct);
+    }
+
+    private async Task DeleteRemotePhotosAsync(CatchLocalEntity localCatch, CancellationToken ct)
+    {
+        var photoUrls = new[] { localCatch.PhotoUrl, localCatch.PhotoUrlPendingDeletion }
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.Ordinal);
+
+        foreach (var photoUrl in photoUrls)
+            await _photoApiClient.DeleteAsync(photoUrl!, ct);
     }
 
     private async Task<Guid?> GetFishingTripServerIdAsync(CatchLocalEntity localCatch, CancellationToken ct)

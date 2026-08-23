@@ -3,11 +3,13 @@ using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Data.Repositories;
 using FishingLog.Mobile.Pages;
 using FishingLog.Mobile.Services;
+using FishingLog.Mobile.Services.Photos;
 using FishingLog.Mobile.ViewModels;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Media;
 
 namespace FishingLog.Mobile;
 
@@ -52,6 +54,8 @@ public static class MauiProgram
         // --- Device capabilities ---
         builder.Services.AddSingleton<IGeolocation>(Geolocation.Default);
         builder.Services.AddSingleton<IDeviceLocationService, DeviceLocationService>();
+        builder.Services.AddSingleton<IMediaPicker>(MediaPicker.Default);
+        builder.Services.AddSingleton<IPhotoCaptureService, PhotoCaptureService>();
 
         // --- API client ---
         // Typed HttpClient: BaseAddress and Timeout come from appsettings
@@ -62,6 +66,12 @@ public static class MauiProgram
 			client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
 		});
         builder.Services.AddHttpClient<ICatchApiClient, CatchApiClient>(client =>
+        {
+            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
+        });
+        builder.Services.AddHttpClient<IPhotoApiClient, PhotoApiClient>(client =>
         {
             var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");

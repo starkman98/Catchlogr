@@ -30,5 +30,7 @@
 	<string>Assets.xcassets/appicon.appiconset</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is used when you choose to save a fishing spot and fetch its weather.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Your camera is used when you choose to photograph a catch.</string>
 </dict>
 </plist>
