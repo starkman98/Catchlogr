@@ -13,6 +13,10 @@ using FluentValidation;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using FishingLog.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.Identity;
+using FishingLog.Api.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +30,38 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<FishingLogDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Missing connection string.")));
+
+builder.Services.AddAuthorization();
+
+builder.Services
+    .AddIdentityApiEndpoints<ApplicationUser>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+
+        // Keep false while initially building the authentication flow.
+        // Enable before production after implementing an email sender.
+        options.SignIn.RequireConfirmedEmail = false;
+
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan =
+            TimeSpan.FromMinutes(15);
+    })
+    .AddEntityFrameworkStores<FishingLogDbContext>();
+
+builder.Services.Configure<BearerTokenOptions>(
+    IdentityConstants.BearerScheme,
+    options =>
+    {
+        options.BearerTokenExpiration = TimeSpan.FromMinutes(30);
+        options.RefreshTokenExpiration = TimeSpan.FromDays(14);
+
+        //For the first checkpoint, you can leave Identity’s default password policy unchanged. Before production, define the policy
+        //intentionally and consider checking passwords against a breached-password list.
+    });
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 
 // --- Repositories ---
 builder.Services.AddScoped<IFishingTripRepository, FishingTripRepository>();
@@ -119,10 +155,14 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = photoContentTypes
 });
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthChecks("/health");
 app.MapFishingTripEndpoints();
 app.MapCatchEndpoints();
 app.MapLocationEndpoints();
 app.MapPhotoEndpoints();
+app.MapAuthenticationEndpoints();
 
 app.Run();

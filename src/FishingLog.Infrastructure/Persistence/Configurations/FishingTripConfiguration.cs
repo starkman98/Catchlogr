@@ -16,6 +16,9 @@ public sealed class FishingTripConfiguration
     {
         builder.HasKey(t => t.Id);
 
+        builder.Property(t => t.UserId)
+            .IsRequired();
+
         builder.Property(t => t.Name)
             .IsRequired()
             .HasMaxLength(200);
@@ -49,7 +52,8 @@ public sealed class FishingTripConfiguration
 
         builder.Property(t => t.LastModified)
             .HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
-        builder.HasIndex(t => t.LastModified);
+        
+        builder.HasIndex(t => new { t.LastModified, t.UserId });
 
         builder.Property(t => t.WeatherSampleTimeUtc)
             .HasConversion(v => v, v => v.HasValue 

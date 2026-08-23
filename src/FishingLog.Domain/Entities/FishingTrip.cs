@@ -11,6 +11,9 @@ public class FishingTrip
     /// <summary>Unique identifier for the trip.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    /// <summary>Gets or sets the account that owns this fishing trip.</summary>
+    public Guid UserId { get; set; }
+
     /// <summary>Display name for the trip (required, max 200 chars).</summary>
     [Required]
     public string Name { get; set; } = string.Empty;

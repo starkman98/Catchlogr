@@ -21,20 +21,21 @@ public class FishingTripRepository : IFishingTripRepository
     }
 
     /// <inheritdoc/>
-    public Task<List<FishingTrip>> GetAllAsync(CancellationToken ct = default)
+    public Task<List<FishingTrip>> GetAllAsync(Guid userId ,CancellationToken ct = default)
         => _context.FishingTrips
+            .Where(t => t.UserId == userId)
             .OrderByDescending(t => t.StartTime)
             .ToListAsync(ct);
 
     /// <inheritdoc/>
-    public Task<FishingTrip?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    public Task<FishingTrip?> GetByIdAsync(Guid id, Guid userId, CancellationToken ct = default)
         => _context.FishingTrips
-            .FirstOrDefaultAsync(t => t.Id == id, ct);
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId, ct);
 
     /// <inheritdoc/>
-    public Task<List<FishingTrip>> GetModifiedSinceAsync(DateTime since, CancellationToken ct = default)
+    public Task<List<FishingTrip>> GetModifiedSinceAsync(Guid userId, DateTime since, CancellationToken ct = default)
         => _context.FishingTrips
-            .Where(t => t.LastModified > since)
+            .Where(t => t.LastModified > since && t.UserId == userId)
             .OrderBy(t => t.LastModified)
             .ToListAsync(ct);
 
@@ -53,9 +54,9 @@ public class FishingTripRepository : IFishingTripRepository
     }
 
     /// <inheritdoc/>
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, Guid userId, CancellationToken ct = default)
     {
-        var trip = await GetByIdAsync(id, ct);
+        var trip = await GetByIdAsync(id, userId, ct);
         if (trip is null)
             return;
 

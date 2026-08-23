@@ -9,16 +9,16 @@ namespace FishingLog.Domain.Interfaces;
 public interface IFishingTripRepository
 {
     /// <summary>Returns all trips ordered by StartTime descending.</summary>
-    Task<List<FishingTrip>> GetAllAsync(CancellationToken ct = default);
+    Task<List<FishingTrip>> GetAllAsync(Guid userId, CancellationToken ct = default);
 
     /// <summary>Returns a single trip by GUID, or null if not found.</summary>
-    Task<FishingTrip?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<FishingTrip?> GetByIdAsync(Guid id, Guid userId, CancellationToken ct = default);
 
     /// <summary>
     /// Returns all trips modified after the given UTC timestamp, ordered by LastModified ascending.
     /// Used by the mobile sync service to download only incremental changes.
     /// </summary>
-    Task<List<FishingTrip>> GetModifiedSinceAsync(DateTime since, CancellationToken ct = default);
+    Task<List<FishingTrip>> GetModifiedSinceAsync(Guid userId, DateTime since, CancellationToken ct = default);
 
     /// <summary>Persists a new trip to the database.</summary>
     Task AddAsync(FishingTrip trip, CancellationToken ct = default);
@@ -27,5 +27,5 @@ public interface IFishingTripRepository
     Task UpdateAsync(FishingTrip trip, CancellationToken ct = default);
 
     /// <summary>Deletes a trip by GUID. No-op if not found.</summary>
-    Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, Guid userId, CancellationToken ct = default);
 }
