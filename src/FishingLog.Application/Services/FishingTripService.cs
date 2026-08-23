@@ -97,6 +97,27 @@ public class FishingTripService : IFishingTripService
     }
 
     /// <inheritdoc/>
+    public async Task<FishingTripResponse> RetryWeatherEnrichmentAsync(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        var trip = await _repository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Trip {id} not found.");
+
+        if (trip.WeatherSampleTimeUtc is not null)
+            return MapFromTripToResponse(trip);
+
+        var enriched = await TryEnrichWeatherAsync(trip, ct);
+        if (enriched)
+        {
+            trip.LastModified = DateTime.UtcNow;
+            await _repository.UpdateAsync(trip, ct);
+        }
+
+        return MapFromTripToResponse(trip);
+    }
+
+    /// <inheritdoc/>
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var trip = await _repository.GetByIdAsync(id, ct)
@@ -105,14 +126,18 @@ public class FishingTripService : IFishingTripService
         await _repository.DeleteAsync(id, ct);
     }
 
-    private async Task TryEnrichWeatherAsync(FishingTrip trip, CancellationToken ct = default)
+    private async Task<bool> TryEnrichWeatherAsync(
+        FishingTrip trip,
+        CancellationToken ct = default)
     {
-        if (trip.Latitude is null || trip.Longitude is null) return;
+        if (trip.Latitude is null || trip.Longitude is null)
+            return false;
 
         try
         {
             var weather = await _weatherService.GetWeatherAsync(trip.Latitude.Value, trip.Longitude.Value, trip.StartTime, ct);
-            if (weather is null) return;
+            if (weather is null)
+                return false;
 
             trip.AirTemperatureC = weather.AirTemperatureC;
             trip.WeatherCode = weather.WeatherCode;
@@ -121,6 +146,7 @@ public class FishingTripService : IFishingTripService
             trip.PressureHpa = weather.PressureHpa;
             trip.WeatherSampleTimeUtc = weather.WeatherSampleTimeUtc;
             trip.WeatherProvider = weather.WeatherProvider;
+            return true;
         }
         catch (OperationCanceledException)
             when (ct.IsCancellationRequested)
@@ -138,6 +164,7 @@ public class FishingTripService : IFishingTripService
                 "Failed to enrich weather for trip {TripId}. Error type {ErrorType}",
                 trip.Id,
                 ex.GetType().Name);
+            return false;
         }
     }
 

@@ -347,6 +347,120 @@ public class FishingTripServiceTests
     }
 
     // -----------------------------------------------------------------------
+    // RetryWeatherEnrichmentAsync
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task RetryWeatherEnrichmentAsync_MissingWeather_EnrichesAndPersistsTrip()
+    {
+        var trip = BuildTripWithoutWeather();
+        var previousLastModified = trip.LastModified;
+        var snapshot = BuildWeatherSnapshot();
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        _weatherService.GetWeatherAsync(
+                trip.Latitude!.Value,
+                trip.Longitude!.Value,
+                trip.StartTime,
+                TestContext.Current.CancellationToken)
+            .Returns(snapshot);
+
+        var result = await _sut.RetryWeatherEnrichmentAsync(
+            trip.Id,
+            TestContext.Current.CancellationToken);
+
+        result.WeatherSampleTimeUtc.Should().Be(snapshot.WeatherSampleTimeUtc);
+        result.LastModified.Should().BeAfter(previousLastModified);
+        await _repository.Received(1).UpdateAsync(
+            Arg.Is<FishingTrip>(savedTrip =>
+                savedTrip.WeatherSampleTimeUtc == snapshot.WeatherSampleTimeUtc
+                && savedTrip.LastModified > previousLastModified),
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task RetryWeatherEnrichmentAsync_ExistingWeather_DoesNotCallProviderOrPersist()
+    {
+        var trip = BuildTripWithWeather();
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+
+        var result = await _sut.RetryWeatherEnrichmentAsync(
+            trip.Id,
+            TestContext.Current.CancellationToken);
+
+        result.WeatherSampleTimeUtc.Should().Be(trip.WeatherSampleTimeUtc);
+        await _weatherService.DidNotReceive().GetWeatherAsync(
+            Arg.Any<double>(),
+            Arg.Any<double>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().UpdateAsync(
+            Arg.Any<FishingTrip>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RetryWeatherEnrichmentAsync_MissingCoordinates_DoesNotCallProviderOrPersist()
+    {
+        var trip = BuildTrip("No coordinates");
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+
+        var result = await _sut.RetryWeatherEnrichmentAsync(
+            trip.Id,
+            TestContext.Current.CancellationToken);
+
+        result.WeatherSampleTimeUtc.Should().BeNull();
+        await _weatherService.DidNotReceive().GetWeatherAsync(
+            Arg.Any<double>(),
+            Arg.Any<double>(),
+            Arg.Any<DateTime>(),
+            Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().UpdateAsync(
+            Arg.Any<FishingTrip>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RetryWeatherEnrichmentAsync_ProviderFailure_RemainsNonFatalAndDoesNotPersist()
+    {
+        var trip = BuildTripWithoutWeather();
+        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+            .Returns(trip);
+        _weatherService.GetWeatherAsync(
+                Arg.Any<double>(),
+                Arg.Any<double>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException<WeatherSnapshot?>(
+                new HttpRequestException("Provider unavailable")));
+
+        var result = await _sut.RetryWeatherEnrichmentAsync(
+            trip.Id,
+            TestContext.Current.CancellationToken);
+
+        result.WeatherSampleTimeUtc.Should().BeNull();
+        await _repository.DidNotReceive().UpdateAsync(
+            Arg.Any<FishingTrip>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RetryWeatherEnrichmentAsync_TripNotFound_Throws()
+    {
+        var id = Guid.NewGuid();
+        _repository.GetByIdAsync(id, TestContext.Current.CancellationToken)
+            .ReturnsNull();
+
+        var action = () => _sut.RetryWeatherEnrichmentAsync(
+            id,
+            TestContext.Current.CancellationToken);
+
+        await action.Should().ThrowAsync<NotFoundException>();
+    }
+
+    // -----------------------------------------------------------------------
     // DeleteAsync
     // -----------------------------------------------------------------------
 
@@ -406,6 +520,17 @@ public class FishingTripServiceTests
         PressureHpa = 1010,
         WeatherSampleTimeUtc = Utc(2026, 8, 20, 10),
         WeatherProvider = "Open-Meteo"
+    };
+
+    private static FishingTrip BuildTripWithoutWeather() => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = "Weather retry trip",
+        Latitude = 58.9,
+        Longitude = 13.5,
+        StartTime = Utc(2026, 8, 20, 10),
+        CreatedAt = Utc(2026, 8, 20, 9),
+        LastModified = Utc(2026, 8, 20, 9)
     };
 
     private static CreateFishingTripRequest BuildCreateRequest(

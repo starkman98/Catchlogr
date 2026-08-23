@@ -38,6 +38,14 @@ public static class FishingTripEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Update an existing fishing trip");
 
+        group.MapPost("/{id:guid}/weather/retry", RetryWeatherEnrichment)
+            .Produces<FishingTripResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Retry weather enrichment for a fishing trip")
+            .WithDescription(
+                "Attempts enrichment only when provider weather is missing. " +
+                "Provider failure leaves the trip unchanged and does not fail synchronization.");
+
         group.MapDelete("/{id:guid}", DeleteTrip)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
@@ -101,6 +109,18 @@ public static class FishingTripEndpoints
 
         var updated = await service.UpdateAsync(id, request, ct);
         return Results.Ok(updated);
+    }
+
+    /// <summary>
+    /// POST /api/fishing-trips/{id}/weather/retry → 200 OK or 404
+    /// </summary>
+    private static async Task<IResult> RetryWeatherEnrichment(
+        Guid id,
+        IFishingTripService service,
+        CancellationToken ct)
+    {
+        var trip = await service.RetryWeatherEnrichmentAsync(id, ct);
+        return Results.Ok(trip);
     }
 
     /// <summary>DELETE /api/fishing-trips/{id} → 204 No Content or 404</summary>

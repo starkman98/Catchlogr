@@ -1,6 +1,7 @@
 # FishingLog Roadmap
 
 ## Guiding Principles
+
 - **Offline-first**: Local SQLite is the source of truth on device until synced
 - **Server is system of record**: API + PostgreSQL is the canonical source across devices
 - **Explicit sync**: Dirty flags + last sync cursor pattern
@@ -12,6 +13,7 @@
 ## Phase 0: Foundation & Project Setup
 
 ### Project Structure ✅
+
 - [x] Solution structure with layered architecture
 - [x] FishingLog.Domain project (entities, interfaces)
 - [x] FishingLog.Application project (business logic, services)
@@ -21,6 +23,7 @@
 - [x] FishingLog.Contracts project (DTOs, shared models)
 
 ### Development Environment
+
 - [x] Docker Compose for local PostgreSQL
 - [x] API appsettings.Development.json with connection strings
 - [x] User secrets configuration for sensitive data
@@ -29,6 +32,7 @@
 - [x] .gitignore properly configured
 
 ### Core Infrastructure (API)
+
 - [x] **Domain**: `FishingTrip` entity with properties (Id, UserId, StartTime, EndTime, Location, Notes, etc.)
 - [x] **Infrastructure**: DbContext setup for PostgreSQL
 - [x] **Infrastructure**: Initial EF Core migration
@@ -38,6 +42,7 @@
 - [x] **API**: Global exception handling middleware
 
 ### Core Infrastructure (Mobile)
+
 - [x] **Mobile**: SQLite database initialization
 - [x] **Mobile**: Base repository interface
 - [x] **Mobile**: Base entity with sync metadata (Id, ServerId, LastModifiedUtc, IsDirty, IsDeleted)
@@ -50,6 +55,7 @@
 ## Phase 1: MVP — Fishing Trips (Local + Sync)
 
 ### 1.1 Domain Layer: Fishing Trip Entity
+
 - [x] Create `FishingTrip` domain entity
   - Id (Guid), UserId (Guid), StartTime, EndTime, Location, WaterType, Notes, CreatedUtc, LastModifiedUtc
 - [x] Create `IFishingTripRepository` interface in Domain
@@ -57,6 +63,7 @@
 - [x] Add XML summary comments to all public members
 
 ### 1.2 API: Database & Migrations
+
 - [x] Create `FishingTripRepository` in Infrastructure
   - Implement CRUD operations using EF Core
   - All methods async with CancellationToken
@@ -65,6 +72,7 @@
 - [ ] Seed test data (optional, development only)
 
 ### 1.3 API: Business Logic
+
 - [x] Create `FishingTripService` in Application
   - GetAllAsync(userId, ct)
   - GetByIdAsync(id, userId, ct)
@@ -75,6 +83,7 @@
 - [x] Add basic validation (start time < end time, required fields)
 
 ### 1.4 API: Endpoints (Minimal APIs)
+
 - [x] Create `FishingTripEndpoints.cs` class
   - `GET /api/fishing-trips` → Get all trips for user
   - `GET /api/fishing-trips/{id}` → Get single trip
@@ -85,12 +94,14 @@
 - [x] Test with Postman/curl (manual verification)
 
 ### 1.5 Contracts: DTOs
+
 - [x] Create `CreateFishingTripRequest` record in Contracts
 - [x] Create `UpdateFishingTripRequest` record in Contracts
 - [x] Create `FishingTripResponse` record in Contracts
 - [x] Add FluentValidation validators (optional but recommended)
 
 ### 1.6 Mobile: Local Database Schema
+
 - [x] Create `FishingTripLocalEntity` class
   - Id (int, local PK), ServerId (Guid?), StartTime, EndTime, Location, Notes
   - LastModifiedUtc, IsDirty (bool), IsDeleted (bool)
@@ -100,6 +111,7 @@
 - [x] Test local insert/update/delete
 
 ### 1.7 Mobile: Repository Layer
+
 - [x] Create `IFishingTripLocalRepository` interface
   - GetAllAsync(), GetByIdAsync(id), GetDirtyAsync()
   - AddAsync(trip), UpdateAsync(trip), DeleteAsync(id)
@@ -108,6 +120,7 @@
 - [x] Register in MauiProgram.cs
 
 ### 1.8 Mobile: API Client
+
 - [x] Create `IFishingTripApiClient` interface
   - GetAllAsync(ct), GetByIdAsync(id, ct)
   - CreateAsync(request, ct), UpdateAsync(id, request, ct), DeleteAsync(id, ct)
@@ -116,6 +129,7 @@
 - [x] Register as singleton in MauiProgram.cs
 
 ### 1.9 Mobile: Sync Service (Core)
+
 - [x] Create `IFishingTripSyncService` interface
   - SyncAsync(ct)
 - [x] Create `FishingTripSyncService` implementation
@@ -130,6 +144,7 @@
 - [x] Register in MauiProgram.cs
 
 ### 1.10 Mobile: ViewModel & UI
+
 - [x] Create `FishingTripsViewModel`
   - ObservableCollection<FishingTripLocalEntity> Trips
   - LoadTripsCommand, AddTripCommand, EditTripCommand, DeleteTripCommand, SyncCommand
@@ -145,6 +160,7 @@
 - [x] Add navigation between pages
 
 ### 1.11 Testing & Validation
+
 - [x] Unit tests for FishingTripService (Application layer)
 - [x] Unit tests for CreateFishingTripRequestValidator (FluentValidation)
 - [x] Unit tests for FishingTripSyncService (blocked — see Phase 4 refactor)
@@ -154,6 +170,7 @@
 - [x] Manual test: Conflict resolution (edit same trip on two devices)
 
 ### 1.12 Documentation
+
 - [x] Update README with "How to Run" instructions and project status
 - [x] Document sync algorithm in docs/SYNC_STRATEGY.md
 - [x] Add API endpoint documentation (Swagger/OpenAPI)
@@ -164,6 +181,7 @@
 ## Phase 1.x: Technical Improvements
 
 ### 1.x SyncService Testability Refactor
+
 - [x] Extract `FishingTripSyncService` from `FishingLog.Mobile` into a new `FishingLog.Sync` class library
 - [x] Reference `FishingLog.Sync` from both `FishingLog.Mobile` and `FishingLog.Tests`
 - [x] Add unit tests for `FishingTripSyncService` (mock `IFishingTripApiClient`, mock `IFishingTripLocalRepository`)
@@ -173,18 +191,21 @@
 ## Phase 2: Catches (Fish Records per Trip)
 
 ### 2.1 Domain & Database
+
 - [x] Create `Catch` domain entity (Id, FishingTripId, Species, Length, Weight, PhotoUrl, Notes, CaughtAt)
 - [x] Create `ICatchRepository` and `ICatchService` interfaces
 - [x] EF Core migration for Catches table (with FK to FishingTrips)
 - [x] Create CatchLocalEntity for Mobile
 
 ### 2.2 API Implementation
+
 - [x] Implement CatchRepository and CatchService
 - [x] Create Catch DTOs (CreateCatchRequest, CatchResponse)
 - [x] Create CatchEndpoints (nested under trips: `/api/fishing-trips/{tripId}/catches`)
 - [x] Test CRUD operations
 
 ### 2.3 Mobile Implementation
+
 - [x] Create CatchLocalRepository
 - [x] Create CatchApiClient
 - [x] Extend FishingTripSyncService to sync catches
@@ -197,16 +218,18 @@
 ## Phase 3: Weather & Moon Phase Enrichment
 
 ### 3.1 Weather Integration (Server-Side)
-- [ ] Choose weather API (OpenWeatherMap, WeatherAPI.com, etc.)
-- [ ] Create `IWeatherService` interface in Application
-- [ ] Implement WeatherService in Infrastructure
+
+- [x] Choose weather API (OpenWeatherMap, WeatherAPI.com, etc.)
+- [x] Create `IWeatherService` interface in Application
+- [x] Implement WeatherService in Infrastructure
   - Fetch weather based on location + timestamp
   - Store API key in user secrets / Azure Key Vault
-- [ ] Add Weather properties to FishingTrip (Temperature, Conditions, WindSpeed, Pressure)
-- [ ] Auto-fetch weather when trip is created/synced
-- [ ] Display weather on trip details page (Mobile)
+- [x] Add Weather properties to FishingTrip (Temperature, Conditions, WindSpeed, Pressure)
+- [x] Auto-fetch weather when trip is created/synced
+- [x] Display weather on trip details page (Mobile)
 
 ### 3.2 Moon Phase Calculation
+
 - [ ] Create `IMoonPhaseService` interface
 - [ ] Implement MoonPhaseService (calculate phase based on date)
 - [ ] Add MoonPhase property to FishingTrip
@@ -217,18 +240,21 @@
 ## Phase 4: Photo Capture & Upload
 
 ### 4.1 Photo Capture (Mobile)
+
 - [ ] Add camera permission to AndroidManifest.xml and Info.plist
 - [ ] Create photo capture service using MediaPicker
 - [ ] Save photo locally (app data folder)
 - [ ] Reference photo path in CatchLocalEntity
 
 ### 4.2 Photo Upload (API)
+
 - [ ] Create blob storage account (Azure Blob or local file storage)
 - [ ] Create photo upload endpoint (`POST /api/photos`)
 - [ ] Accept multipart/form-data
 - [ ] Return photo URL
 
 ### 4.3 Photo Sync
+
 - [ ] Extend CatchSyncService to upload photos before syncing catch
 - [ ] Store PhotoUrl from server in CatchLocalEntity
 - [ ] Display photos in catch list and details
@@ -239,24 +265,28 @@
 ## Phase 5: Authentication & Authorization
 
 ### 5.1 User Registration & Login (API)
+
 - [ ] Create `User` entity (Id, Email, PasswordHash, CreatedUtc)
 - [ ] Create authentication endpoints (register, login)
 - [ ] Use ASP.NET Core Identity or custom JWT implementation
 - [ ] Store password securely (bcrypt/PBKDF2)
 
 ### 5.2 JWT Token Handling
+
 - [ ] Issue JWT tokens on successful login
 - [ ] Add `[Authorize]` to all endpoints (except auth endpoints)
 - [ ] Validate tokens in middleware
 - [ ] Extract UserId from token claims
 
 ### 5.3 Mobile Authentication
+
 - [ ] Create login page (XAML)
 - [ ] Store JWT token in SecureStorage
 - [ ] Attach token to all API requests (Authorization header)
 - [ ] Handle token expiration and refresh
 
 ### 5.4 User Context
+
 - [ ] Filter all trips and catches by authenticated user
 - [ ] Add UserId to all entities
 - [ ] Update all queries to scope by user
@@ -266,16 +296,19 @@
 ## Phase 6: Teams & Sharing (Multi-User Collaboration)
 
 ### 6.1 Teams Domain
+
 - [ ] Create `Team` entity (Id, Name, CreatedByUserId)
 - [ ] Create `TeamMember` entity (Id, TeamId, UserId, Role)
 - [ ] Create `TeamFishingTrip` junction (many-to-many)
 
 ### 6.2 Sharing Rules
+
 - [ ] Define roles (Owner, Editor, Viewer)
 - [ ] Implement permission checks in services
 - [ ] Create team endpoints (CRUD teams, add/remove members)
 
 ### 6.3 Mobile Team Features
+
 - [ ] Team selection UI
 - [ ] Shared trips view (filter by team)
 - [ ] Invite members by email
@@ -285,17 +318,20 @@
 ## Phase 7: Analytics & Reporting
 
 ### 7.1 Statistics
+
 - [ ] Total trips, total catches
 - [ ] Average catches per trip
 - [ ] Most common species
 - [ ] Best fishing times (time of day, moon phase correlation)
 
 ### 7.2 Visualizations
+
 - [ ] Charts for catches over time (Line/Bar chart)
 - [ ] Species distribution (Pie chart)
 - [ ] Heatmap of best fishing locations
 
 ### 7.3 Export
+
 - [ ] Export data as CSV
 - [ ] Export trip summary as PDF
 
@@ -304,30 +340,35 @@
 ## Phase 8: Polish & Production Readiness
 
 ### 8.1 Error Handling & Logging
+
 - [ ] Structured logging (Serilog)
 - [ ] Application Insights / Log aggregation
 - [ ] User-friendly error messages
 - [ ] Retry policies for transient failures
 
 ### 8.2 Performance Optimization
+
 - [ ] API response caching
 - [ ] Database indexing
 - [ ] Lazy loading for large lists (pagination)
 - [ ] Image compression for photos
 
 ### 8.3 Testing
+
 - [ ] Comprehensive unit test coverage (>80%)
 - [ ] Integration tests for all endpoints
 - [ ] UI tests for critical flows (Appium or similar)
 - [ ] Load testing for API
 
 ### 8.4 Deployment
+
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] API deployed to Azure App Service / AWS / Docker
 - [ ] Database migrations automated
 - [ ] App published to Google Play / App Store
 
 ### 8.5 Documentation
+
 - [ ] User guide
 - [ ] Developer documentation
 - [ ] Architecture decision records (ADRs)

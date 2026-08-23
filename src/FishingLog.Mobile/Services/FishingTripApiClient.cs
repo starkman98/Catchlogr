@@ -82,6 +82,24 @@ public class FishingTripApiClient : IFishingTripApiClient
     }
 
     /// <inheritdoc/>
+    public async Task<FishingTripResponse?> RetryWeatherEnrichmentAsync(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        using var response = await _httpClient.PostAsync(
+            $"api/fishing-trips/{id}/weather/retry",
+            content: null,
+            ct);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content
+            .ReadFromJsonAsync<FishingTripResponse>(cancellationToken: ct);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var response = await _httpClient.DeleteAsync($"api/fishing-trips/{id}", ct);

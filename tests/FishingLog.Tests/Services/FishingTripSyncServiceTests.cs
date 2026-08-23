@@ -39,6 +39,9 @@ public class FishingTripSyncServiceTests
         _localRepo.GetDirtyAsync(Arg.Any<CancellationToken>())
             .Returns(new List<FishingTripLocalEntity>());
 
+        _localRepo.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity>());
+
         _apiClient.GetModifiedSinceAsync(Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
             .Returns(new List<FishingTripResponse>());
 
@@ -277,6 +280,117 @@ public class FishingTripSyncServiceTests
             .Should().NotThrowAsync();
     }
 
+    [Fact]
+    public async Task SyncAsync_CleanTripWithMissingWeather_RetriesAndAppliesResponse()
+    {
+        var candidate = BuildWeatherRetryCandidate();
+        var serverId = Guid.Parse(candidate.ServerId!);
+        var response = BuildServerTrip(serverId);
+        _localRepo.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity> { candidate });
+        _localRepo.GetByServerIdAsync(serverId, Arg.Any<CancellationToken>())
+            .Returns(candidate);
+        _apiClient.RetryWeatherEnrichmentAsync(
+                serverId,
+                Arg.Any<CancellationToken>())
+            .Returns(response);
+
+        await _sut.SyncAsync(TestContext.Current.CancellationToken);
+
+        await _apiClient.Received(1).RetryWeatherEnrichmentAsync(
+            serverId,
+            TestContext.Current.CancellationToken);
+        await _localRepo.Received(1).SaveFromServerAsync(
+            Arg.Is<FishingTripLocalEntity>(trip =>
+                trip.Id == candidate.Id
+                && HasWeatherFrom(trip, response)),
+            TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task SyncAsync_NewTrip_DoesNotRetryWeatherDuringSameSync()
+    {
+        var newTrip = BuildNewLocalTrip();
+        var serverResponse = BuildServerTripWithoutWeather();
+        _localRepo.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity> { newTrip });
+        _localRepo.GetDirtyAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity> { newTrip });
+        _apiClient.CreateAsync(
+                Arg.Any<CreateFishingTripRequest>(),
+                Arg.Any<CancellationToken>())
+            .Returns(serverResponse);
+
+        await _sut.SyncAsync(TestContext.Current.CancellationToken);
+
+        await _apiClient.DidNotReceive().RetryWeatherEnrichmentAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SyncAsync_IneligibleTrips_DoNotRetryWeather()
+    {
+        var hasWeather = BuildWeatherRetryCandidate();
+        hasWeather.WeatherSampleTimeUtc = DateTime.UtcNow;
+        var isDirty = BuildWeatherRetryCandidate();
+        isDirty.IsDirty = true;
+        var missingCoordinates = BuildWeatherRetryCandidate();
+        missingCoordinates.Latitude = null;
+
+        _localRepo.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity>
+            {
+                hasWeather,
+                isDirty,
+                missingCoordinates
+            });
+
+        await _sut.SyncAsync(TestContext.Current.CancellationToken);
+
+        await _apiClient.DidNotReceive().RetryWeatherEnrichmentAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SyncAsync_CandidateBecomesDirtyBeforeRetry_SkipsRetry()
+    {
+        var candidate = BuildWeatherRetryCandidate();
+        var serverId = Guid.Parse(candidate.ServerId!);
+        var dirtyTrip = BuildWeatherRetryCandidate(serverId);
+        dirtyTrip.IsDirty = true;
+        _localRepo.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity> { candidate });
+        _localRepo.GetByServerIdAsync(serverId, Arg.Any<CancellationToken>())
+            .Returns(dirtyTrip);
+
+        await _sut.SyncAsync(TestContext.Current.CancellationToken);
+
+        await _apiClient.DidNotReceive().RetryWeatherEnrichmentAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SyncAsync_NetworkErrorDuringWeatherRetry_DoesNotFailSync()
+    {
+        var candidate = BuildWeatherRetryCandidate();
+        var serverId = Guid.Parse(candidate.ServerId!);
+        _localRepo.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<FishingTripLocalEntity> { candidate });
+        _localRepo.GetByServerIdAsync(serverId, Arg.Any<CancellationToken>())
+            .Returns(candidate);
+        _apiClient.RetryWeatherEnrichmentAsync(
+                serverId,
+                Arg.Any<CancellationToken>())
+            .Throws(new HttpRequestException("Network unavailable"));
+
+        var action = () => _sut.SyncAsync(TestContext.Current.CancellationToken);
+
+        await action.Should().NotThrowAsync();
+    }
+
     private static FishingTripLocalEntity BuildNewLocalTrip(string name = "Test trip") => new()
     {
         Id = 1,
@@ -297,6 +411,20 @@ public class FishingTripSyncServiceTests
         LastModifiedUtc = lastModified ?? DateTime.UtcNow,
         IsDirty = true,
         IsDeleted = false
+    };
+
+    private static FishingTripLocalEntity BuildWeatherRetryCandidate(Guid? serverId = null) => new()
+    {
+        Id = 2,
+        ServerId = (serverId ?? Guid.NewGuid()).ToString(),
+        Name = "Missing weather",
+        Latitude = 58.9,
+        Longitude = 13.5,
+        StartTime = DateTime.UtcNow,
+        LastModifiedUtc = DateTime.UtcNow,
+        IsDirty = false,
+        IsDeleted = false,
+        WeatherSampleTimeUtc = null
     };
 
     private static FishingTripResponse BuildServerTrip(Guid? id = null, DateTime? lastModified = null) => new(
@@ -320,6 +448,27 @@ public class FishingTripSyncServiceTests
         WeatherSampleTimeUtc: DateTime.UtcNow,
         WeatherProvider: "Open-Meteo"
         );
+
+    private static FishingTripResponse BuildServerTripWithoutWeather(Guid? id = null) => new(
+        Id: id ?? Guid.NewGuid(),
+        Name: "Server trip without weather",
+        LocationName: "Lake",
+        WaterTemp: null,
+        WeatherDescription: null,
+        Latitude: 58.9,
+        Longitude: 13.5,
+        StartTime: DateTime.UtcNow,
+        EndTime: null,
+        Note: null,
+        CreatedAt: DateTime.UtcNow,
+        LastModified: DateTime.UtcNow,
+        AirTemperatureC: null,
+        WeatherCode: null,
+        WindSpeedMps: null,
+        WindDirectionDegrees: null,
+        PressureHpa: null,
+        WeatherSampleTimeUtc: null,
+        WeatherProvider: null);
 
     private static bool HasWeatherFrom(
         FishingTripLocalEntity local,

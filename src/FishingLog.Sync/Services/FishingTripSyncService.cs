@@ -40,8 +40,10 @@ public class FishingTripSyncService : IFishingTripSyncService
     {
         _logger.LogInformation("[Sync] Starting sync. BaseAddress={BaseAddress}",
             _apiClient.GetType().Name);
+        var weatherRetryCandidateIds = await GetWeatherRetryCandidateIdsAsync(ct);
         await UploadDirtyTripsAsync(ct);
         await DownloadRemoteChangesAsync(ct);
+        await RetryMissingWeatherAsync(weatherRetryCandidateIds, ct);
         _logger.LogInformation("[Sync] Sync complete.");
     }
 
@@ -194,6 +196,80 @@ public class FishingTripSyncService : IFishingTripSyncService
             await _localRepository.SaveFromServerAsync(existing, ct);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Step 3 — Retry missing provider weather
+    // -------------------------------------------------------------------------
+
+    private async Task<IReadOnlyList<Guid>> GetWeatherRetryCandidateIdsAsync(
+        CancellationToken ct)
+    {
+        var localTrips = await _localRepository.GetAllAsync(ct);
+
+        return localTrips
+            .Where(IsEligibleForWeatherRetry)
+            .Select(trip => Guid.Parse(trip.ServerId!))
+            .Distinct()
+            .ToArray();
+    }
+
+    private async Task RetryMissingWeatherAsync(
+        IReadOnlyList<Guid> candidateIds,
+        CancellationToken ct)
+    {
+        _logger.LogInformation(
+            "[Sync] Weather retry: {Count} candidate trip(s) found.",
+            candidateIds.Count);
+
+        foreach (var serverId in candidateIds)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var localTrip = await _localRepository.GetByServerIdAsync(serverId, ct);
+            if (localTrip is null || !IsEligibleForWeatherRetry(localTrip))
+                continue;
+
+            try
+            {
+                var response = await _apiClient.RetryWeatherEnrichmentAsync(
+                    serverId,
+                    ct);
+
+                if (response is null)
+                    continue;
+
+                ApplyRemoteToLocal(localTrip, response);
+                await _localRepository.SaveFromServerAsync(localTrip, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+                when (ex is HttpRequestException or TaskCanceledException)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "[Sync] Network error retrying weather for ServerId={ServerId}.",
+                    serverId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "[Sync] Unexpected error retrying weather for ServerId={ServerId}.",
+                    serverId);
+            }
+        }
+    }
+
+    private static bool IsEligibleForWeatherRetry(FishingTripLocalEntity trip)
+        => !trip.IsDirty
+           && !trip.IsDeleted
+           && trip.Latitude.HasValue
+           && trip.Longitude.HasValue
+           && trip.WeatherSampleTimeUtc is null
+           && Guid.TryParse(trip.ServerId, out _);
 
     // -------------------------------------------------------------------------
     // Mapping helpers

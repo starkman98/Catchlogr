@@ -243,7 +243,7 @@ Inject `IWeatherService` and `ILogger<FishingTripService>` into `FishingTripServ
 Add one private method with one responsibility:
 
 ```csharp
-private async Task TryEnrichWeatherAsync(
+private async Task<bool> TryEnrichWeatherAsync(
     FishingTrip trip,
     CancellationToken ct)
 ```
@@ -260,7 +260,17 @@ Call the method during creation before `AddAsync`. A weather outage must not pre
 
 During update, refetch weather only when the location coordinates or start time changed, or when no weather sample exists. This avoids spending one provider call on every ordinary notes edit.
 
-For the first version, a failed enrichment can retry on the next update or sync-triggered server operation. A durable background job is a later production improvement, not required for the first vertical slice.
+Failed enrichment retries through an explicit server command:
+
+```http
+POST /api/fishing-trips/{id}/weather/retry
+```
+
+The command returns the current `FishingTripResponse`. It persists and advances
+`LastModified` only when weather was added successfully. Trips without coordinates,
+trips that already have weather, and temporary provider failures remain unchanged.
+A durable background job is a later production improvement, not required for this
+vertical slice.
 
 Never log precise coordinates at Information level because they are user location data.
 
@@ -288,6 +298,17 @@ Do not include server weather in `MapToCreateRequest` or `MapToUpdateRequest`.
 There is one important existing update path to adjust. `UpdateTripOnServerAsync` currently calls `MarkAsSyncedAsync` using only the returned timestamp. Change it to apply the complete returned response and save it, matching `UploadNewTripAsync`; otherwise freshly enriched weather returned by an update will not immediately reach SQLite.
 
 `LocalDatabase.InitializeAsync` already calls `CreateTableAsync<FishingTripLocalEntity>()`. Verify both a fresh database and an existing development database after adding the columns; do not assume schema behavior without testing an upgrade.
+
+Synchronization has a third step after upload and download: retry missing weather.
+At the start of a sync, capture clean trips that have a server ID, coordinates, and
+no `WeatherSampleTimeUtc`. After normal reconciliation, re-read and revalidate each
+candidate, call the explicit retry endpoint, and apply its complete response with
+`ApplyRemoteToLocal`.
+
+Capturing candidates before upload prevents a newly created trip from calling the
+provider twice during the same sync. Network or provider failure during this step
+must not fail the rest of synchronization. The trip remains eligible on a later
+sync.
 
 ### Stage 7: Mobile presentation
 
@@ -345,16 +366,23 @@ Use a stub `HttpMessageHandler`; do not call the live provider in unit tests.
 - Server weather updates an existing clean local trip.
 - Create and update request DTOs never contain server weather.
 - The response from an uploaded update is fully applied locally.
+- A clean trip with coordinates and missing weather calls the explicit retry endpoint.
+- A successful retry response is fully applied locally.
+- Dirty, deleted, coordinate-less, and already enriched trips are skipped.
+- A newly uploaded trip is not retried during the same sync.
+- Retry network failure does not fail synchronization.
 
 ### Manual test
 
-1. Create a trip offline with coordinates and no provider weather.
-2. Confirm it is saved locally.
-3. Restore connectivity and sync.
-4. Confirm the API saves the trip even if Open-Meteo is unavailable.
-5. With Open-Meteo available, confirm normalized weather is stored in PostgreSQL.
-6. Sync again and confirm the weather appears in SQLite and on the details page.
-7. Confirm `WaterTemp` and the user's `WeatherDescription` remain unchanged.
+1. Start the API with the forecast endpoint temporarily pointed at an unavailable
+   local port.
+2. Create and sync a trip with coordinates and a current start time.
+3. Confirm the API saves the trip and the mobile app remains usable without weather.
+4. Restore the real Open-Meteo endpoint and restart the API.
+5. Sync again without editing the trip.
+6. Confirm the retry command enriches PostgreSQL and its response updates SQLite.
+7. Confirm weather appears on the details page.
+8. Confirm `WaterTemp` and the user's `WeatherDescription` remain unchanged.
 
 ## Recommended pull-request boundaries
 
@@ -371,6 +399,7 @@ Keep the implementation reviewable:
 - No provider types escape Infrastructure.
 - Provider weather cannot be overwritten by mobile request DTOs.
 - Weather syncs to SQLite and is available offline.
+- Missing provider weather retries on a later sync without requiring a user edit.
 - UTC and units are explicit and tested.
 - WMO code text has an unknown-code fallback.
 - Open-Meteo attribution is visible.

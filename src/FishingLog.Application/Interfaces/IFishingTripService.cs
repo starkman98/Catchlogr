@@ -26,6 +26,17 @@ public interface IFishingTripService
     /// <summary>Updates an existing trip. Returns null if not found.</summary>
     Task<FishingTripResponse> UpdateAsync(Guid id, UpdateFishingTripRequest request, CancellationToken ct = default);
 
+    /// <summary>
+    /// Retries server-owned weather enrichment when a trip has coordinates but
+    /// does not yet have a weather sample.
+    /// </summary>
+    /// <param name="id">The external trip identifier.</param>
+    /// <param name="ct">Token used to cancel the provider and persistence work.</param>
+    /// <returns>The current trip, including newly enriched weather when available.</returns>
+    Task<FishingTripResponse> RetryWeatherEnrichmentAsync(
+        Guid id,
+        CancellationToken ct = default);
+
     /// <summary>Deletes a trip. Returns false if not found.</summary>
     Task DeleteAsync(Guid id, CancellationToken ct = default);
 }
