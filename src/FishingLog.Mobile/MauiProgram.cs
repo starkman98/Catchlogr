@@ -63,6 +63,14 @@ public static class MauiProgram
         // --- Authentication storage ---
         builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
         builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
+        builder.Services.AddSingleton(TimeProvider.System);
+
+        builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
+        {
+            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + '/');
+            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
+        });
 
         // --- API client ---
         // Typed HttpClient: BaseAddress and Timeout come from appsettings
