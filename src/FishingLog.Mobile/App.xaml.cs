@@ -2,13 +2,13 @@
 
 namespace FishingLog.Mobile;
 
+/// <summary>Represents the FishingLog MAUI application.</summary>
 public partial class App : Microsoft.Maui.Controls.Application
 {
-	private readonly ILocalDatabase _localDatabase;
-	public App(ILocalDatabase localDatabase)
+	/// <summary>Initializes the application resources.</summary>
+	public App()
 	{
 		InitializeComponent();
-		_localDatabase = localDatabase;
 	}
 
     /// <summary>
@@ -18,12 +18,4 @@ public partial class App : Microsoft.Maui.Controls.Application
     protected override Window CreateWindow(IActivationState? activationState)
         => new Window(new AppShell());
 
-    /// <summary>
-    /// Called when the app starts. Initialises the local SQLite database.
-    /// </summary>
-    protected override async void OnStart()
-    {
-        base.OnStart();
-        await _localDatabase.InitializeAsync();
-    }
 }

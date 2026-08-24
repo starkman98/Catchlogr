@@ -46,8 +46,12 @@ public static class MauiProgram
 		builder.Services.AddSingleton(appSettings.Database);
 
         // --- Local database ---
-        // Singleton: one connection shared for the entire app lifetime
-        builder.Services.AddSingleton<ILocalDatabase, LocalDatabase>();
+        // Singleton: one manager switches the active account connection safely
+        builder.Services.AddSingleton<LocalDatabase>();
+        builder.Services.AddSingleton<ILocalDatabase>(services =>
+            services.GetRequiredService<LocalDatabase>());
+        builder.Services.AddSingleton<IAccountStorageContext>(services =>
+            services.GetRequiredService<LocalDatabase>());
 
         // --- Local repositories ---
         // Transient: cheap to create, no state of their own

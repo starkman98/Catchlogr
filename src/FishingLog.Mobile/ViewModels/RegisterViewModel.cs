@@ -1,6 +1,7 @@
 using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Services.Authentication;
 using FishingLog.Mobile.Services.Navigation;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ namespace FishingLog.Mobile.ViewModels;
 public partial class RegisterViewModel : BaseViewModel
 {
     private readonly IAuthenticationService _authenticationService;
+    private readonly ILocalDatabase _localDatabase;
     private readonly IAppNavigator _navigator;
     private readonly ILogger<RegisterViewModel> _logger;
 
@@ -37,10 +39,12 @@ public partial class RegisterViewModel : BaseViewModel
     /// <summary>Initializes a new registration ViewModel.</summary>
     public RegisterViewModel(
         IAuthenticationService authenticationService,
+        ILocalDatabase localDatabase,
         IAppNavigator navigator,
         ILogger<RegisterViewModel> logger)
     {
         _authenticationService = authenticationService;
+        _localDatabase = localDatabase;
         _navigator = navigator;
         _logger = logger;
         Title = "Create account";
@@ -60,7 +64,11 @@ public partial class RegisterViewModel : BaseViewModel
         {
             IsBusy = true;
             await _authenticationService.RegisterAsync(Email, Password, ct);
-            await _authenticationService.LoginAsync(Email, Password, ct);
+            var user = await _authenticationService.LoginAsync(
+                Email,
+                Password,
+                ct);
+            await _localDatabase.ActivateAsync(user.Id, ct);
             Password = string.Empty;
             ConfirmPassword = string.Empty;
             await _navigator.GoToAsync(AppRoutes.FishingTrips, ct);

@@ -1,4 +1,5 @@
 using FishingLog.Contracts.AuthenticationDTOs;
+using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Services.Authentication;
 using FishingLog.Mobile.Services.Navigation;
 using FishingLog.Mobile.ViewModels;
@@ -38,7 +39,11 @@ public sealed class RegisterViewModelTests
             .Returns(new CurrentUserResponse(
                 Guid.NewGuid(), "angler@example.com", DateTime.UtcNow, null));
         var navigator = Substitute.For<IAppNavigator>();
-        var sut = CreateViewModel(authenticationService, navigator);
+        var localDatabase = Substitute.For<ILocalDatabase>();
+        var sut = CreateViewModel(
+            authenticationService,
+            localDatabase,
+            navigator);
         sut.Email = "angler@example.com";
         sut.Password = "Password1!";
         sut.ConfirmPassword = "Password1!";
@@ -52,6 +57,9 @@ public sealed class RegisterViewModelTests
         await navigator.Received(1).GoToAsync(
             AppRoutes.FishingTrips,
             Arg.Any<CancellationToken>());
+        await localDatabase.Received(1).ActivateAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
         sut.Password.Should().BeEmpty();
         sut.ConfirmPassword.Should().BeEmpty();
         sut.IsBusy.Should().BeFalse();
@@ -59,10 +67,12 @@ public sealed class RegisterViewModelTests
 
     private static RegisterViewModel CreateViewModel(
         IAuthenticationService? authenticationService = null,
+        ILocalDatabase? localDatabase = null,
         IAppNavigator? navigator = null)
     {
         return new RegisterViewModel(
             authenticationService ?? Substitute.For<IAuthenticationService>(),
+            localDatabase ?? Substitute.For<ILocalDatabase>(),
             navigator ?? Substitute.For<IAppNavigator>(),
             Substitute.For<ILogger<RegisterViewModel>>());
     }

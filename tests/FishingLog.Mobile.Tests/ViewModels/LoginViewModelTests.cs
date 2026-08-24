@@ -1,5 +1,6 @@
 using System.Net;
 using FishingLog.Contracts.AuthenticationDTOs;
+using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Services.Authentication;
 using FishingLog.Mobile.Services.Navigation;
 using FishingLog.Mobile.ViewModels;
@@ -19,10 +20,17 @@ public sealed class LoginViewModelTests
         var tokenStore = Substitute.For<ITokenStore>();
         tokenStore.GetCurrentUserIdAsync().Returns(Guid.NewGuid());
         var navigator = Substitute.For<IAppNavigator>();
-        var sut = CreateViewModel(tokenStore: tokenStore, navigator: navigator);
+        var localDatabase = Substitute.For<ILocalDatabase>();
+        var sut = CreateViewModel(
+            tokenStore: tokenStore,
+            localDatabase: localDatabase,
+            navigator: navigator);
 
         await sut.InitializeAsync(TestContext.Current.CancellationToken);
 
+        await localDatabase.Received(1).ActivateAsync(
+            Arg.Any<Guid>(),
+            TestContext.Current.CancellationToken);
         await navigator.Received(1).GoToAsync(
             AppRoutes.FishingTrips,
             TestContext.Current.CancellationToken);
@@ -53,7 +61,11 @@ public sealed class LoginViewModelTests
             .Returns(new CurrentUserResponse(
                 Guid.NewGuid(), "angler@example.com", DateTime.UtcNow, null));
         var navigator = Substitute.For<IAppNavigator>();
-        var sut = CreateViewModel(authenticationService, navigator: navigator);
+        var localDatabase = Substitute.For<ILocalDatabase>();
+        var sut = CreateViewModel(
+            authenticationService,
+            localDatabase: localDatabase,
+            navigator: navigator);
         sut.Email = "angler@example.com";
         sut.Password = "Password1!";
 
@@ -62,6 +74,9 @@ public sealed class LoginViewModelTests
         sut.Password.Should().BeEmpty();
         sut.ErrorMessage.Should().BeEmpty();
         sut.IsBusy.Should().BeFalse();
+        await localDatabase.Received(1).ActivateAsync(
+            Arg.Any<Guid>(),
+            Arg.Any<CancellationToken>());
         await navigator.Received(1).GoToAsync(
             AppRoutes.FishingTrips,
             Arg.Any<CancellationToken>());
@@ -89,11 +104,13 @@ public sealed class LoginViewModelTests
     private static LoginViewModel CreateViewModel(
         IAuthenticationService? authenticationService = null,
         ITokenStore? tokenStore = null,
+        ILocalDatabase? localDatabase = null,
         IAppNavigator? navigator = null)
     {
         return new LoginViewModel(
             authenticationService ?? Substitute.For<IAuthenticationService>(),
             tokenStore ?? Substitute.For<ITokenStore>(),
+            localDatabase ?? Substitute.For<ILocalDatabase>(),
             navigator ?? Substitute.For<IAppNavigator>(),
             Substitute.For<ILogger<LoginViewModel>>());
     }

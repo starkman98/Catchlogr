@@ -106,17 +106,15 @@ public class SyncSettings
 public class DatabaseSettings
 {
     /// <summary>
+    /// Root directory under which account-specific storage is created.
+    /// </summary>
+    public string? RootDirectory { get; set; }
+
+    /// <summary>
     /// SQLite database file name
     /// </summary>
     public string FileName { get; set; } = "fishinglog.db3";
 
-    /// <summary>
-    /// Full path to the database file
-    /// </summary>
-    public string FullPath => Path.Combine(
-        FileSystem.AppDataDirectory,
-        FileName
-    );
 }
 
 /// <summary>

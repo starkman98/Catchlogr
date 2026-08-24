@@ -11,6 +11,7 @@
 
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="+" Command="{Binding AddTripCommand}" Order="Primary" Priority="0" />
+        <ToolbarItem Text="Sign out" Command="{Binding LogoutCommand}" Order="Secondary" Priority="1" />
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,*">

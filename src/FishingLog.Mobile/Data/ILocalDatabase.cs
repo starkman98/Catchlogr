@@ -6,7 +6,7 @@ namespace FishingLog.Mobile.Data;
 /// Abstraction for the local SQLite database.
 /// Manages the connection and table initialization.
 /// </summary>
-public interface ILocalDatabase
+public interface ILocalDatabase : IAccountStorageContext
 {
     /// <summary>
     /// Gets the underlying SQLite async connection.
@@ -15,8 +15,13 @@ public interface ILocalDatabase
     SQLiteAsyncConnection Connection { get; }
 
     /// <summary>
-    /// Creates all tables if they do not already exist.
-    /// Must be called once at app startup before any data access.
+    /// Activates and initializes the private database for an account.
     /// </summary>
-    Task InitializeAsync();
+    /// <param name="userId">The authenticated Identity user identifier.</param>
+    /// <param name="ct">A token that can cancel the operation.</param>
+    Task ActivateAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Closes the active account database.</summary>
+    /// <param name="ct">A token that can cancel the operation.</param>
+    Task CloseAsync(CancellationToken ct = default);
 }

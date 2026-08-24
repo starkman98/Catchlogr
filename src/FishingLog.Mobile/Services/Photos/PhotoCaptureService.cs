@@ -1,3 +1,4 @@
+using FishingLog.Mobile.Data;
 using Microsoft.Maui.Media;
 
 namespace FishingLog.Mobile.Services.Photos;
@@ -8,11 +9,15 @@ namespace FishingLog.Mobile.Services.Photos;
 public sealed class PhotoCaptureService : IPhotoCaptureService
 {
     private readonly IMediaPicker _mediaPicker;
+    private readonly IAccountStorageContext _accountStorage;
 
     /// <summary>Initializes a photo capture service with the platform media picker.</summary>
-    public PhotoCaptureService(IMediaPicker mediaPicker)
+    public PhotoCaptureService(
+        IMediaPicker mediaPicker,
+        IAccountStorageContext accountStorage)
     {
         _mediaPicker = mediaPicker;
+        _accountStorage = accountStorage;
     }
 
     /// <inheritdoc/>
@@ -31,7 +36,7 @@ public sealed class PhotoCaptureService : IPhotoCaptureService
 
         ct.ThrowIfCancellationRequested();
 
-        var photoDirectory = Path.Combine(FileSystem.AppDataDirectory, "catch-photos");
+        var photoDirectory = GetPhotoDirectory();
         Directory.CreateDirectory(photoDirectory);
 
         var extension = NormalizeExtension(Path.GetExtension(photo.FileName));
@@ -55,11 +60,36 @@ public sealed class PhotoCaptureService : IPhotoCaptureService
     {
         ct.ThrowIfCancellationRequested();
 
-        if (!string.IsNullOrWhiteSpace(localFilePath) && File.Exists(localFilePath))
-            File.Delete(localFilePath);
+        if (string.IsNullOrWhiteSpace(localFilePath))
+            return Task.CompletedTask;
+
+        var photoDirectory = Path.GetFullPath(
+            GetPhotoDirectory())
+            .TrimEnd(Path.DirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(localFilePath);
+        var pathComparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (!fullPath.StartsWith(
+                photoDirectory,
+                pathComparison))
+        {
+            throw new InvalidOperationException(
+                "The photo does not belong to the active account.");
+        }
+
+        if (File.Exists(fullPath))
+            File.Delete(fullPath);
 
         return Task.CompletedTask;
     }
+
+    private string GetPhotoDirectory()
+        => Path.Combine(
+            _accountStorage.ActiveAccountDirectory,
+            "photos");
 
     private static string NormalizeExtension(string extension) => extension.ToLowerInvariant() switch
     {

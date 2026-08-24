@@ -9,7 +9,7 @@ namespace FishingLog.Mobile.Data.Repositories;
 /// </summary>
 public class FishingTripLocalRepository : IFishingTripLocalRepository
 {
-    private readonly SQLiteAsyncConnection _db;
+    private readonly ILocalDatabase _localDatabase;
 
     /// <summary>
     /// Initializes a new instance of <see cref="FishingTripLocalRepository"/>.
@@ -17,18 +17,18 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
     /// </summary>
     public FishingTripLocalRepository(ILocalDatabase localDatabase)
     {
-        _db = localDatabase.Connection;
+        _localDatabase = localDatabase;
     }
 
     /// <inheritdoc/>
     public Task<List<FishingTripLocalEntity>> GetAllAsync(CancellationToken ct = default)
-        => _db.Table<FishingTripLocalEntity>()
+        => _localDatabase.Connection.Table<FishingTripLocalEntity>()
               .Where(x => !x.IsDeleted)
               .ToListAsync();
 
     /// <inheritdoc/>
     public Task<FishingTripLocalEntity?> GetByIdAsync(int id, CancellationToken ct = default)
-        => _db.Table<FishingTripLocalEntity?>()
+        => _localDatabase.Connection.Table<FishingTripLocalEntity?>()
               .Where(x => x.Id == id && !x.IsDeleted)
               .FirstOrDefaultAsync();
 
@@ -36,14 +36,14 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
     public Task<FishingTripLocalEntity?> GetByServerIdAsync(Guid serverId, CancellationToken ct = default)
     {
         var serverIdAsString = serverId.ToString();
-        return _db.Table<FishingTripLocalEntity?>()
+        return _localDatabase.Connection.Table<FishingTripLocalEntity?>()
             .Where(x => x.ServerId == serverIdAsString)
             .FirstOrDefaultAsync();
     }
 
     /// <inheritdoc/>
     public Task<List<FishingTripLocalEntity>> GetDirtyAsync(CancellationToken ct = default)
-        => _db.Table<FishingTripLocalEntity>()
+        => _localDatabase.Connection.Table<FishingTripLocalEntity>()
               .Where(x => x.IsDirty)
               .ToListAsync();
 
@@ -52,7 +52,7 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
     {
         trip.IsDirty = true;
         trip.LastModifiedUtc = DateTime.UtcNow;
-        await _db.InsertAsync(trip);
+        await _localDatabase.Connection.InsertAsync(trip);
         return trip.Id;
     }
 
@@ -61,7 +61,7 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
     {
         trip.IsDirty = true;
         trip.LastModifiedUtc = DateTime.UtcNow;
-        await _db.UpdateAsync(trip);
+        await _localDatabase.Connection.UpdateAsync(trip);
     }
 
     /// <inheritdoc/>
@@ -74,20 +74,20 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
         trip.IsDeleted = true;
         trip.IsDirty = true;
         trip.LastModifiedUtc = DateTime.UtcNow;
-        await _db.UpdateAsync(trip);
+        await _localDatabase.Connection.UpdateAsync(trip);
     }
 
     /// <inheritdoc/>
     public Task PermanentlyDeleteAsync(int id, CancellationToken ct = default)
-        => _db.DeleteAsync<FishingTripLocalEntity>(id);
+        => _localDatabase.Connection.DeleteAsync<FishingTripLocalEntity>(id);
 
     /// <inheritdoc/>
     public async Task SaveFromServerAsync(FishingTripLocalEntity trip, CancellationToken ct = default)
     {
         // Id == 0 means sqlite-net-pcl has not assigned a local key yet → new record
         if (trip.Id == 0)
-            await _db.InsertAsync(trip);
+            await _localDatabase.Connection.InsertAsync(trip);
         else
-            await _db.UpdateAsync(trip);
+            await _localDatabase.Connection.UpdateAsync(trip);
     }
 }

@@ -1,5 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FishingLog.Mobile.Data;
+using FishingLog.Mobile.Services.Authentication;
+using FishingLog.Mobile.Services.Navigation;
 using FishingLog.Sync.Abstractions;
 using FishingLog.Sync.Entities;
 using Microsoft.Extensions.Logging;
@@ -16,6 +19,9 @@ public partial class FishingTripsViewModel : BaseViewModel
     private readonly IFishingTripLocalRepository _tripRepo;
     private readonly ISyncOrchestrator _syncOrchestrator;
     private readonly IApiHealthClient _healthClient;
+    private readonly IAuthenticationService _authenticationService;
+    private readonly ILocalDatabase _localDatabase;
+    private readonly IAppNavigator _navigator;
     private readonly ILogger<FishingTripsViewModel> _logger;
 
     private readonly SemaphoreSlim _syncLock = new(1, 1);
@@ -50,11 +56,17 @@ public partial class FishingTripsViewModel : BaseViewModel
         IFishingTripLocalRepository tripRepo,
         ISyncOrchestrator syncOrchestrator,
         IApiHealthClient healthClient,
+        IAuthenticationService authenticationService,
+        ILocalDatabase localDatabase,
+        IAppNavigator navigator,
         ILogger<FishingTripsViewModel> logger)
     {
         _tripRepo = tripRepo;
         _syncOrchestrator = syncOrchestrator;
         _healthClient = healthClient;
+        _authenticationService = authenticationService;
+        _localDatabase = localDatabase;
+        _navigator = navigator;
         _logger = logger;
         Title = "Fishing Trips";
     }
@@ -157,6 +169,24 @@ public partial class FishingTripsViewModel : BaseViewModel
     [RelayCommand]
     private async Task AddTripAsync()
         => await Shell.Current.GoToAsync("AddEditFishingTripPage");
+
+    /// <summary>Closes the active account database and signs out locally.</summary>
+    [RelayCommand]
+    private async Task LogoutAsync(CancellationToken ct)
+    {
+        await _syncLock.WaitAsync(ct);
+        try
+        {
+            await _localDatabase.CloseAsync(ct);
+            _authenticationService.Logout();
+            Trips.Clear();
+            await _navigator.GoToAsync(AppRoutes.Login, ct);
+        }
+        finally
+        {
+            _syncLock.Release();
+        }
+    }
 
     /// <summary>Navigates to the details page for the selected trip.</summary>
     [RelayCommand]

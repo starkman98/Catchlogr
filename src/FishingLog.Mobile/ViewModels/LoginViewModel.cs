@@ -1,6 +1,7 @@
 using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Services.Authentication;
 using FishingLog.Mobile.Services.Navigation;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ public partial class LoginViewModel : BaseViewModel
 {
     private readonly IAuthenticationService _authenticationService;
     private readonly ITokenStore _tokenStore;
+    private readonly ILocalDatabase _localDatabase;
     private readonly IAppNavigator _navigator;
     private readonly ILogger<LoginViewModel> _logger;
     private bool _hasCheckedExistingSession;
@@ -36,11 +38,13 @@ public partial class LoginViewModel : BaseViewModel
     public LoginViewModel(
         IAuthenticationService authenticationService,
         ITokenStore tokenStore,
+        ILocalDatabase localDatabase,
         IAppNavigator navigator,
         ILogger<LoginViewModel> logger)
     {
         _authenticationService = authenticationService;
         _tokenStore = tokenStore;
+        _localDatabase = localDatabase;
         _navigator = navigator;
         _logger = logger;
         Title = "Sign in";
@@ -54,9 +58,28 @@ public partial class LoginViewModel : BaseViewModel
             return;
 
         _hasCheckedExistingSession = true;
-        var currentUserId = await _tokenStore.GetCurrentUserIdAsync();
-        if (currentUserId.HasValue)
-            await _navigator.GoToAsync(AppRoutes.FishingTrips, ct);
+        try
+        {
+            var currentUserId = await _tokenStore.GetCurrentUserIdAsync();
+            if (currentUserId.HasValue)
+            {
+                await _localDatabase.ActivateAsync(currentUserId.Value, ct);
+                await _navigator.GoToAsync(AppRoutes.FishingTrips, ct);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _hasCheckedExistingSession = false;
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _hasCheckedExistingSession = false;
+            _logger.LogError(
+                exception,
+                "The stored account database could not be activated.");
+            ErrorMessage = "Unable to open your offline data. Please try again.";
+        }
     }
 
     [RelayCommand]
@@ -75,7 +98,11 @@ public partial class LoginViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            await _authenticationService.LoginAsync(Email, Password, ct);
+            var user = await _authenticationService.LoginAsync(
+                Email,
+                Password,
+                ct);
+            await _localDatabase.ActivateAsync(user.Id, ct);
             Password = string.Empty;
             await _navigator.GoToAsync(AppRoutes.FishingTrips, ct);
         }
