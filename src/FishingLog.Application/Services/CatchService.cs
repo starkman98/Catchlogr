@@ -11,18 +11,19 @@ public class CatchService : ICatchService
 {
     private readonly ICatchRepository _repo;
     private readonly IFishingTripRepository _tripRepo;
+    private readonly ICurrentUserContext _currentUserContext;
 
-    public CatchService(ICatchRepository repo, IFishingTripRepository tripRepo)
+    public CatchService(ICatchRepository repo, IFishingTripRepository tripRepo, ICurrentUserContext currentUserContext)
     {
         _repo = repo;
         _tripRepo = tripRepo;
+        _currentUserContext = currentUserContext;
     }
 
     /// <inheritdoc/>
     public async Task<CatchResponse> CreateAsync(Guid tripId, CreateCatchRequest request, CancellationToken ct = default)
     {
-        // TODO: verify ownership
-        var trip = await _tripRepo.GetByIdAsync(tripId, ct)
+        var trip = await _tripRepo.GetByIdAsync(tripId, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {tripId} not found");
 
         ValidateCatchTime(request.CaughtAt, trip);
@@ -37,16 +38,16 @@ public class CatchService : ICatchService
     /// <inheritdoc/>
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var existingCatch = await _repo.GetByIdAsync(id, ct)
+        var existingCatch = await _repo.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Catch {id} not found");
 
-        await _repo.DeleteAsync(id, ct);
+        await _repo.DeleteAsync(id, _currentUserContext.UserId, ct);
     }
 
     /// <inheritdoc/>
     public async Task<List<CatchResponse>> GetAllAsync(CancellationToken ct = default)
     {
-        var catches = await _repo.GetAllAsync(ct);
+        var catches = await _repo.GetAllAsync(_currentUserContext.UserId, ct);
 
         return catches.Select(MapFromCatchToResponse).ToList();
     }
@@ -54,7 +55,7 @@ public class CatchService : ICatchService
     /// <inheritdoc/>
     public async Task<CatchResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var existingCatch = await _repo.GetByIdAsync(id, ct)
+        var existingCatch = await _repo.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Catch {id} not found");
 
         return MapFromCatchToResponse(existingCatch);
@@ -63,10 +64,10 @@ public class CatchService : ICatchService
     /// <inheritdoc/>
     public async Task<List<CatchResponse>> GetByTripIdAsync(Guid tripId, CancellationToken ct = default)
     {
-        var trip = await _tripRepo.GetByIdAsync(tripId, ct)
+        var trip = await _tripRepo.GetByIdAsync(tripId, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {tripId} not Found");
 
-        var catches = await _repo.GetByTripIdAsync(tripId, ct);
+        var catches = await _repo.GetByTripIdAsync(tripId, _currentUserContext.UserId, ct);
 
         return catches.Select(MapFromCatchToResponse).ToList();
     }
@@ -77,7 +78,7 @@ public class CatchService : ICatchService
         if (since.Kind != DateTimeKind.Utc)
             since = DateTime.SpecifyKind(since, DateTimeKind.Utc);
 
-        var modifiedCatches = await _repo.GetModifiedSinceAsync(since, ct);
+        var modifiedCatches = await _repo.GetModifiedSinceAsync(_currentUserContext.UserId, since, ct);
 
         return modifiedCatches.Select(MapFromCatchToResponse).ToList();
     }
@@ -85,10 +86,10 @@ public class CatchService : ICatchService
     /// <inheritdoc/>
     public async Task<CatchResponse> UpdateAsync(Guid id, UpdateCatchRequest request, CancellationToken ct = default)
     {
-        var existingCatch = await _repo.GetByIdAsync(id, ct)
+        var existingCatch = await _repo.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Catch {id} not found");
 
-        var trip = await _tripRepo.GetByIdAsync(existingCatch.TripId, ct)
+        var trip = await _tripRepo.GetByIdAsync(existingCatch.TripId, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {existingCatch.TripId} not found.");
 
         ValidateCatchTime(request.CaughtAt, trip);

@@ -15,7 +15,8 @@ public static class FishingTripEndpoints
     public static void MapFishingTripEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/fishing-trips")
-            .WithTags("FishingTrips");
+            .WithTags("FishingTrips")
+            .RequireAuthorization();
 
         group.MapGet("/", GetAllTrips)
             .Produces<List<FishingTripResponse>>(StatusCodes.Status200OK)

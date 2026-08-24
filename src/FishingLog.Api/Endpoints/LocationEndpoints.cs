@@ -13,7 +13,8 @@ public static class LocationEndpoints
     public static void MapLocationEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/locations")
-            .WithTags("Locations");
+            .WithTags("Locations")
+            .RequireAuthorization();
 
         group.MapGet("/search", SearchLocations)
             .Produces<IReadOnlyList<LocationSearchResult>>(StatusCodes.Status200OK)

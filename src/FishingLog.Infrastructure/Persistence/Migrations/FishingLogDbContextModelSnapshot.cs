@@ -120,6 +120,9 @@ namespace FishingLog.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.Property<double?>("WaterTemp")
                         .HasColumnType("double precision");
 
@@ -145,7 +148,7 @@ namespace FishingLog.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LastModified");
+                    b.HasIndex("LastModified", "UserId");
 
                     b.ToTable("FishingTrips");
                 });

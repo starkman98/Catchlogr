@@ -16,7 +16,8 @@ public static class CatchEndpoints
     {
         // Nested routes — require tripId context
         var tripsGroup = app.MapGroup("/api/fishing-trips/{tripId:guid}/catches")
-            .WithTags("Catches");
+            .WithTags("Catches")
+            .RequireAuthorization();
 
         tripsGroup.MapGet("/", GetByTripId)
             .Produces<List<CatchResponse>>(StatusCodes.Status200OK)
@@ -30,7 +31,8 @@ public static class CatchEndpoints
 
         // Flat routes — act on a single known catch or sync
         var catchesGroup = app.MapGroup("/api/catches")
-            .WithTags("Catches");
+            .WithTags("Catches")
+            .RequireAuthorization();
 
         catchesGroup.MapGet("/", GetAllCatches)
             .Produces<List<CatchResponse>>(StatusCodes.Status200OK)

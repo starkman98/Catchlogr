@@ -3,6 +3,7 @@ using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Data.Repositories;
 using FishingLog.Mobile.Pages;
 using FishingLog.Mobile.Services;
+using FishingLog.Mobile.Services.Authentication;
 using FishingLog.Mobile.Services.Photos;
 using FishingLog.Mobile.ViewModels;
 using FishingLog.Sync.Abstractions;
@@ -21,6 +22,8 @@ public static class MauiProgram
 	/// <summary>Creates the configured MAUI application.</summary>
 	public static MauiApp CreateMauiApp()
 	{
+		SecureStorageInitializer.Initialize();
+
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
@@ -57,9 +60,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMediaPicker>(MediaPicker.Default);
         builder.Services.AddSingleton<IPhotoCaptureService, PhotoCaptureService>();
 
+        // --- Authentication storage ---
+        builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
+        builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
+
         // --- API client ---
         // Typed HttpClient: BaseAddress and Timeout come from appsettings
-		builder.Services.AddHttpClient<IFishingTripApiClient, FishingTripApiClient>(client =>
+        builder.Services.AddHttpClient<IFishingTripApiClient, FishingTripApiClient>(client =>
 		{
 			var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
 			client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");

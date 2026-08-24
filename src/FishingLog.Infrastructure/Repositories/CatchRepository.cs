@@ -25,40 +25,40 @@ public class CatchRepository : ICatchRepository
     }
 
     /// <inheritdoc/>
-    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task DeleteAsync(Guid id, Guid userId, CancellationToken ct = default)
     {
-        var trip = await GetByIdAsync(id, ct);
+        var catchToDelete = await GetByIdAsync(id, userId, ct);
 
-        if (trip is null)
+        if (catchToDelete is null)
             return;
 
-        _context.Catches.Remove(trip);
+        _context.Catches.Remove(catchToDelete);
         await _context.SaveChangesAsync(ct);
     }
 
     /// <inheritdoc/>
-    public async Task<List<Catch>> GetAllAsync(CancellationToken ct = default)
-        => await _context.Catches
+    public Task<List<Catch>> GetAllAsync(Guid userId, CancellationToken ct = default)
+        => QueryForUser(userId)
         .AsNoTracking()
         .OrderByDescending(c => c.CaughtAt)
         .ToListAsync(ct);
 
     /// <inheritdoc/>
-    public async Task<Catch?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await _context.Catches
+    public Task<Catch?> GetByIdAsync(Guid id, Guid userId, CancellationToken ct = default)
+        => QueryForUser(userId)
         .FirstOrDefaultAsync(c => c.Id == id, ct);
 
     /// <inheritdoc/>
-    public async Task<List<Catch>> GetByTripIdAsync(Guid tripId, CancellationToken ct = default)
-        => await _context.Catches
+    public Task<List<Catch>> GetByTripIdAsync(Guid tripId, Guid userId, CancellationToken ct = default)
+        => QueryForUser(userId)
         .AsNoTracking()
         .Where(c => c.TripId == tripId)
         .OrderByDescending(c => c.CaughtAt)
         .ToListAsync(ct);
 
     /// <inheritdoc/>
-    public async Task<List<Catch>> GetModifiedSinceAsync(DateTime since, CancellationToken ct = default)
-        => await _context.Catches
+    public Task<List<Catch>> GetModifiedSinceAsync(Guid userId, DateTime since, CancellationToken ct = default)
+        => QueryForUser(userId)
         .Where(c => c.LastModified > since)
         .OrderBy(c => c.LastModified)
         .ToListAsync(ct);
@@ -69,4 +69,11 @@ public class CatchRepository : ICatchRepository
         _context.Catches.Update(catchToUpdate);
         await _context.SaveChangesAsync();
     }
+
+    private IQueryable<Catch> QueryForUser(Guid userId)
+          => from currentCatch in _context.Catches
+             join trip in _context.FishingTrips
+                 on currentCatch.TripId equals trip.Id
+             where trip.UserId == userId
+             select currentCatch;
 }

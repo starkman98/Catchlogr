@@ -9,6 +9,7 @@
     <Project Path="src/FishingLog.Sync/FishingLog.Sync.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/FishingLog.Mobile.Tests/FishingLog.Mobile.Tests.csproj" />
     <Project Path="tests/FishingLog.Tests/FishingLog.Tests.csproj" />
   </Folder>
 </Solution>

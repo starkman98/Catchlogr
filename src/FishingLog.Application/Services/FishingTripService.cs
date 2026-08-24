@@ -18,6 +18,7 @@ public class FishingTripService : IFishingTripService
     private readonly IWeatherService _weatherService;
     private readonly IMoonPhaseService _moonPhaseService;
     private readonly ILogger<FishingTripService> _logger;
+    private readonly ICurrentUserContext _currentUserContext;
 
     /// <summary>
     /// Initializes a new instance of <see cref="FishingTripService"/>.
@@ -26,25 +27,27 @@ public class FishingTripService : IFishingTripService
         IFishingTripRepository repository,
         IWeatherService weatherService,
         IMoonPhaseService moonPhaseService,
-        ILogger<FishingTripService> logger)
+        ILogger<FishingTripService> logger,
+        ICurrentUserContext currentUserContext)
     {
         _repository = repository;
         _weatherService = weatherService;
         _moonPhaseService = moonPhaseService;
         _logger = logger;
+        _currentUserContext = currentUserContext;
     }
 
     /// <inheritdoc/>
     public async Task<List<FishingTripResponse>> GetAllAsync(CancellationToken ct = default)
     {
-        var trips = await _repository.GetAllAsync(ct);
+        var trips = await _repository.GetAllAsync(_currentUserContext.UserId, ct);
         return trips.Select(MapFromTripToResponse).ToList();
     }
 
     /// <inheritdoc/>
     public async Task<FishingTripResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var trip = await _repository.GetByIdAsync(id, ct)
+        var trip = await _repository.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {id} not found.");
         return MapFromTripToResponse(trip);
     }
@@ -55,7 +58,7 @@ public class FishingTripService : IFishingTripService
         if (since.Kind != DateTimeKind.Utc)
             since = DateTime.SpecifyKind(since, DateTimeKind.Utc);
 
-        var trips = await _repository.GetModifiedSinceAsync(since, ct);
+        var trips = await _repository.GetModifiedSinceAsync(_currentUserContext.UserId, since, ct);
         return trips.Select(MapFromTripToResponse).ToList();
     }
 
@@ -66,6 +69,7 @@ public class FishingTripService : IFishingTripService
             throw new BusinessRuleException("EndTime must be after StartTime.");
 
         var trip = MapFromCreateToTrip(request);
+        trip.UserId = _currentUserContext.UserId;
         trip.MoonPhase = _moonPhaseService.Calculate(trip.StartTime);
 
         await TryEnrichWeatherAsync(trip, ct);
@@ -80,7 +84,7 @@ public class FishingTripService : IFishingTripService
         if (request.EndTime.HasValue && request.EndTime.Value <= request.StartTime)
             throw new BusinessRuleException("EndTime must be after StartTime.");
 
-        var trip = await _repository.GetByIdAsync(id, ct)
+        var trip = await _repository.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {id} not found");
 
         var requestStartTimeUtc = DateTime.SpecifyKind(
@@ -114,7 +118,7 @@ public class FishingTripService : IFishingTripService
         Guid id,
         CancellationToken ct = default)
     {
-        var trip = await _repository.GetByIdAsync(id, ct)
+        var trip = await _repository.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {id} not found.");
 
         if (trip.WeatherSampleTimeUtc is not null)
@@ -133,10 +137,10 @@ public class FishingTripService : IFishingTripService
     /// <inheritdoc/>
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var trip = await _repository.GetByIdAsync(id, ct)
+        var trip = await _repository.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Trip {id} not found.");
 
-        await _repository.DeleteAsync(id, ct);
+        await _repository.DeleteAsync(id, _currentUserContext.UserId, ct);
     }
 
     private async Task<bool> TryEnrichWeatherAsync(
