@@ -4,6 +4,7 @@ using FishingLog.Mobile.Data.Repositories;
 using FishingLog.Mobile.Pages;
 using FishingLog.Mobile.Services;
 using FishingLog.Mobile.Services.Authentication;
+using FishingLog.Mobile.Services.Navigation;
 using FishingLog.Mobile.Services.Photos;
 using FishingLog.Mobile.ViewModels;
 using FishingLog.Sync.Abstractions;
@@ -65,6 +66,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<AuthenticationMessageHandler>();
+        builder.Services.AddSingleton<IAppNavigator, ShellAppNavigator>();
 
         builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
         {
@@ -120,12 +122,16 @@ public static class MauiProgram
         builder.Services.AddTransient<AddEditFishingTripViewModel>();
         builder.Services.AddTransient<FishingTripDetailsViewModel>();
         builder.Services.AddTransient<AddEditCatchViewModel>();
+        builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<RegisterViewModel>();
 
         // --- Pages ---
         builder.Services.AddTransient<FishingTripsPage>();
         builder.Services.AddTransient<AddEditFishingTripPage>();
         builder.Services.AddTransient<FishingTripDetailsPage>();
         builder.Services.AddTransient<AddEditCatchPage>();
+        builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<RegisterPage>();
 
 
         return builder.Build();

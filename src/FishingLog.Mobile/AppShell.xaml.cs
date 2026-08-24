@@ -15,6 +15,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("AddEditFishingTripPage", typeof(AddEditFishingTripPage));
         Routing.RegisterRoute("FishingTripDetailsPage", typeof(FishingTripDetailsPage));
         Routing.RegisterRoute("AddEditCatchPage", typeof(AddEditCatchPage));
+        Routing.RegisterRoute(nameof(RegisterPage), typeof(RegisterPage));
     }
 }
 
