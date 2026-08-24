@@ -64,6 +64,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
         builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
         builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddTransient<AuthenticationMessageHandler>();
 
         builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
         {
@@ -79,19 +80,22 @@ public static class MauiProgram
 			var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
 			client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
 			client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-		});
+		})
+        .AddHttpMessageHandler<AuthenticationMessageHandler>();
         builder.Services.AddHttpClient<ICatchApiClient, CatchApiClient>(client =>
         {
             var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        });
+        })
+        .AddHttpMessageHandler<AuthenticationMessageHandler>();
         builder.Services.AddHttpClient<IPhotoApiClient, PhotoApiClient>(client =>
         {
             var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        });
+        })
+        .AddHttpMessageHandler<AuthenticationMessageHandler>();
         builder.Services.AddHttpClient<IApiHealthClient, ApiHealthClient>(client =>
         {
             var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
@@ -103,7 +107,8 @@ public static class MauiProgram
             var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
             client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        });
+        })
+        .AddHttpMessageHandler<AuthenticationMessageHandler>();
 
         // --- Sync service ---
         builder.Services.AddTransient<IFishingTripSyncService, FishingTripSyncService>();
