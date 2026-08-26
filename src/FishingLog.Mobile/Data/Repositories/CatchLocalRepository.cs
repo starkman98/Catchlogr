@@ -24,16 +24,16 @@ public class CatchLocalRepository : ICatchLocalRepository
               .ToListAsync();
 
     /// <inheritdoc/>
-    public Task<CatchLocalEntity?> GetByIdAsync(int id, CancellationToken ct = default)
-        => _localDatabase.Connection.Table<CatchLocalEntity?>()
+    public async Task<CatchLocalEntity?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await _localDatabase.Connection.Table<CatchLocalEntity>()
               .Where(x => x.Id == id && !x.IsDeleted)
               .FirstOrDefaultAsync();
 
     /// <inheritdoc/>
-    public Task<CatchLocalEntity?> GetByServerIdAsync(Guid serverId, CancellationToken ct = default)
+    public async Task<CatchLocalEntity?> GetByServerIdAsync(Guid serverId, CancellationToken ct = default)
     {
         var serverIdAsString = serverId.ToString();
-        return _localDatabase.Connection.Table<CatchLocalEntity?>()
+        return await _localDatabase.Connection.Table<CatchLocalEntity>()
             .Where(x => x.ServerId == serverIdAsString)
             .FirstOrDefaultAsync();
     }

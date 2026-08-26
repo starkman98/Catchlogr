@@ -27,16 +27,16 @@ public class FishingTripLocalRepository : IFishingTripLocalRepository
               .ToListAsync();
 
     /// <inheritdoc/>
-    public Task<FishingTripLocalEntity?> GetByIdAsync(int id, CancellationToken ct = default)
-        => _localDatabase.Connection.Table<FishingTripLocalEntity?>()
+    public async Task<FishingTripLocalEntity?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await _localDatabase.Connection.Table<FishingTripLocalEntity>()
               .Where(x => x.Id == id && !x.IsDeleted)
               .FirstOrDefaultAsync();
 
     /// <inheritdoc/>
-    public Task<FishingTripLocalEntity?> GetByServerIdAsync(Guid serverId, CancellationToken ct = default)
+    public async Task<FishingTripLocalEntity?> GetByServerIdAsync(Guid serverId, CancellationToken ct = default)
     {
         var serverIdAsString = serverId.ToString();
-        return _localDatabase.Connection.Table<FishingTripLocalEntity?>()
+        return await _localDatabase.Connection.Table<FishingTripLocalEntity>()
             .Where(x => x.ServerId == serverIdAsString)
             .FirstOrDefaultAsync();
     }

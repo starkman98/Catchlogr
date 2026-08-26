@@ -27,6 +27,8 @@ public class FishingTripServiceTests
     private readonly IWeatherService _weatherService;
     private readonly IMoonPhaseService _moonPhaseService;
     private readonly ILogger<FishingTripService> _logger;
+    private readonly Guid _userId = Guid.NewGuid();
+    private readonly ICurrentUserContext _currentUserContext;
     private readonly FishingTripService _sut; // sut = System Under Test
 
     public FishingTripServiceTests()
@@ -36,11 +38,14 @@ public class FishingTripServiceTests
         _moonPhaseService = Substitute.For<IMoonPhaseService>();
         _moonPhaseService.Calculate(Arg.Any<DateTime>()).Returns(MoonPhase.FullMoon);
         _logger = Substitute.For<ILogger<FishingTripService>>();
+        _currentUserContext = Substitute.For<ICurrentUserContext>();
+        _currentUserContext.UserId.Returns(_userId);
         _sut = new FishingTripService(
             _repository,
             _weatherService,
             _moonPhaseService,
-            _logger);
+            _logger,
+            _currentUserContext);
     }
 
     // -----------------------------------------------------------------------
@@ -56,7 +61,7 @@ public class FishingTripServiceTests
             BuildTrip("Morning bass session"),
             BuildTrip("Evening pike trip")
         };
-        _repository.GetAllAsync(TestContext.Current.CancellationToken).Returns(fakeTrips);
+        _repository.GetAllAsync(_userId, TestContext.Current.CancellationToken).Returns(fakeTrips);
 
         // Act — call the real service method
         var result = await _sut.GetAllAsync(TestContext.Current.CancellationToken);
@@ -77,7 +82,7 @@ public class FishingTripServiceTests
         // Arrange
         var id = Guid.NewGuid();
         var fakeTrip = BuildTrip("Solo trip", id);
-        _repository.GetByIdAsync(id, TestContext.Current.CancellationToken).Returns(fakeTrip);
+        _repository.GetByIdAsync(id, _userId, TestContext.Current.CancellationToken).Returns(fakeTrip);
 
         // Act
         var result = await _sut.GetByIdAsync(id, TestContext.Current.CancellationToken);
@@ -92,7 +97,7 @@ public class FishingTripServiceTests
     public async Task GetByIdAsync_Should_Throw_When_Trip_Not_Found()
     {
         // Arrange — repo returns null (trip doesn't exist)
-        _repository.GetByIdAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken).ReturnsNull();
+        _repository.GetByIdAsync(Arg.Any<Guid>(), _userId, TestContext.Current.CancellationToken).ReturnsNull();
 
         // Act & Assert
         await _sut.Invoking(s => s.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken))
@@ -246,7 +251,7 @@ public class FishingTripServiceTests
     public async Task UpdateAsync_Should_Throw_When_Trip_Not_Found()
     {
         // Arrange
-        _repository.GetByIdAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken).ReturnsNull();
+        _repository.GetByIdAsync(Arg.Any<Guid>(), _userId, TestContext.Current.CancellationToken).ReturnsNull();
         var request = BuildUpdateRequest();
 
         // Act & Assert
@@ -261,7 +266,7 @@ public class FishingTripServiceTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _repository.GetByIdAsync(id, TestContext.Current.CancellationToken).Returns(BuildTrip("Old name", id));
+        _repository.GetByIdAsync(id, _userId, TestContext.Current.CancellationToken).Returns(BuildTrip("Old name", id));
         var request = BuildUpdateRequest("New name");
 
         // Act
@@ -277,7 +282,7 @@ public class FishingTripServiceTests
     public async Task UpdateAsync_ChangingNotesOnly_DoesNotRefetchWeather()
     {
         var trip = BuildTripWithWeather();
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         var request = BuildMatchingUpdateRequest(trip, note: "Updated notes");
 
@@ -299,7 +304,7 @@ public class FishingTripServiceTests
         var trip = BuildTripWithWeather();
         var snapshot = BuildWeatherSnapshot();
         const double newLatitude = 59.1;
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         _weatherService.GetWeatherAsync(
                 newLatitude,
@@ -331,7 +336,7 @@ public class FishingTripServiceTests
         var trip = BuildTripWithWeather();
         var snapshot = BuildWeatherSnapshot();
         var newStartTime = trip.StartTime.AddHours(1);
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         _weatherService.GetWeatherAsync(
                 trip.Latitude!.Value,
@@ -362,7 +367,7 @@ public class FishingTripServiceTests
         var trip = BuildTripWithWeather();
         trip.MoonPhase = MoonPhase.FirstQuarter;
         var newStartTime = trip.StartTime.AddDays(4);
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         _moonPhaseService.Calculate(newStartTime).Returns(MoonPhase.FullMoon);
         var request = BuildMatchingUpdateRequest(trip) with
@@ -383,7 +388,7 @@ public class FishingTripServiceTests
     public async Task UpdateAsync_LegacyTrip_DoesNotAddMoonPhase()
     {
         var trip = BuildTrip("Legacy trip");
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         var request = BuildMatchingUpdateRequest(trip) with
         {
@@ -409,7 +414,7 @@ public class FishingTripServiceTests
         var trip = BuildTripWithoutWeather();
         var previousLastModified = trip.LastModified;
         var snapshot = BuildWeatherSnapshot();
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         _weatherService.GetWeatherAsync(
                 trip.Latitude!.Value,
@@ -435,7 +440,7 @@ public class FishingTripServiceTests
     public async Task RetryWeatherEnrichmentAsync_ExistingWeather_DoesNotCallProviderOrPersist()
     {
         var trip = BuildTripWithWeather();
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
 
         var result = await _sut.RetryWeatherEnrichmentAsync(
@@ -457,7 +462,7 @@ public class FishingTripServiceTests
     public async Task RetryWeatherEnrichmentAsync_MissingCoordinates_DoesNotCallProviderOrPersist()
     {
         var trip = BuildTrip("No coordinates");
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
 
         var result = await _sut.RetryWeatherEnrichmentAsync(
@@ -479,7 +484,7 @@ public class FishingTripServiceTests
     public async Task RetryWeatherEnrichmentAsync_ProviderFailure_RemainsNonFatalAndDoesNotPersist()
     {
         var trip = BuildTripWithoutWeather();
-        _repository.GetByIdAsync(trip.Id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(trip.Id, _userId, TestContext.Current.CancellationToken)
             .Returns(trip);
         _weatherService.GetWeatherAsync(
                 Arg.Any<double>(),
@@ -503,7 +508,7 @@ public class FishingTripServiceTests
     public async Task RetryWeatherEnrichmentAsync_TripNotFound_Throws()
     {
         var id = Guid.NewGuid();
-        _repository.GetByIdAsync(id, TestContext.Current.CancellationToken)
+        _repository.GetByIdAsync(id, _userId, TestContext.Current.CancellationToken)
             .ReturnsNull();
 
         var action = () => _sut.RetryWeatherEnrichmentAsync(
@@ -521,13 +526,13 @@ public class FishingTripServiceTests
     public async Task DeleteAsync_Should_Throw_When_Trip_Not_Found()
     {
         // Arrange
-        _repository.GetByIdAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken).ReturnsNull();
+        _repository.GetByIdAsync(Arg.Any<Guid>(), _userId, TestContext.Current.CancellationToken).ReturnsNull();
 
         // Act & Assert
         await _sut.Invoking(s => s.DeleteAsync(Guid.NewGuid(), TestContext.Current.CancellationToken))
             .Should().ThrowAsync<NotFoundException>();
 
-        await _repository.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), TestContext.Current.CancellationToken);
+        await _repository.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), _userId, TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -535,13 +540,13 @@ public class FishingTripServiceTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _repository.GetByIdAsync(id, TestContext.Current.CancellationToken).Returns(BuildTrip("Trip to delete", id));
+        _repository.GetByIdAsync(id, _userId, TestContext.Current.CancellationToken).Returns(BuildTrip("Trip to delete", id));
 
         // Act
         await _sut.DeleteAsync(id, TestContext.Current.CancellationToken);
 
         // Assert
-        await _repository.Received(1).DeleteAsync(id, TestContext.Current.CancellationToken);
+        await _repository.Received(1).DeleteAsync(id, _userId, TestContext.Current.CancellationToken);
     }
 
     // -----------------------------------------------------------------------

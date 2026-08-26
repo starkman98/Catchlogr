@@ -1,4 +1,3 @@
-using FishingLog.Mobile.Data;
 using FishingLog.Mobile.Services.Authentication;
 using FishingLog.Mobile.Services.Navigation;
 using FishingLog.Mobile.ViewModels;
@@ -13,31 +12,69 @@ namespace FishingLog.Mobile.Tests.ViewModels;
 /// <summary>Tests account-session behavior exposed by the fishing-trips page.</summary>
 public sealed class FishingTripsViewModelTests
 {
-    /// <summary>Verifies that logout closes storage, clears authentication, and navigates to login.</summary>
+    /// <summary>Verifies that a prepared logout completes and navigates to login.</summary>
     [Fact]
     public async Task LogoutCommand_ActiveAccount_ClosesStorageAndNavigatesToLogin()
     {
-        var authenticationService = Substitute.For<IAuthenticationService>();
-        var localDatabase = Substitute.For<ILocalDatabase>();
+        var logoutService = Substitute.For<ILogoutService>();
+        logoutService.PrepareAsync(Arg.Any<CancellationToken>())
+            .Returns(new LogoutPreparationResult(
+                LogoutPreparationStatus.Ready,
+                0));
+        var logoutDialog = Substitute.For<ILogoutDialogService>();
         var navigator = Substitute.For<IAppNavigator>();
         var sut = new FishingTripsViewModel(
             Substitute.For<IFishingTripLocalRepository>(),
             Substitute.For<ISyncOrchestrator>(),
             Substitute.For<IApiHealthClient>(),
-            authenticationService,
-            localDatabase,
+            logoutService,
+            logoutDialog,
             navigator,
             Substitute.For<ILogger<FishingTripsViewModel>>());
         sut.Trips.Add(new FishingTripLocalEntity { Name = "Cached trip" });
 
         await sut.LogoutCommand.ExecuteAsync(null);
 
-        await localDatabase.Received(1).CloseAsync(
+        await logoutService.Received(1).CompleteAsync(
             Arg.Any<CancellationToken>());
-        authenticationService.Received(1).Logout();
+        await logoutDialog.DidNotReceive().ConfirmAsync(
+            Arg.Any<LogoutPreparationResult>(),
+            Arg.Any<CancellationToken>());
         await navigator.Received(1).GoToAsync(
             AppRoutes.Login,
             Arg.Any<CancellationToken>());
         sut.Trips.Should().BeEmpty();
+    }
+
+    /// <summary>Verifies that cancelling a pending-change warning keeps the session active.</summary>
+    [Fact]
+    public async Task LogoutCommand_PendingChangesAndCancel_DoesNotSignOut()
+    {
+        var logoutService = Substitute.For<ILogoutService>();
+        var preparation = new LogoutPreparationResult(
+            LogoutPreparationStatus.PendingChangesOffline,
+            2);
+        logoutService.PrepareAsync(Arg.Any<CancellationToken>())
+            .Returns(preparation);
+        var logoutDialog = Substitute.For<ILogoutDialogService>();
+        logoutDialog.ConfirmAsync(preparation, Arg.Any<CancellationToken>())
+            .Returns(LogoutDecision.Cancel);
+        var navigator = Substitute.For<IAppNavigator>();
+        var sut = new FishingTripsViewModel(
+            Substitute.For<IFishingTripLocalRepository>(),
+            Substitute.For<ISyncOrchestrator>(),
+            Substitute.For<IApiHealthClient>(),
+            logoutService,
+            logoutDialog,
+            navigator,
+            Substitute.For<ILogger<FishingTripsViewModel>>());
+
+        await sut.LogoutCommand.ExecuteAsync(null);
+
+        await logoutService.DidNotReceive().CompleteAsync(
+            Arg.Any<CancellationToken>());
+        await navigator.DidNotReceive().GoToAsync(
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 }

@@ -12,12 +12,19 @@ public class CatchService : ICatchService
     private readonly ICatchRepository _repo;
     private readonly IFishingTripRepository _tripRepo;
     private readonly ICurrentUserContext _currentUserContext;
+    private readonly IPhotoService _photoService;
 
-    public CatchService(ICatchRepository repo, IFishingTripRepository tripRepo, ICurrentUserContext currentUserContext)
+    /// <summary>Initializes the catch application service.</summary>
+    public CatchService(
+        ICatchRepository repo,
+        IFishingTripRepository tripRepo,
+        ICurrentUserContext currentUserContext,
+        IPhotoService photoService)
     {
         _repo = repo;
         _tripRepo = tripRepo;
         _currentUserContext = currentUserContext;
+        _photoService = photoService;
     }
 
     /// <inheritdoc/>
@@ -41,6 +48,7 @@ public class CatchService : ICatchService
         var existingCatch = await _repo.GetByIdAsync(id, _currentUserContext.UserId, ct)
             ?? throw new NotFoundException($"Catch {id} not found");
 
+        await _photoService.DeleteForCatchAsync(id, ct);
         await _repo.DeleteAsync(id, _currentUserContext.UserId, ct);
     }
 
@@ -145,7 +153,7 @@ public class CatchService : ICatchService
         Species = r.Species,
         Length = r.Length,
         Weight = r.Weight,
-        PhotoUrl = r.PhotoUrl,
+        PhotoUrl = null,
         Note = r.Note,
         CaughtAt = DateTime.SpecifyKind(r.CaughtAt, DateTimeKind.Utc),
         LastModified = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
@@ -160,7 +168,6 @@ public class CatchService : ICatchService
         existing.Species = r.Species;
         existing.Length = r.Length;
         existing.Weight = r.Weight;
-        existing.PhotoUrl = r.PhotoUrl;
         existing.Note = r.Note;
         existing.CaughtAt = DateTime.SpecifyKind(r.CaughtAt, DateTimeKind.Utc);
         existing.LastModified = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);

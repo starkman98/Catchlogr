@@ -22,6 +22,9 @@ public sealed class FishingLogDbContext
     /// </summary>
     public DbSet<Catch> Catches => Set<Catch>();
 
+    /// <summary>Gets the private catch-photo metadata set.</summary>
+    public DbSet<CatchPhoto> CatchPhotos => Set<CatchPhoto>();
+
     /// <summary>
     /// Initializes the database context.
     /// </summary>

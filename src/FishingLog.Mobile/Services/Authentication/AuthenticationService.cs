@@ -15,6 +15,7 @@ public sealed class AuthenticationService : IAuthenticationService
     private readonly HttpClient _httpClient;
     private readonly ITokenStore _tokenStore;
     private readonly TimeProvider _timeProvider;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     /// <summary>Initializes a new authentication service.</summary>
     /// <param name="httpClient">The client configured for the FishingLog API.</param>
@@ -74,46 +75,65 @@ public sealed class AuthenticationService : IAuthenticationService
     /// <inheritdoc/>
     public async Task<string?> GetValidAccessTokenAsync(CancellationToken ct = default)
     {
+        var accessToken = await GetUsableAccessTokenAsync();
+        if (accessToken is not null)
+            return accessToken;
+
+        await _refreshLock.WaitAsync(ct);
+        try
+        {
+            // Another request may have refreshed the session while this one waited.
+            accessToken = await GetUsableAccessTokenAsync();
+            if (accessToken is not null)
+                return accessToken;
+
+            var refreshToken = await _tokenStore.GetRefreshTokenAsync();
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                _tokenStore.Clear();
+                return null;
+            }
+
+            using var response = await _httpClient.PostAsJsonAsync(
+                "api/auth/refresh",
+                new RefreshTokenRequest(refreshToken),
+                ct);
+
+            if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
+            {
+                _tokenStore.Clear();
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var tokens = await ReadTokensAsync(response, ct);
+
+            try
+            {
+                await SaveTokensAsync(tokens);
+                return tokens.AccessToken;
+            }
+            catch
+            {
+                _tokenStore.Clear();
+                throw;
+            }
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
+    private async Task<string?> GetUsableAccessTokenAsync()
+    {
         var accessToken = await _tokenStore.GetAccessTokenAsync();
         var expiresAtUtc = await _tokenStore.GetAccessTokenExpiresAtUtcAsync();
 
-        if (!string.IsNullOrWhiteSpace(accessToken) &&
-            expiresAtUtc > _timeProvider.GetUtcNow().Add(ExpirationSafetyWindow))
-        {
-            return accessToken;
-        }
-
-        var refreshToken = await _tokenStore.GetRefreshTokenAsync();
-        if (string.IsNullOrWhiteSpace(refreshToken))
-        {
-            _tokenStore.Clear();
-            return null;
-        }
-
-        using var response = await _httpClient.PostAsJsonAsync(
-            "api/auth/refresh",
-            new RefreshTokenRequest(refreshToken),
-            ct);
-
-        if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
-        {
-            _tokenStore.Clear();
-            return null;
-        }
-
-        response.EnsureSuccessStatusCode();
-        var tokens = await ReadTokensAsync(response, ct);
-
-        try
-        {
-            await SaveTokensAsync(tokens);
-            return tokens.AccessToken;
-        }
-        catch
-        {
-            _tokenStore.Clear();
-            throw;
-        }
+        return !string.IsNullOrWhiteSpace(accessToken) &&
+               expiresAtUtc > _timeProvider.GetUtcNow().Add(ExpirationSafetyWindow)
+            ? accessToken
+            : null;
     }
 
     /// <inheritdoc/>

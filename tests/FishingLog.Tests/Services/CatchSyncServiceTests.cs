@@ -114,31 +114,37 @@ public class CatchSyncServiceTests
     /// Verifies that a pending local photo is uploaded and its URL is included when the catch is created.
     /// </summary>
     [Fact]
-    public async Task SyncAsync_NewCatchWithPendingPhoto_UploadsPhotoBeforeSavingCatch()
+    public async Task SyncAsync_NewCatchWithPendingPhoto_CreatesCatchBeforeUploadingPhoto()
     {
         var tripServerId = Guid.NewGuid();
         var localTrip = BuildLocalTrip(tripServerId);
         var localCatch = BuildNewLocalCatch(tripServerId);
         localCatch.LocalPhotoPath = "local-catch.jpg";
         localCatch.IsPhotoUploadPending = true;
-        const string uploadedUrl = "https://example.test/uploads/new-catch.jpg";
+        const string uploadedUrl = "https://example.test/api/photos/10000000-0000-0000-0000-000000000001";
         var serverCatch = BuildServerCatch(tripServerId, photoUrl: uploadedUrl);
 
         _localRepository.GetDirtyAsync(Arg.Any<CancellationToken>()).Returns([localCatch]);
-        _photoApiClient.UploadAsync(localCatch.LocalPhotoPath, Arg.Any<CancellationToken>())
-            .Returns(uploadedUrl);
         _apiClient.CreateAsync(
                 tripServerId,
-                Arg.Is<CreateCatchRequest>(request => request.PhotoUrl == uploadedUrl),
+                Arg.Is<CreateCatchRequest>(request => request.PhotoUrl == null),
                 Arg.Any<CancellationToken>())
             .Returns(serverCatch);
+        _photoApiClient.UploadAsync(
+                serverCatch.Id,
+                localCatch.LocalPhotoPath,
+                Arg.Any<CancellationToken>())
+            .Returns(uploadedUrl);
         _tripRepository.GetByServerIdAsync(tripServerId, Arg.Any<CancellationToken>())
             .Returns(localTrip);
 
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
 
         await _photoApiClient.Received(1)
-            .UploadAsync(localCatch.LocalPhotoPath, Arg.Any<CancellationToken>());
+            .UploadAsync(
+                serverCatch.Id,
+                localCatch.LocalPhotoPath,
+                Arg.Any<CancellationToken>());
         await _localRepository.Received().SaveFromServerAsync(
             Arg.Is<CatchLocalEntity>(saved =>
                 saved.PhotoUrl == uploadedUrl
@@ -149,19 +155,16 @@ public class CatchSyncServiceTests
     }
 
     /// <summary>
-    /// Verifies that a successful photo upload is reused when the following catch request fails.
+    /// Verifies that an unowned photo is not uploaded when catch creation fails.
     /// </summary>
     [Fact]
-    public async Task SyncAsync_CatchCreateFailsAfterPhotoUpload_DoesNotUploadPhotoAgain()
+    public async Task SyncAsync_CatchCreateFails_DoesNotUploadPhoto()
     {
         var tripServerId = Guid.NewGuid();
         var localCatch = BuildNewLocalCatch(tripServerId);
         localCatch.LocalPhotoPath = "local-catch.jpg";
         localCatch.IsPhotoUploadPending = true;
-        const string uploadedUrl = "https://example.test/uploads/reusable.jpg";
         _localRepository.GetDirtyAsync(Arg.Any<CancellationToken>()).Returns([localCatch]);
-        _photoApiClient.UploadAsync(localCatch.LocalPhotoPath, Arg.Any<CancellationToken>())
-            .Returns(uploadedUrl);
         _apiClient.CreateAsync(
                 tripServerId,
                 Arg.Any<CreateCatchRequest>(),
@@ -171,10 +174,13 @@ public class CatchSyncServiceTests
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
         await _sut.SyncAsync(TestContext.Current.CancellationToken);
 
-        await _photoApiClient.Received(1)
-            .UploadAsync(localCatch.LocalPhotoPath, Arg.Any<CancellationToken>());
-        localCatch.PhotoUrl.Should().Be(uploadedUrl);
-        localCatch.IsPhotoUploadPending.Should().BeFalse();
+        await _photoApiClient.DidNotReceive()
+            .UploadAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>());
+        localCatch.PhotoUrl.Should().BeNull();
+        localCatch.IsPhotoUploadPending.Should().BeTrue();
     }
 
     /// <summary>
@@ -237,7 +243,7 @@ public class CatchSyncServiceTests
     {
         var localCatch = BuildExistingLocalCatch(Guid.NewGuid(), Guid.NewGuid());
         localCatch.IsDeleted = true;
-        localCatch.PhotoUrl = "https://example.test/uploads/old-catch.jpg";
+        localCatch.PhotoUrl = "https://example.test/api/photos/10000000-0000-0000-0000-000000000002";
         _localRepository.GetDirtyAsync(Arg.Any<CancellationToken>()).Returns([localCatch]);
 
         await _sut.SyncAsync(TestContext.Current.CancellationToken);

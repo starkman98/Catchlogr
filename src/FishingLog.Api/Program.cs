@@ -10,7 +10,6 @@ using FishingLog.Infrastructure.Location;
 using FishingLog.Infrastructure.Weather;
 using FishingLog.Infrastructure.Photos;
 using FluentValidation;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using FishingLog.Infrastructure.Identity;
@@ -66,16 +65,18 @@ builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 // --- Repositories ---
 builder.Services.AddScoped<IFishingTripRepository, FishingTripRepository>();
 builder.Services.AddScoped<ICatchRepository, CatchRepository>();
+builder.Services.AddScoped<ICatchPhotoRepository, CatchPhotoRepository>();
 
 // --- Services ---
 builder.Services.AddScoped<IFishingTripService, FishingTripService>();
 builder.Services.AddScoped<ICatchService, CatchService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddSingleton<IMoonPhaseService, MoonPhaseService>();
-builder.Services.AddSingleton<IPhotoStorage>(_ =>
+builder.Services.AddSingleton<IPhotoObjectStorage>(_ =>
 {
-    var webRoot = builder.Environment.WebRootPath
-        ?? Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
-    return new LocalPhotoStorage(Path.Combine(webRoot, "uploads"));
+    return new LocalPhotoStorage(Path.Combine(
+        builder.Environment.ContentRootPath,
+        "private-photos"));
 });
 
 // --- Validators (registers all validators in the Application assembly) ---
@@ -147,14 +148,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowedConfiguredOrigins");
-var photoContentTypes = new FileExtensionContentTypeProvider();
-photoContentTypes.Mappings[".heic"] = "image/heic";
-photoContentTypes.Mappings[".heif"] = "image/heif";
-app.UseStaticFiles(new StaticFileOptions
-{
-    ContentTypeProvider = photoContentTypes
-});
-
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -166,3 +159,8 @@ app.MapPhotoEndpoints();
 app.MapAuthenticationEndpoints();
 
 app.Run();
+
+/// <summary>
+/// Exposes the top-level API entry point to integration-test hosts.
+/// </summary>
+public partial class Program;

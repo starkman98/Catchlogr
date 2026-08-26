@@ -101,10 +101,9 @@ public class CatchSyncService : ICatchSyncService
             return;
         }
 
-        var photoUrl = await UploadPhotoIfNeededAsync(localCatch, ct);
         var response = await _apiClient.CreateAsync(
             fishingTripServerId.Value,
-            MapToCreateRequest(localCatch, photoUrl),
+            MapToCreateRequest(localCatch, null),
             ct);
         if (response is null)
             return;
@@ -114,6 +113,7 @@ public class CatchSyncService : ICatchSyncService
             return;
 
         ApplyRemoteToLocal(localCatch, response, trip);
+        await UploadPhotoIfNeededAsync(localCatch, ct);
         await CompletePhotoSyncAsync(localCatch, ct);
     }
 
@@ -147,8 +147,8 @@ public class CatchSyncService : ICatchSyncService
             return;
         }
 
-        await _apiClient.DeleteAsync(serverId, ct);
         await DeleteRemotePhotosAsync(localCatch, ct);
+        await _apiClient.DeleteAsync(serverId, ct);
         await _localRepository.PermanentlyDeleteAsync(localCatch.Id, ct);
     }
 
@@ -208,7 +208,9 @@ public class CatchSyncService : ICatchSyncService
 
         if (existing is null)
         {
-            await _localRepository.SaveFromServerAsync(MapToLocalEntity(remoteCatch, localTrip), ct);
+            var added = MapToLocalEntity(remoteCatch, localTrip);
+            added.LocalPhotoPath = await DownloadPhotoIfAvailableAsync(remoteCatch.PhotoUrl, ct);
+            await _localRepository.SaveFromServerAsync(added, ct);
         }
         else if (existing.IsDirty && existing.LastModifiedUtc > remoteCatch.LastModifiedAt)
         {
@@ -216,7 +218,19 @@ public class CatchSyncService : ICatchSyncService
         }
         else
         {
+            var photoChanged = !string.Equals(
+                existing.PhotoUrl,
+                remoteCatch.PhotoUrl,
+                StringComparison.Ordinal);
             ApplyRemoteToLocal(existing, remoteCatch, localTrip);
+            if (photoChanged || (
+                !string.IsNullOrWhiteSpace(remoteCatch.PhotoUrl) &&
+                string.IsNullOrWhiteSpace(existing.LocalPhotoPath)))
+            {
+                existing.LocalPhotoPath = await DownloadPhotoIfAvailableAsync(
+                    remoteCatch.PhotoUrl,
+                    ct);
+            }
             existing.IsPhotoUploadPending = false;
             existing.PhotoUrlPendingDeletion = null;
             await _localRepository.SaveFromServerAsync(existing, ct);
@@ -315,7 +329,13 @@ public class CatchSyncService : ICatchSyncService
             return null;
 
         _logger.LogInformation("[Sync] Uploading photo for catch LocalId={Id}.", localCatch.Id);
-        var uploadedUrl = await _photoApiClient.UploadAsync(localCatch.LocalPhotoPath, ct);
+        if (!Guid.TryParse(localCatch.ServerId, out var catchId))
+            return localCatch.PhotoUrl;
+
+        var uploadedUrl = await _photoApiClient.UploadAsync(
+            catchId,
+            localCatch.LocalPhotoPath,
+            ct);
 
         // Persist the URL before syncing the catch. If the following catch request fails,
         // the next sync reuses this upload instead of creating an orphaned duplicate.
@@ -324,6 +344,26 @@ public class CatchSyncService : ICatchSyncService
         await _localRepository.SaveFromServerAsync(localCatch, ct);
 
         return uploadedUrl;
+    }
+
+    private async Task<string?> DownloadPhotoIfAvailableAsync(
+        string? photoUrl,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(photoUrl))
+            return null;
+
+        try
+        {
+            return await _photoApiClient.DownloadAsync(photoUrl, ct);
+        }
+        catch (HttpRequestException exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Unable to cache a private catch photo for offline display.");
+            return null;
+        }
     }
 
     private async Task CompletePhotoSyncAsync(CatchLocalEntity localCatch, CancellationToken ct)

@@ -149,6 +149,48 @@ public sealed class AuthenticationServiceTests
             Now.AddMinutes(30));
     }
 
+    /// <summary>Verifies that concurrent callers share one token refresh operation.</summary>
+    [Fact]
+    public async Task GetValidAccessTokenAsync_ConcurrentCallers_RefreshesOnlyOnce()
+    {
+        var tokenStore = Substitute.For<ITokenStore>();
+        tokenStore.GetAccessTokenAsync().Returns((string?)null);
+        tokenStore.GetAccessTokenExpiresAtUtcAsync().Returns((DateTimeOffset?)null);
+        tokenStore.GetRefreshTokenAsync().Returns("stored-refresh-token");
+        tokenStore
+            .SaveTokensAsync(
+                "new-access-token",
+                "new-refresh-token",
+                Now.AddMinutes(30))
+            .Returns(_ =>
+            {
+                tokenStore.GetAccessTokenAsync().Returns("new-access-token");
+                tokenStore.GetAccessTokenExpiresAtUtcAsync()
+                    .Returns(Now.AddMinutes(30));
+                return Task.CompletedTask;
+            });
+        var refreshCalls = 0;
+        var handler = new StubHttpMessageHandler(async (_, ct) =>
+        {
+            Interlocked.Increment(ref refreshCalls);
+            await Task.Delay(50, ct);
+            return JsonResponse(new AccessTokenResponse(
+                "Bearer",
+                "new-access-token",
+                1_800,
+                "new-refresh-token"));
+        });
+        var sut = CreateService(handler, tokenStore);
+
+        var results = await Task.WhenAll(
+            Enumerable.Range(0, 8)
+                .Select(_ => sut.GetValidAccessTokenAsync(
+                    TestContext.Current.CancellationToken)));
+
+        results.Should().OnlyContain(token => token == "new-access-token");
+        refreshCalls.Should().Be(1);
+    }
+
     /// <summary>Verifies that a rejected refresh signs out the local session.</summary>
     [Fact]
     public async Task GetValidAccessTokenAsync_RefreshRejected_ClearsSession()

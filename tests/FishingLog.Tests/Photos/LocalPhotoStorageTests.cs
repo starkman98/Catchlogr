@@ -20,7 +20,7 @@ public sealed class LocalPhotoStorageTests : IDisposable
             Directory.Delete(_directory, recursive: true);
     }
 
-    /// <summary>Verifies that supported image bytes are stored under a generated safe name.</summary>
+    /// <summary>Verifies that supported image bytes are stored and read by opaque key.</summary>
     [Fact]
     public async Task SaveAsync_Jpeg_StoresBytesWithGeneratedFileName()
     {
@@ -28,17 +28,23 @@ public sealed class LocalPhotoStorageTests : IDisposable
         byte[] bytes = [1, 2, 3, 4];
         await using var content = new MemoryStream(bytes);
 
-        var fileName = await sut.SaveAsync(
+        const string storageKey = "7a4ea1ef074d4ca18f36fb7996bca188";
+        await sut.SaveAsync(
+            storageKey,
             content,
             "image/jpeg",
             bytes.Length,
             TestContext.Current.CancellationToken);
 
-        fileName.Should().EndWith(".jpg");
-        fileName.Should().NotContain("..");
-        var storedBytes = await File.ReadAllBytesAsync(
-            Path.Combine(_directory, fileName),
+        await using var stored = await sut.OpenReadAsync(
+            storageKey,
             TestContext.Current.CancellationToken);
+        stored.Should().NotBeNull();
+        using var buffer = new MemoryStream();
+        await stored!.CopyToAsync(
+            buffer,
+            TestContext.Current.CancellationToken);
+        var storedBytes = buffer.ToArray();
         storedBytes.Should().Equal(bytes);
     }
 
@@ -50,6 +56,7 @@ public sealed class LocalPhotoStorageTests : IDisposable
         await using var content = new MemoryStream([1]);
 
         var action = () => sut.SaveAsync(
+            "safe-storage-key",
             content,
             "text/plain",
             1,
@@ -64,15 +71,17 @@ public sealed class LocalPhotoStorageTests : IDisposable
     {
         var sut = new LocalPhotoStorage(_directory);
         await using var content = new MemoryStream([1]);
-        var fileName = await sut.SaveAsync(
+        const string storageKey = "private-photo-key";
+        await sut.SaveAsync(
+            storageKey,
             content,
             "image/png",
             1,
             TestContext.Current.CancellationToken);
 
-        await sut.DeleteAsync(fileName, TestContext.Current.CancellationToken);
-        await sut.DeleteAsync(fileName, TestContext.Current.CancellationToken);
+        await sut.DeleteAsync(storageKey, TestContext.Current.CancellationToken);
+        await sut.DeleteAsync(storageKey, TestContext.Current.CancellationToken);
 
-        File.Exists(Path.Combine(_directory, fileName)).Should().BeFalse();
+        File.Exists(Path.Combine(_directory, storageKey)).Should().BeFalse();
     }
 }

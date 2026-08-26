@@ -19,8 +19,8 @@ public partial class FishingTripsViewModel : BaseViewModel
     private readonly IFishingTripLocalRepository _tripRepo;
     private readonly ISyncOrchestrator _syncOrchestrator;
     private readonly IApiHealthClient _healthClient;
-    private readonly IAuthenticationService _authenticationService;
-    private readonly ILocalDatabase _localDatabase;
+    private readonly ILogoutService _logoutService;
+    private readonly ILogoutDialogService _logoutDialogService;
     private readonly IAppNavigator _navigator;
     private readonly ILogger<FishingTripsViewModel> _logger;
 
@@ -56,16 +56,16 @@ public partial class FishingTripsViewModel : BaseViewModel
         IFishingTripLocalRepository tripRepo,
         ISyncOrchestrator syncOrchestrator,
         IApiHealthClient healthClient,
-        IAuthenticationService authenticationService,
-        ILocalDatabase localDatabase,
+        ILogoutService logoutService,
+        ILogoutDialogService logoutDialogService,
         IAppNavigator navigator,
         ILogger<FishingTripsViewModel> logger)
     {
         _tripRepo = tripRepo;
         _syncOrchestrator = syncOrchestrator;
         _healthClient = healthClient;
-        _authenticationService = authenticationService;
-        _localDatabase = localDatabase;
+        _logoutService = logoutService;
+        _logoutDialogService = logoutDialogService;
         _navigator = navigator;
         _logger = logger;
         Title = "Fishing Trips";
@@ -170,15 +170,30 @@ public partial class FishingTripsViewModel : BaseViewModel
     private async Task AddTripAsync()
         => await Shell.Current.GoToAsync("AddEditFishingTripPage");
 
-    /// <summary>Closes the active account database and signs out locally.</summary>
+    /// <summary>Synchronizes pending changes when possible and signs out locally.</summary>
     [RelayCommand]
     private async Task LogoutAsync(CancellationToken ct)
     {
         await _syncLock.WaitAsync(ct);
         try
         {
-            await _localDatabase.CloseAsync(ct);
-            _authenticationService.Logout();
+            while (true)
+            {
+                var preparation = await _logoutService.PrepareAsync(ct);
+                if (preparation.Status == LogoutPreparationStatus.Ready)
+                    break;
+
+                var decision = await _logoutDialogService.ConfirmAsync(
+                    preparation,
+                    ct);
+                if (decision == LogoutDecision.Cancel)
+                    return;
+
+                if (decision == LogoutDecision.SignOutAnyway)
+                    break;
+            }
+
+            await _logoutService.CompleteAsync(ct);
             Trips.Clear();
             await _navigator.GoToAsync(AppRoutes.Login, ct);
         }

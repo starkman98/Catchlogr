@@ -61,6 +61,7 @@ public static class MauiProgram
 
         // --- Device capabilities ---
         builder.Services.AddSingleton<IGeolocation>(Geolocation.Default);
+        builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
         builder.Services.AddSingleton<IDeviceLocationService, DeviceLocationService>();
         builder.Services.AddSingleton<IMediaPicker>(MediaPicker.Default);
         builder.Services.AddSingleton<IPhotoCaptureService, PhotoCaptureService>();
@@ -68,6 +69,8 @@ public static class MauiProgram
         // --- Authentication storage ---
         builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
         builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
+        builder.Services.AddTransient<ILogoutService, LogoutService>();
+        builder.Services.AddSingleton<ILogoutDialogService, ShellLogoutDialogService>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<AuthenticationMessageHandler>();
         builder.Services.AddSingleton<IAppNavigator, ShellAppNavigator>();

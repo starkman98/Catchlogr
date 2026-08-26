@@ -29,6 +29,9 @@ public class Catch
     /// <summary>An URL to a photo of the catch.</summary>
     public string? PhotoUrl { get; set; }
 
+    /// <summary>Private photo metadata associated with this catch.</summary>
+    public CatchPhoto? Photo { get; set; }
+
     /// <summary>Free-text note about the catch.</summary>
     public string? Note { get; set; }
 
