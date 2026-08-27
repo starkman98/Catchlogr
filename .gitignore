@@ -381,6 +381,9 @@ secrets.json
 docker-data/
 postgres-data/
 
+# Environmental files
+.env
+
 # Local environment overrides
 .env.local
 .env.*.local
