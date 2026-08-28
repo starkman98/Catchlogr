@@ -1,6 +1,6 @@
 # Mobile Architecture — Sync Flow, ViewModels & Navigation
 
-This document covers the three most important architectural areas of `FishingLog.Mobile`:
+This document covers the three most important architectural areas of `Catchlogr.Mobile`:
 1. [Offline-First Sync Flow](#offline-first-sync-flow)
 2. [ViewModel Patterns](#viewmodel-patterns)
 3. [Shell Navigation & Routing](#shell-navigation--routing)
@@ -263,7 +263,7 @@ builder.Services.AddTransient<AddEditFishingTripPage>();
 ## File Map
 
 ```
-src/FishingLog.Mobile/
+src/Catchlogr.Mobile/
 ├─ Configuration/
 │   ├─ AppSettings.cs
 │   └─ PlatformApiUrl.cs          ← platform URL resolver

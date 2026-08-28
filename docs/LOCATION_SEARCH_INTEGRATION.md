@@ -28,7 +28,7 @@ Add/edit trip page
 ```
 
 The mobile app never calls LocationIQ directly and never contains the LocationIQ
-access token. It communicates with `FishingLog.Api` over HTTP or HTTPS, following
+access token. It communicates with `Catchlogr.Api` over HTTP or HTTPS, following
 the same boundary as the rest of the application.
 
 Location search itself requires connectivity. Selecting a result stores its name,
@@ -41,7 +41,7 @@ The add/edit trip page supports two independent ways to set coordinates:
 
 1. **Use current location** requests device-location permission and uses the
    captured coordinates.
-2. **Search by name** sends only the entered text to the FishingLog API. It does
+2. **Search by name** sends only the entered text to the Catchlogr API. It does
    not request or transmit the device's current position.
 
 For named search:
@@ -83,7 +83,7 @@ GET https://eu1.locationiq.com/v1/search
 ```
 
 `source=nom` restricts the search to LocationIQ's OpenStreetMap/Nominatim source.
-The provider may return ten candidates; FishingLog ranks them and returns the best
+The provider may return ten candidates; Catchlogr ranks them and returns the best
 five to the mobile app.
 
 The ranking order is:
@@ -94,7 +94,7 @@ The ranking order is:
 
 Water ranking improves fishing-related searches without excluding cities or other
 locations when no matching water feature exists. Provider-specific JSON models and
-ranking logic remain inside `FishingLog.Infrastructure`.
+ranking logic remain inside `Catchlogr.Infrastructure`.
 
 Reference: [LocationIQ Search / Forward Geocoding](https://docs.locationiq.com/docs/search-forward-geocoding).
 
@@ -137,7 +137,7 @@ token with:
 
 ```powershell
 dotnet user-secrets set "LocationSearch:LocationIQ:ApiKey" "YOUR_LOCATIONIQ_KEY" `
-  --project .\src\FishingLog.Api\FishingLog.Api.csproj
+  --project .\src\Catchlogr.Api\Catchlogr.Api.csproj
 ```
 
 Do not paste the real token into source-controlled configuration, documentation,
@@ -148,7 +148,7 @@ not need configuration. To override it locally:
 
 ```powershell
 dotnet user-secrets set "LocationSearch:LocationIQ:BaseUri" "https://eu1.locationiq.com" `
-  --project .\src\FishingLog.Api\FishingLog.Api.csproj
+  --project .\src\Catchlogr.Api\Catchlogr.Api.csproj
 ```
 
 Restart the API after changing user-secrets. The API validates configuration at
@@ -198,19 +198,19 @@ Reference: [LocationIQ security guidance](https://docs.locationiq.com/docs/authe
 
 | Responsibility | File |
 |---|---|
-| Shared result contract | `src/FishingLog.Contracts/LocationDTOs/LocationSearchResult.cs` |
-| Provider-neutral interface | `src/FishingLog.Application/Interfaces/ILocationSearchService.cs` |
-| LocationIQ configuration | `src/FishingLog.Infrastructure/Location/LocationIqOptions.cs` |
-| LocationIQ response model | `src/FishingLog.Infrastructure/Location/LocationIqSearchResult.cs` |
-| Provider adapter and water ranking | `src/FishingLog.Infrastructure/Location/LocationIqLocationSearchService.cs` |
-| Minimal API endpoint | `src/FishingLog.Api/Endpoints/LocationEndpoints.cs` |
-| API DI and options validation | `src/FishingLog.Api/Program.cs` |
-| Mobile API abstraction | `src/FishingLog.Mobile/Services/ILocationSearchApiClient.cs` |
-| Mobile typed API client | `src/FishingLog.Mobile/Services/LocationSearchApiClient.cs` |
-| Mobile DI | `src/FishingLog.Mobile/MauiProgram.cs` |
-| Search and selection behavior | `src/FishingLog.Mobile/ViewModels/AddEditFishingTripViewModel.cs` |
-| Search UI and attribution | `src/FishingLog.Mobile/Pages/AddEditFishingTripPage.xaml` |
-| Provider unit tests | `tests/FishingLog.Tests/Location/LocationIqLocationSearchServiceTests.cs` |
+| Shared result contract | `src/Catchlogr.Contracts/LocationDTOs/LocationSearchResult.cs` |
+| Provider-neutral interface | `src/Catchlogr.Application/Interfaces/ILocationSearchService.cs` |
+| LocationIQ configuration | `src/Catchlogr.Infrastructure/Location/LocationIqOptions.cs` |
+| LocationIQ response model | `src/Catchlogr.Infrastructure/Location/LocationIqSearchResult.cs` |
+| Provider adapter and water ranking | `src/Catchlogr.Infrastructure/Location/LocationIqLocationSearchService.cs` |
+| Minimal API endpoint | `src/Catchlogr.Api/Endpoints/LocationEndpoints.cs` |
+| API DI and options validation | `src/Catchlogr.Api/Program.cs` |
+| Mobile API abstraction | `src/Catchlogr.Mobile/Services/ILocationSearchApiClient.cs` |
+| Mobile typed API client | `src/Catchlogr.Mobile/Services/LocationSearchApiClient.cs` |
+| Mobile DI | `src/Catchlogr.Mobile/MauiProgram.cs` |
+| Search and selection behavior | `src/Catchlogr.Mobile/ViewModels/AddEditFishingTripViewModel.cs` |
+| Search UI and attribution | `src/Catchlogr.Mobile/Pages/AddEditFishingTripPage.xaml` |
+| Provider unit tests | `tests/Catchlogr.Tests/Location/LocationIqLocationSearchServiceTests.cs` |
 
 ## Testing
 
@@ -229,14 +229,14 @@ cover:
 Run the focused tests:
 
 ```powershell
-dotnet test .\tests\FishingLog.Tests\FishingLog.Tests.csproj `
+dotnet test .\tests\Catchlogr.Tests\Catchlogr.Tests.csproj `
   --filter FullyQualifiedName~LocationIqLocationSearchServiceTests
 ```
 
 Run the complete regression suite:
 
 ```powershell
-dotnet test .\tests\FishingLog.Tests\FishingLog.Tests.csproj
+dotnet test .\tests\Catchlogr.Tests\Catchlogr.Tests.csproj
 ```
 
 ### Manual verification
@@ -260,7 +260,7 @@ API project and restart it. Do not put the key in the mobile project.
 
 ### Search always reports unavailable
 
-- Confirm the FishingLog API is running and reachable from the device.
+- Confirm the Catchlogr API is running and reachable from the device.
 - Confirm the mobile API base URL points to the development computer rather than
   `localhost` when testing on a physical device.
 - Confirm the LocationIQ token is valid and has remaining quota.

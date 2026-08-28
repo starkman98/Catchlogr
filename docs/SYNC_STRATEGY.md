@@ -1,6 +1,6 @@
 # Sync Strategy
 
-FishingLog uses an **offline-first, explicit sync** model. The mobile app stores all data locally in SQLite and syncs with the server API when connectivity is available.
+Catchlogr uses an **offline-first, explicit sync** model. The mobile app stores all data locally in SQLite and syncs with the server API when connectivity is available.
 
 ---
 
@@ -111,4 +111,4 @@ Sync is triggered:
 - No per-field conflict merging — last-write-wins only
 - Sync cursor is a single timestamp per entity type — no per-record cursors
 - Deletions are permanent after sync; no recycle bin
-- `FishingTripSyncService` lives in `FishingLog.Mobile` — see roadmap for planned refactor into a testable class library
+- `FishingTripSyncService` lives in `Catchlogr.Mobile` — see roadmap for planned refactor into a testable class library

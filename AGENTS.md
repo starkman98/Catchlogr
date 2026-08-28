@@ -1,13 +1,13 @@
-# Instructions — FishingLog
+# Instructions — Catchlogr
 
 ## Project Context
 This repository contains a production-ready fishing log application with:
-- **FishingLog.Mobile**: .NET MAUI app (offline-first)
-- **FishingLog.Api**: ASP.NET Core Web API (system of record)
-- **FishingLog.Contracts**: Shared DTOs/contracts
-- **FishingLog.Domain**: Domain entities and interfaces
-- **FishingLog.Application**: Business logic and services
-- **FishingLog.Infrastructure**: Data access and external dependencies
+- **Catchlogr.Mobile**: .NET MAUI app (offline-first)
+- **Catchlogr.Api**: ASP.NET Core Web API (system of record)
+- **Catchlogr.Contracts**: Shared DTOs/contracts
+- **Catchlogr.Domain**: Domain entities and interfaces
+- **Catchlogr.Application**: Business logic and services
+- **Catchlogr.Infrastructure**: Data access and external dependencies
 - **Local persistence**: sqlite-net-pcl in Mobile
 - **Server persistence**: PostgreSQL via EF Core
 
@@ -51,7 +51,7 @@ This repository contains a production-ready fishing log application with:
 
 ### DTOs and Contracts
 - **Do not mix Domain entities with API contracts**
-- Use DTOs in FishingLog.Contracts
+- Use DTOs in Catchlogr.Contracts
 - Call DTOs meaningful names: `CreateFishingTripRequest`, `FishingTripResponse`, etc.
 - Prefer immutable DTOs (use `record` types) where practical
 - Use DTOs where it makes sense, not everywhere
@@ -258,7 +258,7 @@ private static DateTime ToUtc(DateTime localDate, TimeSpan localTime)
 ### ObservableProperty (CommunityToolkit.Mvvm)
 
 - **Always use partial property syntax** — field-based `[ObservableProperty] private T _field;` is deprecated and not AOT-safe
-- Requires `<LangVersion>preview</LangVersion>` in `FishingLog.Mobile.csproj`
+- Requires `<LangVersion>preview</LangVersion>` in `Catchlogr.Mobile.csproj`
 
 ```csharp
 // Correct — partial property syntax

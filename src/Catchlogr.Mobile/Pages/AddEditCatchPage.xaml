@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Catchlogr.Mobile.Pages.AddEditCatchPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Catchlogr.Mobile.ViewModels"
+    x:DataType="vm:AddEditCatchViewModel"
+    Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="8">
+            <Label FontAttributes="Bold" Text="Species *" />
+            <Entry Placeholder="e.g. Pike" Text="{Binding Species}" />
+
+            <Label FontAttributes="Bold" Margin="0,10,0,0" Text="Photo" />
+            <Border
+                HeightRequest="220"
+                IsVisible="{Binding HasPhoto}"
+                Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                StrokeThickness="1">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <Image
+                    Aspect="AspectFill"
+                    SemanticProperties.Description="Photo of this catch"
+                    Source="{Binding PhotoSource}" />
+            </Border>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Button
+                    Grid.Column="0"
+                    Command="{Binding CapturePhotoCommand}"
+                    Text="Take Photo" />
+                <Button
+                    Grid.Column="1"
+                    BackgroundColor="Gray"
+                    Command="{Binding RemovePhotoCommand}"
+                    IsVisible="{Binding HasPhoto}"
+                    Text="Remove Photo"
+                    TextColor="White" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,10,0,0">
+                <VerticalStackLayout Grid.Column="0" Spacing="8">
+                    <Label FontAttributes="Bold" Text="Length (cm)" />
+                    <Entry Keyboard="Numeric" Text="{Binding Length}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="8">
+                    <Label FontAttributes="Bold" Text="Weight (g)" />
+                    <Entry Keyboard="Numeric" Text="{Binding Weight}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <Label FontAttributes="Bold" Margin="0,10,0,0" Text="Caught Date" />
+            <DatePicker Date="{Binding CaughtDate}" />
+
+            <Label FontAttributes="Bold" Margin="0,6,0,0" Text="Caught Time" />
+            <TimePicker Time="{Binding CaughtTimeOfDay}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,10,0,0">
+                <VerticalStackLayout Grid.Column="0" Spacing="8">
+                    <Label FontAttributes="Bold" Text="Depth" />
+                    <Entry Keyboard="Numeric" Text="{Binding Depth}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="8">
+                    <Label FontAttributes="Bold" Text="Bait Type" />
+                    <Picker ItemsSource="{Binding BaitTypes}" SelectedItem="{Binding BaitType}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <Label FontAttributes="Bold" Margin="0,10,0,0" Text="Bait Name" />
+            <Entry Placeholder="e.g. McRubber" Text="{Binding BaitName}" />
+
+            <Label FontAttributes="Bold" Margin="0,10,0,0" Text="Bait Color" />
+            <Entry Placeholder="e.g. Motor oil" Text="{Binding BaitColor}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,10,0,0">
+                <VerticalStackLayout Grid.Column="0" Spacing="8">
+                    <Label FontAttributes="Bold" Text="Bait Weight (g)" />
+                    <Entry Keyboard="Numeric" Text="{Binding BaitWeightGrams}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="8">
+                    <Label FontAttributes="Bold" Text="Bait Length (mm)" />
+                    <Entry Keyboard="Numeric" Text="{Binding BaitLengthMm}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <Label FontAttributes="Bold" Margin="0,10,0,0" Text="Notes" />
+            <Editor
+                AutoSize="Disabled"
+                HeightRequest="120"
+                Placeholder="What happened?"
+                Text="{Binding Note}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,16,0,0">
+                <Button
+                    Grid.Column="0"
+                    BackgroundColor="Gray"
+                    Command="{Binding CancelCommand}"
+                    Text="Cancel"
+                    TextColor="White" />
+                <Button
+                    Grid.Column="1"
+                    Command="{Binding SaveCommand}"
+                    Text="Save" />
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

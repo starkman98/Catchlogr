@@ -1,4 +1,4 @@
-# FishingLog Development Setup Checklist
+# Catchlogr Development Setup Checklist
 
 Use this checklist to verify your development environment is properly configured.
 
@@ -32,8 +32,8 @@ Use this checklist to verify your development environment is properly configured
 
 - [ ] Repository cloned
   ```bash
-  git clone https://github.com/starkman98/FishingLog.git
-  cd FishingLog
+  git clone https://github.com/starkman98/Catchlogr.git
+  cd Catchlogr
   ```
 
 - [ ] Solution builds successfully
@@ -53,18 +53,18 @@ Use this checklist to verify your development environment is properly configured
 - [ ] PostgreSQL container running
   ```bash
   docker-compose up -d
-  docker ps  # Should show fishinglog_postgres
+  docker ps  # Should show catchlogr_postgres
   ```
 
 - [ ] Database connection works
   ```bash
-  docker exec -it fishinglog_postgres psql -U fishinglog_user -d fishinglog_dev
+  docker exec -it catchlogr_postgres psql -U catchlogr_user -d catchlogr_dev
   # Type \q to exit
   ```
 
 - [ ] Migrations applied (when migrations exist)
   ```bash
-  cd src/FishingLog.Api
+  cd src/Catchlogr.Api
   dotnet ef database update
   ```
 
@@ -72,19 +72,19 @@ Use this checklist to verify your development environment is properly configured
 
 ## ✅ API Configuration
 
-- [ ] `appsettings.Development.json` exists in `src/FishingLog.Api/`
+- [ ] `appsettings.Development.json` exists in `src/Catchlogr.Api/`
 - [ ] Connection string points to local PostgreSQL:
   ```json
   {
     "ConnectionStrings": {
-      "DefaultConnection": "Host=localhost;Port=5432;Database=fishinglog_dev;Username=fishinglog_user;Password=fishinglog_dev_password"
+      "DefaultConnection": "Host=localhost;Port=5432;Database=catchlogr_dev;Username=catchlogr_user;Password=catchlogr_dev_password"
     }
   }
   ```
 
 - [ ] API runs successfully
   ```bash
-  cd src/FishingLog.Api
+  cd src/Catchlogr.Api
   dotnet run
   # Should start on https://localhost:5001
   ```
@@ -98,15 +98,15 @@ Use this checklist to verify your development environment is properly configured
 
 ## ✅ Mobile Configuration
 
-- [ ] `appsettings.json` exists in `src/FishingLog.Mobile/`
-- [ ] `appsettings.Development.json` exists in `src/FishingLog.Mobile/`
+- [ ] `appsettings.json` exists in `src/Catchlogr.Mobile/`
+- [ ] `appsettings.Development.json` exists in `src/Catchlogr.Mobile/`
 - [ ] Files marked as `EmbeddedResource` in `.csproj`
 - [ ] `Configuration/AppSettings.cs` class exists
 - [ ] Settings registered in `MauiProgram.cs`
 
 - [ ] Mobile app builds for target platform
   ```bash
-  cd src/FishingLog.Mobile
+  cd src/Catchlogr.Mobile
   dotnet build -f net10.0-android  # For Android
   ```
 
@@ -192,7 +192,7 @@ Use this checklist to verify your development environment is properly configured
 
 - [ ] **Terminal 2**: Run API
   ```bash
-  cd src/FishingLog.Api
+  cd src/Catchlogr.Api
   dotnet watch run
   ```
 

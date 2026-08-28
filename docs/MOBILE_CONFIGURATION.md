@@ -1,7 +1,7 @@
 # Mobile App Configuration
 
 ## Overview
-The FishingLog mobile app uses embedded JSON configuration files similar to ASP.NET Core apps.
+The Catchlogr mobile app uses embedded JSON configuration files similar to ASP.NET Core apps.
 
 ## Configuration Files
 
@@ -11,7 +11,7 @@ Default configuration used in **Release** builds.
 ```json
 {
   "Api": {
-    "BaseUrl": "https://api.fishinglog.com",  // Production API URL
+    "BaseUrl": "https://api.catchlogr.com",  // Production API URL
     "Timeout": 30
   },
   "Sync": {
@@ -19,7 +19,7 @@ Default configuration used in **Release** builds.
     "SyncIntervalMinutes": 15
   },
   "Database": {
-    "FileName": "fishinglog.db3"
+    "FileName": "catchlogr.db3"
   }
 }
 ```
@@ -38,7 +38,7 @@ Configuration overrides used in **Debug** builds.
     "SyncIntervalMinutes": 5
   },
   "Database": {
-    "FileName": "fishinglog_dev.db3"
+    "FileName": "catchlogr_dev.db3"
   },
   "Logging": {
     "LogLevel": "Debug"
@@ -91,7 +91,7 @@ public class MyApiClient
 ## Changing API URL
 
 ### For Local Development
-Edit `src/FishingLog.Mobile/appsettings.Development.json`:
+Edit `src/Catchlogr.Mobile/appsettings.Development.json`:
 ```json
 {
   "Api": {
@@ -121,7 +121,7 @@ And modify the `AppSettings.Load()` method to check for environment variables or
 The SQLite database is stored at:
 ```csharp
 var dbPath = appSettings.Database.FullPath;
-// Example: /data/user/0/com.companyname.fishinglog.mobile/files/fishinglog_dev.db3
+// Example: /data/user/0/com.companyname.catchlogr.mobile/files/catchlogr_dev.db3
 ```
 
 This path is automatically determined by MAUI's `FileSystem.AppDataDirectory`.

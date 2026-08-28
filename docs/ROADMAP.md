@@ -1,4 +1,4 @@
-# FishingLog Roadmap
+# Catchlogr Roadmap
 
 ## Guiding Principles
 
@@ -15,12 +15,12 @@
 ### Project Structure ✅
 
 - [x] Solution structure with layered architecture
-- [x] FishingLog.Domain project (entities, interfaces)
-- [x] FishingLog.Application project (business logic, services)
-- [x] FishingLog.Infrastructure project (data access, EF Core)
-- [x] FishingLog.Api project (ASP.NET Core Web API)
-- [x] FishingLog.Mobile project (.NET MAUI)
-- [x] FishingLog.Contracts project (DTOs, shared models)
+- [x] Catchlogr.Domain project (entities, interfaces)
+- [x] Catchlogr.Application project (business logic, services)
+- [x] Catchlogr.Infrastructure project (data access, EF Core)
+- [x] Catchlogr.Api project (ASP.NET Core Web API)
+- [x] Catchlogr.Mobile project (.NET MAUI)
+- [x] Catchlogr.Contracts project (DTOs, shared models)
 
 ### Development Environment
 
@@ -182,8 +182,8 @@
 
 ### 1.x SyncService Testability Refactor
 
-- [x] Extract `FishingTripSyncService` from `FishingLog.Mobile` into a new `FishingLog.Sync` class library
-- [x] Reference `FishingLog.Sync` from both `FishingLog.Mobile` and `FishingLog.Tests`
+- [x] Extract `FishingTripSyncService` from `Catchlogr.Mobile` into a new `Catchlogr.Sync` class library
+- [x] Reference `Catchlogr.Sync` from both `Catchlogr.Mobile` and `Catchlogr.Tests`
 - [x] Add unit tests for `FishingTripSyncService` (mock `IFishingTripApiClient`, mock `IFishingTripLocalRepository`)
 
 ---

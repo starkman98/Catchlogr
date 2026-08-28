@@ -10,10 +10,10 @@ Enrich a fishing trip with weather for its location and start time while preserv
 - SQLite stores a downloaded copy for offline display.
 - A weather-provider failure must never prevent a trip from being saved or synced.
 
-The initial provider is [Open-Meteo](https://open-meteo.com/en/docs). All provider-specific models and HTTP behavior remain in `FishingLog.Infrastructure`, behind an Application-layer interface, so the provider can be replaced later.
+The initial provider is [Open-Meteo](https://open-meteo.com/en/docs). All provider-specific models and HTTP behavior remain in `Catchlogr.Infrastructure`, behind an Application-layer interface, so the provider can be replaced later.
 
 Users can provide weather coordinates through device location or a named lake and
-place search. The latter uses LocationIQ through the FishingLog API and is
+place search. The latter uses LocationIQ through the Catchlogr API and is
 documented in [Location Search Integration](LOCATION_SEARCH_INTEGRATION.md).
 
 ## MVP decision
@@ -127,7 +127,7 @@ Implement and verify one stage at a time. Do not begin with the mobile UI.
 Create these files:
 
 ```text
-src/FishingLog.Application/
+src/Catchlogr.Application/
 ├── Interfaces/IWeatherService.cs
 └── Weather/
     ├── WeatherSnapshot.cs
@@ -166,7 +166,7 @@ Validation at this boundary:
 Create these files:
 
 ```text
-src/FishingLog.Infrastructure/Weather/
+src/Catchlogr.Infrastructure/Weather/
 ├── OpenMeteoWeatherService.cs
 ├── OpenMeteoWeatherResponse.cs
 └── OpenMeteoHourlyWeather.cs
@@ -185,7 +185,7 @@ Responsibilities of `OpenMeteoWeatherService`:
 
 Do not return Open-Meteo response classes outside Infrastructure and do not store the raw JSON response.
 
-Register it in `src/FishingLog.Api/Program.cs`:
+Register it in `src/Catchlogr.Api/Program.cs`:
 
 ```csharp
 builder.Services.AddHttpClient<IWeatherService, OpenMeteoWeatherService>(client =>
@@ -198,9 +198,9 @@ The non-commercial development endpoint does not need an API key. If the applica
 
 ### Stage 3: Server persistence
 
-Edit `src/FishingLog.Domain/Entities/FishingTrip.cs` and add nullable properties for all new weather values. Add XML summaries to every property.
+Edit `src/Catchlogr.Domain/Entities/FishingTrip.cs` and add nullable properties for all new weather values. Add XML summaries to every property.
 
-Edit `src/FishingLog.Infrastructure/Persistence/Configurations/FishingTripConfiguration.cs`:
+Edit `src/Catchlogr.Infrastructure/Persistence/Configurations/FishingTripConfiguration.cs`:
 
 - limit `WeatherProvider` to a reasonable length such as 100;
 - configure `WeatherSampleTimeUtc` with the repository's existing UTC conversion pattern;
@@ -210,8 +210,8 @@ Create an EF Core migration such as:
 
 ```powershell
 dotnet ef migrations add AddFishingTripWeather `
-  --project src/FishingLog.Infrastructure `
-  --startup-project src/FishingLog.Api
+  --project src/Catchlogr.Infrastructure `
+  --startup-project src/Catchlogr.Api
 ```
 
 Review the generated migration before applying it. It should only add nullable columns and update the model snapshot.
@@ -221,8 +221,8 @@ Review the generated migration before applying it. It should only add nullable c
 Edit:
 
 ```text
-src/FishingLog.Contracts/FishingTripDTOs/FishingTripResponse.cs
-src/FishingLog.Application/Services/FishingTripService.cs
+src/Catchlogr.Contracts/FishingTripDTOs/FishingTripResponse.cs
+src/Catchlogr.Application/Services/FishingTripService.cs
 ```
 
 Add the new weather fields to `FishingTripResponse` and to `MapFromTripToResponse`.
@@ -279,13 +279,13 @@ Never log precise coordinates at Information level because they are user locatio
 Add matching nullable properties to:
 
 ```text
-src/FishingLog.Sync/Entities/FishingTripLocalEntity.cs
+src/Catchlogr.Sync/Entities/FishingTripLocalEntity.cs
 ```
 
 Then update both response-to-local mapping methods in:
 
 ```text
-src/FishingLog.Sync/Services/FishingTripSyncService.cs
+src/Catchlogr.Sync/Services/FishingTripSyncService.cs
 ```
 
 The relevant methods are currently:
@@ -315,8 +315,8 @@ sync.
 Edit:
 
 ```text
-src/FishingLog.Mobile/ViewModels/FishingTripDetailsViewModel.cs
-src/FishingLog.Mobile/Pages/FishingTripDetailsPage.xaml
+src/Catchlogr.Mobile/ViewModels/FishingTripDetailsViewModel.cs
+src/Catchlogr.Mobile/Pages/FishingTripDetailsPage.xaml
 ```
 
 Add read-only observable properties for temperature, condition, wind, direction, pressure, and the sample time. Populate them in `LoadAsync` from `FishingTripLocalEntity`.

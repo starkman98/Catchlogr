@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: fishinglog-postgres
+    container_name: catchlogr-postgres
     restart: unless-stopped
 
     env_file:
@@ -11,7 +11,7 @@ services:
       - "${POSTGRES_PORT}:5432"
 
     volumes:
-      - fishinglog_postgres_data:/var/lib/postgresql/data
+      - catchlogr_postgres_data:/var/lib/postgresql/data
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -20,4 +20,4 @@ services:
       retries: 5
 
 volumes:
-  fishinglog_postgres_data:
+  catchlogr_postgres_data:
