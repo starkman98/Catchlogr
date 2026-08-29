@@ -11,6 +11,8 @@ COPY ["src/Catchlogr.Contracts/Catchlogr.Contracts.csproj", "src/Catchlogr.Contr
 COPY ["src/Catchlogr.Domain/Catchlogr.Domain.csproj", "src/Catchlogr.Domain/"]
 COPY ["src/Catchlogr.Infrastructure/Catchlogr.Infrastructure.csproj", "src/Catchlogr.Infrastructure/"]
 
+RUN dotnet workload restore "src/Catchlogr.Api/Catchlogr.Api.csproj"
+
 RUN dotnet restore "src/Catchlogr.Api/Catchlogr.Api.csproj"
 
 COPY . .
