@@ -13,6 +13,31 @@ public interface IAuthenticationService
     /// <param name="ct">A token that can cancel the operation.</param>
     Task RegisterAsync(string email, string password, CancellationToken ct = default);
 
+    /// <summary>Requests another confirmation email for an account.</summary>
+    /// <param name="email">The account email address.</param>
+    /// <param name="ct">A token that can cancel the operation.</param>
+    Task ResendConfirmationEmailAsync(
+        string email,
+        CancellationToken ct = default);
+
+    /// <summary>Requests a password-reset code for an account.</summary>
+    /// <param name="email">The account email address.</param>
+    /// <param name="ct">A token that can cancel the operation.</param>
+    Task ForgotPasswordAsync(
+        string email,
+        CancellationToken ct = default);
+
+    /// <summary>Resets an account password using an emailed code.</summary>
+    /// <param name="email">The account email address.</param>
+    /// <param name="resetCode">The password-reset code.</param>
+    /// <param name="newPassword">The new account password.</param>
+    /// <param name="ct">A token that can cancel the operation.</param>
+    Task ResetPasswordAsync(
+        string email,
+        string resetCode,
+        string newPassword,
+        CancellationToken ct = default);
+
     /// <summary>Logs in and stores the resulting session securely.</summary>
     /// <param name="email">The account email address.</param>
     /// <param name="password">The account password.</param>

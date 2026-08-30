@@ -1,6 +1,7 @@
 using Catchlogr.Application.Interfaces;
 using Catchlogr.Infrastructure.Persistence;
 using Catchlogr.Infrastructure.Photos;
+using Catchlogr.Infrastructure.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +20,7 @@ namespace Catchlogr.Api.IntegrationTests;
 public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
 {
     private readonly TimeSpan? _bearerTokenLifetime;
+    private readonly bool _requireConfirmedEmail;
     private readonly string _rootDirectory = Path.Combine(
         Path.GetTempPath(),
         "Catchlogr.Api.IntegrationTests",
@@ -26,11 +28,20 @@ public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
     private readonly string _databaseName =
         $"Catchlogr-{Guid.NewGuid():N}";
 
-    /// <summary>Initializes a test host with an optional access-token lifetime.</summary>
-    public CatchlogrApiFactory(TimeSpan? bearerTokenLifetime = null)
+    /// <summary>
+    /// Initializes a test host with optional token lifetime and confirmation policy.
+    /// </summary>
+    public CatchlogrApiFactory(
+        TimeSpan? bearerTokenLifetime = null,
+        bool requireConfirmedEmail = false)
     {
         _bearerTokenLifetime = bearerTokenLifetime;
+        _requireConfirmedEmail = requireConfirmedEmail;
     }
+
+    /// <summary>Gets the email sender capturing Identity messages.</summary>
+    public TestIdentityEmailSender EmailSender
+        => Services.GetRequiredService<TestIdentityEmailSender>();
 
     /// <summary>Initializes the isolated integration-test database.</summary>
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -53,6 +64,10 @@ public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
                 ["LocationSearch:LocationIQ:BaseUri"] = "https://location.test/",
                 ["Cors:AllowedOrigins:0"] = "https://mobile.test",
                 ["PhotoStorage:Provider"] = "Local",
+                ["Email:ApiKey"] = "integration-test-key",
+                ["Email:FromAddress"] = "account@mail.catchlogr.test",
+                ["Email:FromName"] = "Catchlogr",
+                ["Email:PublicApiBaseUrl"] = "https://api.catchlogr.test",
                 ["PhotoStorage:Local:Path"] = Path.Combine(
                     _rootDirectory,
                     "private-photos")
@@ -74,6 +89,15 @@ public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
                         _bearerTokenLifetime.Value);
             }
 
+            services.PostConfigure<IdentityOptions>(
+                options => options.SignIn.RequireConfirmedEmail =
+                    _requireConfirmedEmail);
+            services.RemoveAll<IEmailSender<ApplicationUser>>();
+            services.AddSingleton<TestIdentityEmailSender>();
+            services.AddSingleton<IEmailSender<ApplicationUser>>(
+                serviceProvider => serviceProvider
+                    .GetRequiredService<TestIdentityEmailSender>());
+
             services.RemoveAll<IPhotoObjectStorage>();
             services.AddSingleton<IPhotoObjectStorage>(
                 new LocalPhotoStorage(
@@ -89,4 +113,3 @@ public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
             Directory.Delete(_rootDirectory, recursive: true);
     }
 }
-

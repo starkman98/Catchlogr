@@ -53,6 +53,72 @@ public sealed class AuthenticationServiceTests
         await action.Should().ThrowAsync<ArgumentException>();
     }
 
+    /// <summary>Verifies that confirmation resend uses the Identity endpoint.</summary>
+    [Fact]
+    public async Task ResendConfirmationEmailAsync_ValidEmail_SendsRequest()
+    {
+        var handler = new StubHttpMessageHandler(async (request, ct) =>
+        {
+            request.RequestUri!.PathAndQuery.Should()
+                .Be("/api/auth/resendConfirmationEmail");
+            var body = await request.Content!
+                .ReadFromJsonAsync<ResendConfirmationEmailRequest>(ct);
+            body.Should().Be(
+                new ResendConfirmationEmailRequest("angler@example.com"));
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var sut = CreateService(handler, Substitute.For<ITokenStore>());
+
+        await sut.ResendConfirmationEmailAsync(
+            "  angler@example.com  ",
+            TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Verifies that password recovery requests an emailed code.</summary>
+    [Fact]
+    public async Task ForgotPasswordAsync_ValidEmail_SendsRequest()
+    {
+        var handler = new StubHttpMessageHandler(async (request, ct) =>
+        {
+            request.RequestUri!.PathAndQuery.Should()
+                .Be("/api/auth/forgotPassword");
+            var body = await request.Content!
+                .ReadFromJsonAsync<ForgotPasswordRequest>(ct);
+            body.Should().Be(new ForgotPasswordRequest("angler@example.com"));
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var sut = CreateService(handler, Substitute.For<ITokenStore>());
+
+        await sut.ForgotPasswordAsync(
+            "angler@example.com",
+            TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Verifies that the reset code and new password reach Identity.</summary>
+    [Fact]
+    public async Task ResetPasswordAsync_ValidInput_SendsRequest()
+    {
+        var handler = new StubHttpMessageHandler(async (request, ct) =>
+        {
+            request.RequestUri!.PathAndQuery.Should()
+                .Be("/api/auth/resetPassword");
+            var body = await request.Content!
+                .ReadFromJsonAsync<ResetPasswordRequest>(ct);
+            body.Should().Be(new ResetPasswordRequest(
+                "angler@example.com",
+                "reset-code",
+                "NewPassword1!"));
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var sut = CreateService(handler, Substitute.For<ITokenStore>());
+
+        await sut.ResetPasswordAsync(
+            " angler@example.com ",
+            " reset-code ",
+            "NewPassword1!",
+            TestContext.Current.CancellationToken);
+    }
+
     /// <summary>Verifies that login stores tokens and authenticated account metadata.</summary>
     [Fact]
     public async Task LoginAsync_ValidCredentials_SavesSessionAndReturnsUser()

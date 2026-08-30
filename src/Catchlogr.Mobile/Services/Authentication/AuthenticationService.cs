@@ -45,6 +45,58 @@ public sealed class AuthenticationService : IAuthenticationService
     }
 
     /// <inheritdoc/>
+    public async Task ResendConfirmationEmailAsync(
+        string email,
+        CancellationToken ct = default)
+    {
+        ValidateEmail(email);
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            "api/auth/resendConfirmationEmail",
+            new ResendConfirmationEmailRequest(email.Trim()),
+            ct);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <inheritdoc/>
+    public async Task ForgotPasswordAsync(
+        string email,
+        CancellationToken ct = default)
+    {
+        ValidateEmail(email);
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            "api/auth/forgotPassword",
+            new ForgotPasswordRequest(email.Trim()),
+            ct);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <inheritdoc/>
+    public async Task ResetPasswordAsync(
+        string email,
+        string resetCode,
+        string newPassword,
+        CancellationToken ct = default)
+    {
+        ValidateEmail(email);
+        ArgumentException.ThrowIfNullOrWhiteSpace(resetCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPassword);
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            "api/auth/resetPassword",
+            new ResetPasswordRequest(
+                email.Trim(),
+                resetCode.Trim(),
+                newPassword),
+            ct);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    /// <inheritdoc/>
     public async Task<CurrentUserResponse> LoginAsync(
         string email,
         string password,
@@ -204,7 +256,10 @@ public sealed class AuthenticationService : IAuthenticationService
 
     private static void ValidateCredentials(string email, string password)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        ValidateEmail(email);
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
     }
+
+    private static void ValidateEmail(string email)
+        => ArgumentException.ThrowIfNullOrWhiteSpace(email);
 }

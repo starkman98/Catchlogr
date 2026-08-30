@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Resend" Version="0.11.0" />
     <ProjectReference Include="..\Catchlogr.Application\Catchlogr.Application.csproj" />
     <ProjectReference Include="..\Catchlogr.Domain\Catchlogr.Domain.csproj" />
   </ItemGroup>

@@ -101,6 +101,23 @@ public sealed class LoginViewModelTests
         sut.IsBusy.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that an unconfirmed user can reopen the resend-email screen.
+    /// </summary>
+    [Fact]
+    public async Task OpenCheckEmailCommand_EmailEntered_OpensCheckEmail()
+    {
+        var navigator = Substitute.For<IAppNavigator>();
+        var sut = CreateViewModel(navigator: navigator);
+        sut.Email = "angler@example.com";
+
+        await sut.OpenCheckEmailCommand.ExecuteAsync(null);
+
+        await navigator.Received(1).GoToAsync(
+            AppRoutes.CheckEmailFor("angler@example.com"),
+            Arg.Any<CancellationToken>());
+    }
+
     private static LoginViewModel CreateViewModel(
         IAuthenticationService? authenticationService = null,
         ITokenStore? tokenStore = null,

@@ -13,6 +13,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Catchlogr.Infrastructure.Identity;
+using Catchlogr.Infrastructure.Email;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Catchlogr.Api.Authentication;
@@ -40,15 +41,14 @@ builder.Services.AddDbContext<CatchlogrDbContext>(options =>
     ?? throw new InvalidOperationException("Missing connection string.")));
 
 builder.Services.AddAuthorization();
+builder.Services.AddIdentityEmail(builder.Configuration);
 
 builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>(options =>
     {
         options.User.RequireUniqueEmail = true;
 
-        // Keep false while initially building the authentication flow.
-        // Enable before production after implementing an email sender.
-        options.SignIn.RequireConfirmedEmail = false;
+        options.SignIn.RequireConfirmedEmail = true;
 
         options.Lockout.AllowedForNewUsers = true;
         options.Lockout.MaxFailedAccessAttempts = 5;

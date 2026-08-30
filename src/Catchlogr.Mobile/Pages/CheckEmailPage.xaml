@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
-    x:Class="Catchlogr.Mobile.Pages.LoginPage"
+    x:Class="Catchlogr.Mobile.Pages.CheckEmailPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Catchlogr.Mobile.ViewModels"
-    x:DataType="vm:LoginViewModel"
-    Shell.NavBarIsVisible="False"
+    x:DataType="vm:CheckEmailViewModel"
     Title="{Binding Title}">
 
     <ScrollView>
@@ -17,30 +16,26 @@
 
             <Label
                 FontAttributes="Bold"
-                FontSize="32"
+                FontSize="28"
                 HorizontalTextAlignment="Center"
-                Text="Catchlogr" />
+                Text="Check your email" />
 
             <Label
                 HorizontalTextAlignment="Center"
-                Text="Sign in to sync your fishing trips across devices."
+                Text="Open the confirmation link we sent, then return to Catchlogr and sign in."
                 TextColor="Gray" />
 
             <Entry
-                AutomationId="LoginEmailEntry"
+                AutomationId="ConfirmationEmailEntry"
                 IsEnabled="{Binding IsNotBusy}"
                 Keyboard="Email"
                 Placeholder="Email address"
-                ReturnType="Next"
                 Text="{Binding Email}" />
 
-            <Entry
-                AutomationId="LoginPasswordEntry"
-                IsEnabled="{Binding IsNotBusy}"
-                IsPassword="True"
-                Placeholder="Password"
-                ReturnType="Go"
-                Text="{Binding Password}" />
+            <Label
+                IsVisible="{Binding HasStatusMessage}"
+                Text="{Binding StatusMessage}"
+                TextColor="Green" />
 
             <Label
                 IsVisible="{Binding HasErrorMessage}"
@@ -49,10 +44,10 @@
 
             <Grid>
                 <Button
-                    AutomationId="LoginButton"
-                    Command="{Binding LoginCommand}"
+                    AutomationId="ResendConfirmationButton"
+                    Command="{Binding ResendCommand}"
                     IsEnabled="{Binding IsNotBusy}"
-                    Text="Sign in" />
+                    Text="Resend confirmation email" />
                 <ActivityIndicator
                     IsRunning="{Binding IsBusy}"
                     IsVisible="{Binding IsBusy}"
@@ -60,25 +55,11 @@
             </Grid>
 
             <Button
-                AutomationId="OpenForgotPasswordButton"
+                AutomationId="ConfirmationOpenLoginButton"
                 BackgroundColor="Transparent"
-                Command="{Binding OpenForgotPasswordCommand}"
+                Command="{Binding OpenLoginCommand}"
                 IsEnabled="{Binding IsNotBusy}"
-                Text="Forgot password?" />
-
-            <Button
-                AutomationId="OpenCheckEmailButton"
-                BackgroundColor="Transparent"
-                Command="{Binding OpenCheckEmailCommand}"
-                IsEnabled="{Binding IsNotBusy}"
-                Text="Resend confirmation email" />
-
-            <Button
-                AutomationId="OpenRegisterButton"
-                BackgroundColor="Transparent"
-                Command="{Binding OpenRegisterCommand}"
-                IsEnabled="{Binding IsNotBusy}"
-                Text="Create a new account" />
+                Text="Back to sign in" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

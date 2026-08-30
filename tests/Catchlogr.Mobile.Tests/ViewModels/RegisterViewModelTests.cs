@@ -1,5 +1,3 @@
-using Catchlogr.Contracts.AuthenticationDTOs;
-using Catchlogr.Mobile.Data;
 using Catchlogr.Mobile.Services.Authentication;
 using Catchlogr.Mobile.Services.Navigation;
 using Catchlogr.Mobile.ViewModels;
@@ -9,7 +7,7 @@ using NSubstitute;
 
 namespace Catchlogr.Mobile.Tests.ViewModels;
 
-/// <summary>Tests registration validation, automatic login, and navigation.</summary>
+/// <summary>Tests registration validation and confirmation navigation.</summary>
 public sealed class RegisterViewModelTests
 {
     /// <summary>Verifies that mismatched passwords are rejected before calling the API.</summary>
@@ -29,20 +27,14 @@ public sealed class RegisterViewModelTests
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
-    /// <summary>Verifies that registration logs in and opens the trips page.</summary>
+    /// <summary>Verifies that registration opens the email-confirmation page.</summary>
     [Fact]
-    public async Task RegisterCommand_ValidInput_RegistersLogsInAndNavigates()
+    public async Task RegisterCommand_ValidInput_RegistersAndOpensCheckEmail()
     {
         var authenticationService = Substitute.For<IAuthenticationService>();
-        authenticationService
-            .LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new CurrentUserResponse(
-                Guid.NewGuid(), "angler@example.com", DateTime.UtcNow, null));
         var navigator = Substitute.For<IAppNavigator>();
-        var localDatabase = Substitute.For<ILocalDatabase>();
         var sut = CreateViewModel(
             authenticationService,
-            localDatabase,
             navigator);
         sut.Email = "angler@example.com";
         sut.Password = "Password1!";
@@ -52,13 +44,8 @@ public sealed class RegisterViewModelTests
 
         await authenticationService.Received(1).RegisterAsync(
             "angler@example.com", "Password1!", Arg.Any<CancellationToken>());
-        await authenticationService.Received(1).LoginAsync(
-            "angler@example.com", "Password1!", Arg.Any<CancellationToken>());
         await navigator.Received(1).GoToAsync(
-            AppRoutes.FishingTrips,
-            Arg.Any<CancellationToken>());
-        await localDatabase.Received(1).ActivateAsync(
-            Arg.Any<Guid>(),
+            AppRoutes.CheckEmailFor("angler@example.com"),
             Arg.Any<CancellationToken>());
         sut.Password.Should().BeEmpty();
         sut.ConfirmPassword.Should().BeEmpty();
@@ -67,12 +54,10 @@ public sealed class RegisterViewModelTests
 
     private static RegisterViewModel CreateViewModel(
         IAuthenticationService? authenticationService = null,
-        ILocalDatabase? localDatabase = null,
         IAppNavigator? navigator = null)
     {
         return new RegisterViewModel(
             authenticationService ?? Substitute.For<IAuthenticationService>(),
-            localDatabase ?? Substitute.For<ILocalDatabase>(),
             navigator ?? Substitute.For<IAppNavigator>(),
             Substitute.For<ILogger<RegisterViewModel>>());
     }

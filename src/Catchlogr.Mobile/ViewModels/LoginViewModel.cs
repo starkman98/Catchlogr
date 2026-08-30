@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Catchlogr.Mobile.ViewModels;
 
-/// <summary>Handles login, session restoration, and navigation to registration.</summary>
+/// <summary>Handles login, session restoration, and account navigation.</summary>
 public partial class LoginViewModel : BaseViewModel
 {
     private readonly IAuthenticationService _authenticationService;
@@ -133,5 +133,28 @@ public partial class LoginViewModel : BaseViewModel
     {
         ErrorMessage = string.Empty;
         return _navigator.GoToAsync(AppRoutes.Register, ct);
+    }
+
+    [RelayCommand]
+    private Task OpenForgotPasswordAsync(CancellationToken ct)
+    {
+        ErrorMessage = string.Empty;
+        return _navigator.GoToAsync(AppRoutes.ForgotPassword, ct);
+    }
+
+    [RelayCommand]
+    private Task OpenCheckEmailAsync(CancellationToken ct)
+    {
+        ErrorMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            ErrorMessage =
+                "Enter your email address to resend a confirmation email.";
+            return Task.CompletedTask;
+        }
+
+        return _navigator.GoToAsync(
+            AppRoutes.CheckEmailFor(Email),
+            ct);
     }
 }

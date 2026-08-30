@@ -44,6 +44,96 @@ public sealed class AuthenticationAndAuthorizationTests
         duplicate.IsSuccessStatusCode.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that confirmation is required and the emailed link enables login.
+    /// </summary>
+    [Fact]
+    public async Task EmailConfirmation_RegistrationLink_EnablesLogin()
+    {
+        using var scenario = await ApiScenario.CreateAsync(
+            requireConfirmedEmail: true);
+        using var registration = await RegisterAsync(
+            scenario.Client,
+            "confirm@example.com");
+
+        using var beforeConfirmation = await scenario.Client.PostAsJsonAsync(
+            "/api/auth/login?useCookies=false",
+            new LoginRequest("confirm@example.com", Password),
+            TestContext.Current.CancellationToken);
+        var confirmationLink = scenario.Factory.EmailSender
+            .ConfirmationLinks.Should().ContainSingle().Subject;
+        using var confirmation = await scenario.Client.GetAsync(
+            new Uri(WebUtility.HtmlDecode(confirmationLink)).PathAndQuery,
+            TestContext.Current.CancellationToken);
+        var tokens = await LoginAsync(scenario.Client, "confirm@example.com");
+
+        registration.IsSuccessStatusCode.Should().BeTrue();
+        beforeConfirmation.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        confirmation.IsSuccessStatusCode.Should().BeTrue();
+        tokens.AccessToken.Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>Verifies that confirmation email can be requested again.</summary>
+    [Fact]
+    public async Task ResendConfirmationEmail_UnconfirmedAccount_SendsAnotherLink()
+    {
+        using var scenario = await ApiScenario.CreateAsync(
+            requireConfirmedEmail: true);
+        using var registration = await RegisterAsync(
+            scenario.Client,
+            "resend@example.com");
+
+        using var response = await scenario.Client.PostAsJsonAsync(
+            "/api/auth/resendConfirmationEmail",
+            new ResendConfirmationEmailRequest("resend@example.com"),
+            TestContext.Current.CancellationToken);
+
+        response.IsSuccessStatusCode.Should().BeTrue();
+        scenario.Factory.EmailSender.ConfirmationLinks.Should().HaveCount(2);
+    }
+
+    /// <summary>
+    /// Verifies that an emailed reset code changes the account password.
+    /// </summary>
+    [Fact]
+    public async Task PasswordReset_EmailedCode_ChangesPassword()
+    {
+        const string newPassword = "NewPassword1!";
+        using var scenario = await ApiScenario.CreateAsync(
+            requireConfirmedEmail: true);
+        using var registration = await RegisterAsync(
+            scenario.Client,
+            "reset@example.com");
+        var confirmationLink = scenario.Factory.EmailSender
+            .ConfirmationLinks.Should().ContainSingle().Subject;
+        using var confirmation = await scenario.Client.GetAsync(
+            new Uri(WebUtility.HtmlDecode(confirmationLink)).PathAndQuery,
+            TestContext.Current.CancellationToken);
+        confirmation.EnsureSuccessStatusCode();
+
+        using var forgotPassword = await scenario.Client.PostAsJsonAsync(
+            "/api/auth/forgotPassword",
+            new ForgotPasswordRequest("reset@example.com"),
+            TestContext.Current.CancellationToken);
+        var resetCode = scenario.Factory.EmailSender.PasswordResetCodes
+            .Should().ContainSingle().Subject;
+        using var resetPassword = await scenario.Client.PostAsJsonAsync(
+            "/api/auth/resetPassword",
+            new ResetPasswordRequest(
+                "reset@example.com",
+                WebUtility.HtmlDecode(resetCode),
+                newPassword),
+            TestContext.Current.CancellationToken);
+        var tokens = await LoginAsync(
+            scenario.Client,
+            "reset@example.com",
+            newPassword);
+
+        forgotPassword.IsSuccessStatusCode.Should().BeTrue();
+        resetPassword.IsSuccessStatusCode.Should().BeTrue();
+        tokens.AccessToken.Should().NotBeNullOrWhiteSpace();
+    }
+
     /// <summary>Verifies that correct credentials return access and refresh tokens.</summary>
     [Fact]
     public async Task Login_CorrectCredentials_ReturnsTokenPair()
@@ -422,11 +512,12 @@ public sealed class AuthenticationAndAuthorizationTests
 
     private static async Task<AccessTokenResponse> LoginAsync(
         HttpClient client,
-        string email)
+        string email,
+        string password = Password)
     {
         using var response = await client.PostAsJsonAsync(
             "/api/auth/login?useCookies=false",
-            new LoginRequest(email, Password));
+            new LoginRequest(email, password));
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<AccessTokenResponse>()
             ?? throw new InvalidOperationException("Login returned no token pair.");
@@ -617,9 +708,12 @@ public sealed class AuthenticationAndAuthorizationTests
         public HttpClient Client { get; }
 
         public static async Task<ApiScenario> CreateAsync(
-            TimeSpan? bearerTokenLifetime = null)
+            TimeSpan? bearerTokenLifetime = null,
+            bool requireConfirmedEmail = false)
         {
-            var factory = new CatchlogrApiFactory(bearerTokenLifetime);
+            var factory = new CatchlogrApiFactory(
+                bearerTokenLifetime,
+                requireConfirmedEmail);
             await factory.InitializeAsync();
             return new ApiScenario(factory, factory.CreateClient());
         }
@@ -631,4 +725,3 @@ public sealed class AuthenticationAndAuthorizationTests
         }
     }
 }
-

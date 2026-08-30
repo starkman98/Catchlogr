@@ -335,6 +335,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the detailed development roadmap.
 - [MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) - Mobile app configuration guide
 - [WEATHER_INTEGRATION.md](docs/WEATHER_INTEGRATION.md) - Weather enrichment architecture and implementation
 - [LOCATION_SEARCH_INTEGRATION.md](docs/LOCATION_SEARCH_INTEGRATION.md) - LocationIQ lake and place search integration
+- [IDENTITY_EMAIL.md](docs/IDENTITY_EMAIL.md) - Resend configuration, email confirmation, and password recovery
 - [QUICK_START.md](docs/QUICK_START.md) - Quick start guide
 - [SETUP_CHECKLIST.md](docs/SETUP_CHECKLIST.md) - Setup checklist
 - [SETUP_SUMMARY.md](docs/SETUP_SUMMARY.md) - Setup summary
