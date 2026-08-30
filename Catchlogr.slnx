@@ -1,16 +1,42 @@
 <Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Local" />
+    <BuildType Name="Release" />
+  </Configurations>
   <Folder Name="/src/">
-    <Project Path="src/Catchlogr.Api/Catchlogr.Api.csproj" />
-    <Project Path="src/Catchlogr.Application/Catchlogr.Application.csproj" />
-    <Project Path="src/Catchlogr.Contracts/Catchlogr.Contracts.csproj" />
-    <Project Path="src/Catchlogr.Domain/Catchlogr.Domain.csproj" />
-    <Project Path="src/Catchlogr.Infrastructure/Catchlogr.Infrastructure.csproj" />
-    <Project Path="src/Catchlogr.Mobile/Catchlogr.Mobile.csproj" />
-    <Project Path="src/Catchlogr.Sync/Catchlogr.Sync.csproj" />
+    <Project Path="src/Catchlogr.Api/Catchlogr.Api.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="src/Catchlogr.Application/Catchlogr.Application.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="src/Catchlogr.Contracts/Catchlogr.Contracts.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="src/Catchlogr.Domain/Catchlogr.Domain.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="src/Catchlogr.Infrastructure/Catchlogr.Infrastructure.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="src/Catchlogr.Mobile/Catchlogr.Mobile.csproj">
+      <Deploy Solution="Debug|*" />
+      <Deploy Solution="Local|*" />
+    </Project>
+    <Project Path="src/Catchlogr.Sync/Catchlogr.Sync.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj" />
-    <Project Path="tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj" />
-    <Project Path="tests/Catchlogr.Tests/Catchlogr.Tests.csproj" />
+    <Project Path="tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
+    <Project Path="tests/Catchlogr.Tests/Catchlogr.Tests.csproj">
+      <BuildType Solution="Local|*" Project="Release" />
+    </Project>
   </Folder>
 </Solution>

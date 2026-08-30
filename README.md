@@ -161,25 +161,30 @@ The API uses standard ASP.NET Core configuration files:
 
 The mobile app uses embedded JSON configuration files:
 
+`src/Catchlogr.Mobile/appsettings.Local.json` (Local builds):
+
+```json
+{
+  "BackendEnvironment": "Local",
+  "Api": {
+    "BaseUrl": "https://localhost:7160"
+  }
+}
+```
+
 `src/Catchlogr.Mobile/appsettings.Development.json` (Debug builds):
 
 ```json
 {
+  "BackendEnvironment": "Development",
   "Api": {
-    "BaseUrl": "https://localhost:5001"
+    "BaseUrl": "https://dev-api.catchlogr.com"
   }
 }
 ```
 
-`src/Catchlogr.Mobile/appsettings.json` (Release builds):
-
-```json
-{
-  "Api": {
-    "BaseUrl": "https://api.catchlogr.com"
-  }
-}
-```
+`src/Catchlogr.Mobile/appsettings.json` is used by Release builds and targets
+`https://api.catchlogr.com`.
 
 See [docs/MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) for details.
 
@@ -198,7 +203,7 @@ See [docs/MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) for details.
    cd src/Catchlogr.Api
    dotnet watch run
    ```
-3. **Visual Studio** - Run Mobile app (F5)
+3. **Visual Studio** - Select the Local configuration and run Mobile (F5)
 
 ### Testing API Endpoints
 
@@ -206,20 +211,20 @@ Use your favorite HTTP client (Postman, curl, or REST Client extension):
 
 ```bash
 # Health check
-curl https://localhost:5001/health
+curl https://localhost:7160/health
 
 # Get all fishing trips (once implemented)
-curl https://localhost:5001/api/fishing-trips
+curl https://localhost:7160/api/fishing-trips
 ```
 
 ### Connecting Mobile to API
 
-**Android Emulator**: Use `10.0.2.2` instead of `localhost`:
+**Android Emulator**: Local builds automatically use the host alias:
 
 ```json
 {
   "Api": {
-    "BaseUrl": "https://10.0.2.2:5001"
+    "BaseUrl": "http://10.0.2.2:5001"
   }
 }
 ```

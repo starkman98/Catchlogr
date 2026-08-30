@@ -1,4 +1,5 @@
 using System.Globalization;
+using Catchlogr.Mobile.Configuration;
 using Catchlogr.Mobile.Services.Authentication;
 using FluentAssertions;
 using Microsoft.Maui.Storage;
@@ -11,18 +12,19 @@ namespace Catchlogr.Mobile.Tests.Authentication;
 /// </summary>
 public sealed class SecureTokenStoreTests
 {
-    private const string AccessTokenKey = "catchlogr.auth.access_token";
-    private const string RefreshTokenKey = "catchlogr.auth.refresh_token";
-    private const string ExpiresAtKey = "catchlogr.auth.access_token_expires_at_utc";
-    private const string UserIdKey = "catchlogr.auth.current_user_id";
-    private const string UserEmailKey = "catchlogr.auth.current_user_email";
+    private const string KeyPrefix = "catchlogr.development.auth.";
+    private const string AccessTokenKey = KeyPrefix + "access_token";
+    private const string RefreshTokenKey = KeyPrefix + "refresh_token";
+    private const string ExpiresAtKey = KeyPrefix + "access_token_expires_at_utc";
+    private const string UserIdKey = KeyPrefix + "current_user_id";
+    private const string UserEmailKey = KeyPrefix + "current_user_email";
 
     /// <summary>Verifies that a complete token set is saved with a UTC expiration value.</summary>
     [Fact]
     public async Task SaveTokensAsync_ValidTokens_SavesCompleteTokenSet()
     {
         var secureStorage = Substitute.For<ISecureStorage>();
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
         var expiresAt = new DateTimeOffset(2026, 8, 24, 14, 30, 0, TimeSpan.FromHours(2));
 
         await sut.SaveTokensAsync("access-token", "refresh-token", expiresAt);
@@ -41,7 +43,7 @@ public sealed class SecureTokenStoreTests
     [InlineData("access-token", " ")]
     public async Task SaveTokensAsync_BlankToken_ThrowsArgumentException(string accessToken, string refreshToken)
     {
-        var sut = new SecureTokenStore(Substitute.For<ISecureStorage>());
+        var sut = CreateStore(Substitute.For<ISecureStorage>());
 
         var action = () => sut.SaveTokensAsync(accessToken, refreshToken, DateTimeOffset.UtcNow);
 
@@ -56,7 +58,7 @@ public sealed class SecureTokenStoreTests
         secureStorage
             .SetAsync(ExpiresAtKey, Arg.Any<string>())
             .Returns(Task.FromException(new InvalidOperationException("Storage unavailable.")));
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
 
         var action = () => sut.SaveTokensAsync("access-token", "refresh-token", DateTimeOffset.UtcNow);
 
@@ -76,7 +78,7 @@ public sealed class SecureTokenStoreTests
         secureStorage.GetAsync(ExpiresAtKey).Returns(expiresAt.ToString("O", CultureInfo.InvariantCulture));
         secureStorage.GetAsync(UserIdKey).Returns(userId.ToString("D"));
         secureStorage.GetAsync(UserEmailKey).Returns("angler@example.com");
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
 
         (await sut.GetAccessTokenAsync()).Should().Be("access-token");
         (await sut.GetRefreshTokenAsync()).Should().Be("refresh-token");
@@ -95,7 +97,7 @@ public sealed class SecureTokenStoreTests
         secureStorage.GetAsync(ExpiresAtKey).Returns(string.Empty);
         secureStorage.GetAsync(UserIdKey).Returns((string?)null);
         secureStorage.GetAsync(UserEmailKey).Returns(" ");
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
 
         (await sut.GetAccessTokenAsync()).Should().BeNull();
         (await sut.GetRefreshTokenAsync()).Should().BeNull();
@@ -113,7 +115,7 @@ public sealed class SecureTokenStoreTests
     {
         var secureStorage = Substitute.For<ISecureStorage>();
         secureStorage.GetAsync(key).Returns(value);
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
 
         if (key == ExpiresAtKey)
             (await sut.GetAccessTokenExpiresAtUtcAsync()).Should().BeNull();
@@ -125,18 +127,18 @@ public sealed class SecureTokenStoreTests
 
     /// <summary>Verifies that unreadable encrypted storage is reset and treated as signed out.</summary>
     [Fact]
-    public async Task GetAccessTokenAsync_StorageThrows_RemovesAllAndReturnsNull()
+    public async Task GetAccessTokenAsync_StorageThrows_ClearsActiveEnvironmentAndReturnsNull()
     {
         var secureStorage = Substitute.For<ISecureStorage>();
         secureStorage
             .GetAsync(AccessTokenKey)
             .Returns(Task.FromException<string?>(new InvalidOperationException("Cannot decrypt.")));
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
 
         var result = await sut.GetAccessTokenAsync();
 
         result.Should().BeNull();
-        secureStorage.Received(1).RemoveAll();
+        AssertSessionKeysRemoved(secureStorage);
     }
 
     /// <summary>Verifies that active-account metadata is validated, normalized, and saved.</summary>
@@ -144,7 +146,7 @@ public sealed class SecureTokenStoreTests
     public async Task SaveCurrentUserAsync_ValidUser_SavesNormalizedValues()
     {
         var secureStorage = Substitute.For<ISecureStorage>();
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
         var userId = Guid.NewGuid();
 
         await sut.SaveCurrentUserAsync(userId, "  angler@example.com  ");
@@ -159,7 +161,7 @@ public sealed class SecureTokenStoreTests
     [InlineData("a6334722-5550-4b32-bc28-660552a0fb2f", " ")]
     public async Task SaveCurrentUserAsync_InvalidUser_ThrowsArgumentException(string userIdValue, string email)
     {
-        var sut = new SecureTokenStore(Substitute.For<ISecureStorage>());
+        var sut = CreateStore(Substitute.For<ISecureStorage>());
 
         var action = () => sut.SaveCurrentUserAsync(Guid.Parse(userIdValue), email);
 
@@ -171,11 +173,50 @@ public sealed class SecureTokenStoreTests
     public void Clear_Always_RemovesEverySessionKey()
     {
         var secureStorage = Substitute.For<ISecureStorage>();
-        var sut = new SecureTokenStore(secureStorage);
+        var sut = CreateStore(secureStorage);
 
         sut.Clear();
 
         AssertSessionKeysRemoved(secureStorage);
+    }
+
+    /// <summary>Verifies that each backend uses an independent secure-storage namespace.</summary>
+    [Fact]
+    public async Task SaveTokensAsync_DifferentBackends_UsesDifferentKeys()
+    {
+        var secureStorage = Substitute.For<ISecureStorage>();
+        var localStore = CreateStore(secureStorage, BackendEnvironment.Local);
+        var developmentStore = CreateStore(
+            secureStorage,
+            BackendEnvironment.Development);
+
+        await localStore.SaveTokensAsync(
+            "local-access",
+            "local-refresh",
+            DateTimeOffset.UtcNow.AddMinutes(30));
+        await developmentStore.SaveTokensAsync(
+            "dev-access",
+            "dev-refresh",
+            DateTimeOffset.UtcNow.AddMinutes(30));
+
+        await secureStorage.Received(1).SetAsync(
+            "catchlogr.local.auth.access_token",
+            "local-access");
+        await secureStorage.Received(1).SetAsync(
+            AccessTokenKey,
+            "dev-access");
+    }
+
+    private static SecureTokenStore CreateStore(
+        ISecureStorage secureStorage,
+        BackendEnvironment environment = BackendEnvironment.Development)
+    {
+        return new SecureTokenStore(
+            secureStorage,
+            new AppSettings
+            {
+                BackendEnvironment = environment
+            });
     }
 
     private static void AssertSessionKeysRemoved(ISecureStorage secureStorage)

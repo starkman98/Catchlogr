@@ -1,4 +1,5 @@
 using System.Globalization;
+using Catchlogr.Mobile.Configuration;
 
 namespace Catchlogr.Mobile.Services.Authentication;
 
@@ -8,32 +9,32 @@ namespace Catchlogr.Mobile.Services.Authentication;
 /// </summary>
 public sealed class SecureTokenStore : ITokenStore
 {
-    private const string AccessTokenKey =
-        "catchlogr.auth.access_token";
+    private const string AccessTokenKey = "access_token";
 
-    private const string RefreshTokenKey =
-        "catchlogr.auth.refresh_token";
+    private const string RefreshTokenKey = "refresh_token";
 
     private const string AccessTokenExpiresAtUtcKey =
-        "catchlogr.auth.access_token_expires_at_utc";
+        "access_token_expires_at_utc";
 
-    private const string CurrentUserIdKey =
-        "catchlogr.auth.current_user_id";
+    private const string CurrentUserIdKey = "current_user_id";
 
-    private const string CurrentUserEmailKey =
-        "catchlogr.auth.current_user_email";
+    private const string CurrentUserEmailKey = "current_user_email";
 
     private readonly ISecureStorage _secureStorage;
+    private readonly string _keyPrefix;
 
     /// <summary>
     /// Initializes a new secure token store.
     /// </summary>
-    /// <param name="secureStorage">
-    /// The platform secure-storage implementation.
-    /// </param>
-    public SecureTokenStore(ISecureStorage secureStorage)
+    /// <param name="secureStorage">The platform secure-storage implementation.</param>
+    /// <param name="appSettings">The selected mobile backend settings.</param>
+    public SecureTokenStore(
+        ISecureStorage secureStorage,
+        AppSettings appSettings)
     {
         _secureStorage = secureStorage;
+        _keyPrefix =
+            $"catchlogr.{appSettings.BackendEnvironment.ToString().ToLowerInvariant()}.auth.";
     }
 
     /// <inheritdoc/>
@@ -51,20 +52,20 @@ public sealed class SecureTokenStore : ITokenStore
 
         // Remove the access token first. It is written last and therefore
         // acts as a marker that the complete token set was saved.
-        _secureStorage.Remove(AccessTokenKey);
+        _secureStorage.Remove(GetKey(AccessTokenKey));
 
         try
         {
             await _secureStorage.SetAsync(
-                RefreshTokenKey,
+                GetKey(RefreshTokenKey),
                 refreshToken);
 
             await _secureStorage.SetAsync(
-                AccessTokenExpiresAtUtcKey,
+                GetKey(AccessTokenExpiresAtUtcKey),
                 expirationValue);
 
             await _secureStorage.SetAsync(
-                AccessTokenKey,
+                GetKey(AccessTokenKey),
                 accessToken);
         }
         catch
@@ -77,7 +78,7 @@ public sealed class SecureTokenStore : ITokenStore
     /// <inheritdoc/>
     public async Task<string?> GetAccessTokenAsync()
     {
-        var value = await ReadAsync(AccessTokenKey);
+        var value = await ReadAsync(GetKey(AccessTokenKey));
 
         return string.IsNullOrWhiteSpace(value)
             ? null
@@ -87,7 +88,7 @@ public sealed class SecureTokenStore : ITokenStore
     /// <inheritdoc/>
     public async Task<string?> GetRefreshTokenAsync()
     {
-        var value = await ReadAsync(RefreshTokenKey);
+        var value = await ReadAsync(GetKey(RefreshTokenKey));
 
         return string.IsNullOrWhiteSpace(value)
             ? null
@@ -99,7 +100,7 @@ public sealed class SecureTokenStore : ITokenStore
         GetAccessTokenExpiresAtUtcAsync()
     {
         var storedValue =
-            await ReadAsync(AccessTokenExpiresAtUtcKey);
+            await ReadAsync(GetKey(AccessTokenExpiresAtUtcKey));
 
         if (string.IsNullOrWhiteSpace(storedValue))
         {
@@ -138,11 +139,11 @@ public sealed class SecureTokenStore : ITokenStore
         try
         {
             await _secureStorage.SetAsync(
-                CurrentUserIdKey,
+                GetKey(CurrentUserIdKey),
                 userId.ToString("D"));
 
             await _secureStorage.SetAsync(
-                CurrentUserEmailKey,
+                GetKey(CurrentUserEmailKey),
                 email.Trim());
         }
         catch
@@ -155,7 +156,7 @@ public sealed class SecureTokenStore : ITokenStore
     /// <inheritdoc/>
     public async Task<Guid?> GetCurrentUserIdAsync()
     {
-        var storedValue = await ReadAsync(CurrentUserIdKey);
+        var storedValue = await ReadAsync(GetKey(CurrentUserIdKey));
 
         if (string.IsNullOrWhiteSpace(storedValue))
         {
@@ -175,7 +176,7 @@ public sealed class SecureTokenStore : ITokenStore
     /// <inheritdoc/>
     public async Task<string?> GetCurrentUserEmailAsync()
     {
-        var value = await ReadAsync(CurrentUserEmailKey);
+        var value = await ReadAsync(GetKey(CurrentUserEmailKey));
 
         return string.IsNullOrWhiteSpace(value)
             ? null
@@ -185,11 +186,11 @@ public sealed class SecureTokenStore : ITokenStore
     /// <inheritdoc/>
     public void Clear()
     {
-        _secureStorage.Remove(AccessTokenKey);
-        _secureStorage.Remove(RefreshTokenKey);
-        _secureStorage.Remove(AccessTokenExpiresAtUtcKey);
-        _secureStorage.Remove(CurrentUserIdKey);
-        _secureStorage.Remove(CurrentUserEmailKey);
+        _secureStorage.Remove(GetKey(AccessTokenKey));
+        _secureStorage.Remove(GetKey(RefreshTokenKey));
+        _secureStorage.Remove(GetKey(AccessTokenExpiresAtUtcKey));
+        _secureStorage.Remove(GetKey(CurrentUserIdKey));
+        _secureStorage.Remove(GetKey(CurrentUserEmailKey));
     }
 
     private async Task<string?> ReadAsync(string key)
@@ -202,8 +203,10 @@ public sealed class SecureTokenStore : ITokenStore
         {
             // Encrypted values can become unreadable after a device
             // restore or encryption-key change. Force a fresh login.
-            _secureStorage.RemoveAll();
+            Clear();
             return null;
         }
     }
+
+    private string GetKey(string key) => _keyPrefix + key;
 }

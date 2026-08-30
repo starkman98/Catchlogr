@@ -1,127 +1,80 @@
-# Mobile App Configuration
+# Mobile app configuration
 
-## Overview
-The Catchlogr mobile app uses embedded JSON configuration files similar to ASP.NET Core apps.
+## Backend selection
 
-## Configuration Files
+Catchlogr Mobile selects its backend through the Visual Studio build
+configuration. Select the configuration before starting the mobile project.
 
-### `appsettings.json`
-Default configuration used in **Release** builds.
+| Build configuration | Settings resource | API | SQLite file |
+| --- | --- | --- | --- |
+| Local | `appsettings.Local.json` | API on the developer PC | `catchlogr_local.db3` |
+| Debug | `appsettings.Development.json` | `https://dev-api.catchlogr.com` | `catchlogr_dev.db3` |
+| Release | `appsettings.json` | `https://api.catchlogr.com` | `catchlogr.db3` |
 
-```json
-{
-  "Api": {
-    "BaseUrl": "https://api.catchlogr.com",  // Production API URL
-    "Timeout": 30
-  },
-  "Sync": {
-    "AutoSyncOnStartup": true,
-    "SyncIntervalMinutes": 15
-  },
-  "Database": {
-    "FileName": "catchlogr.db3"
-  }
-}
+`AppSettings.Load()` loads exactly one embedded resource. It does not fall
+back to another environment. Startup fails if the resource is missing, its
+declared `BackendEnvironment` does not match the build, or a non-Local API
+URL does not use HTTPS.
+
+Changes to these JSON files require rebuilding the mobile app because the
+files are embedded in the application assembly.
+
+## Local API addresses
+
+The API HTTPS launch profile listens at `https://localhost:7160` and also
+exposes HTTP at port `5001`.
+
+For a Local build, the mobile app resolves the endpoint as follows:
+
+| Platform | API address |
+| --- | --- |
+| Windows | `https://localhost:7160` |
+| Android emulator | `http://10.0.2.2:5001` |
+| iOS simulator / Mac Catalyst | Configured Local URL, normally `https://localhost:7160` |
+| Physical device | Configured Local URL |
+
+`10.0.2.2` is the Android emulator alias for the host computer. Android
+cleartext access is restricted to that host by
+`Platforms/Android/Resources/xml/network_security_config.xml`.
+
+To connect a physical device directly to the local API, temporarily set
+`Api:BaseUrl` in `appsettings.Local.json` to the PC's LAN address, ensure
+the API listens on the LAN interface, and rebuild. For routine physical-device
+development, prefer the Debug configuration and the deployed development API.
+
+## Local state isolation
+
+Each backend has a different SQLite filename. Authentication values in
+SecureStorage are also prefixed with the selected backend:
+
+```text
+catchlogr.local.auth.*
+catchlogr.development.auth.*
+catchlogr.production.auth.*
 ```
 
-### `appsettings.Development.json`
-Configuration overrides used in **Debug** builds.
+Switching configurations therefore does not reuse tokens, user metadata,
+dirty rows, or sync cursors from another backend. Existing unscoped
+`catchlogr.auth.*` tokens are intentionally not migrated; users sign in once
+per backend after upgrading.
 
-```json
-{
-  "Api": {
-    "BaseUrl": "https://localhost:5001",  // Local development API
-    "Timeout": 60
-  },
-  "Sync": {
-    "AutoSyncOnStartup": false,
-    "SyncIntervalMinutes": 5
-  },
-  "Database": {
-    "FileName": "catchlogr_dev.db3"
-  },
-  "Logging": {
-    "LogLevel": "Debug"
-  }
-}
+## API email links
+
+Mobile backend selection does not configure Identity email links. The API uses
+its existing `Email:PublicApiBaseUrl` setting:
+
+```text
+Local API:       https://localhost:7160
+Development API: https://dev-api.catchlogr.com
+Production API:  https://api.catchlogr.com
 ```
 
-## How It Works
+For deployed environments, the environment-variable form is
+`Email__PublicApiBaseUrl`.
 
-1. **Files are embedded** as resources in the compiled app (see `.csproj`)
-2. **AppSettings.Load()** reads the JSON at runtime:
-   - In **Debug** builds: Loads `appsettings.Development.json` first, falls back to `appsettings.json`
-   - In **Release** builds: Loads `appsettings.json`
-3. **Settings are registered** in `MauiProgram.cs` for dependency injection
+## Security
 
-## Using Settings in Your Code
-
-### Option 1: Inject the whole AppSettings object
-```csharp
-public class MyViewModel
-{
-    private readonly AppSettings _settings;
-
-    public MyViewModel(AppSettings settings)
-    {
-        _settings = settings;
-        var apiUrl = _settings.Api.BaseUrl;
-    }
-}
-```
-
-### Option 2: Inject specific settings sections
-```csharp
-public class MyApiClient
-{
-    private readonly ApiSettings _apiSettings;
-
-    public MyApiClient(ApiSettings apiSettings)
-    {
-        _apiSettings = apiSettings;
-        var client = new HttpClient
-        {
-            BaseAddress = new Uri(_apiSettings.BaseUrl),
-            Timeout = TimeSpan.FromSeconds(_apiSettings.Timeout)
-        };
-    }
-}
-```
-
-## Changing API URL
-
-### For Local Development
-Edit `src/Catchlogr.Mobile/appsettings.Development.json`:
-```json
-{
-  "Api": {
-    "BaseUrl": "https://localhost:5001"  // Change to your local API URL
-  }
-}
-```
-
-### For Different Environments (Staging, Production)
-You can create additional files:
-- `appsettings.Staging.json`
-- `appsettings.Production.json`
-
-And modify the `AppSettings.Load()` method to check for environment variables or build configurations.
-
-## Important Notes
-
-- ⚠️ **Don't put secrets in these files** - They are embedded in the app binary
-- ✅ For sensitive data (API keys, tokens), use:
-  - Platform-specific secure storage (e.g., `SecureStorage.SetAsync()`)
-  - Environment variables
-  - Remote configuration (e.g., Azure App Configuration)
-- 🔄 Changes to JSON files require **rebuilding the app** (they're embedded at compile time)
-
-## Database Location
-
-The SQLite database is stored at:
-```csharp
-var dbPath = appSettings.Database.FullPath;
-// Example: /data/user/0/com.companyname.catchlogr.mobile/files/catchlogr_dev.db3
-```
-
-This path is automatically determined by MAUI's `FileSystem.AppDataDirectory`.
+Embedded mobile settings are public application configuration. Never store
+passwords, API keys, tokens, connection strings, or other secrets in these
+files. Tokens belong in platform SecureStorage; server secrets belong in API
+environment variables or an appropriate secret store.

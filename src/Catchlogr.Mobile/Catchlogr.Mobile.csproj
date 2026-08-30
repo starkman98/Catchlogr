@@ -37,6 +37,14 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+		<Configurations>Debug;Release;Local</Configurations>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Local'">
+		<DefineConstants>$(DefineConstants);LOCAL</DefineConstants>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+		<Optimize>false</Optimize>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -61,6 +69,7 @@
 		<!-- Embedded Configuration Files -->
 		<EmbeddedResource Include="appsettings.json" />
 		<EmbeddedResource Include="appsettings.Development.json" />
+		<EmbeddedResource Include="appsettings.Local.json" />
 	</ItemGroup>
 
 	<ItemGroup>

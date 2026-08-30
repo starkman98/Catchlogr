@@ -1,48 +1,37 @@
 namespace Catchlogr.Mobile.Configuration;
 
 /// <summary>
-/// Resolves the correct API base URL for the current platform and build configuration.
-/// Only applies overrides in DEBUG builds — Release always uses the configured value.
+/// Resolves platform-specific API addresses for the Local backend.
 /// </summary>
 internal static class PlatformApiUrl
 {
     /// <summary>
-    /// Returns the base URL to use for the current environment:
-    /// <list type="bullet">
-    ///   <item>Android emulator  → http://10.0.2.2:5001     (emulator loopback to host)</item>
-    ///   <item>iOS simulator     → https://localhost:5001    (simulator shares host network)</item>
-    ///   <item>Windows           → https://localhost:5001    (runs on the same machine)</item>
-    ///   <item>Physical device   → uses the value from appsettings (set your LAN IP there)</item>
-    ///   <item>Release builds    → always uses the value from appsettings</item>
-    /// </list>
+    /// Returns the configured URL unchanged unless a Local build requires a
+    /// platform-specific host address.
     /// </summary>
-    /// <param name="configuredUrl">The base URL from appsettings.json as the fallback.</param>
-    internal static string Resolve(string configuredUrl)
+    /// <param name="configuredUrl">The base URL from the selected settings file.</param>
+    /// <param name="environment">The selected backend environment.</param>
+    /// <param name="platform">The platform running the mobile app.</param>
+    /// <param name="deviceType">Whether the app runs on virtual or physical hardware.</param>
+    internal static string Resolve(
+        string configuredUrl,
+        BackendEnvironment environment,
+        DevicePlatform platform,
+        DeviceType deviceType)
     {
-#if DEBUG
-        if (DeviceInfo.Current.Platform == DevicePlatform.Android)
+        if (environment != BackendEnvironment.Local)
         {
-            // Android emulator uses 10.0.2.2 as an alias for the host machine
-            // Physical Android device must use your LAN IP — set it in appsettings.Development.json
-            return DeviceInfo.Current.DeviceType == DeviceType.Virtual
-                ? "http://10.0.2.2:5001"
-                : configuredUrl;
+            return configuredUrl;
         }
 
-        if (DeviceInfo.Current.Platform == DevicePlatform.iOS ||
-            DeviceInfo.Current.Platform == DevicePlatform.MacCatalyst)
+        if (platform == DevicePlatform.Android &&
+            deviceType == DeviceType.Virtual)
         {
-            // iOS/macOS simulator shares the host machine's network stack
-            // Physical iOS device must use your LAN IP — set it in appsettings.Development.json
-            return DeviceInfo.Current.DeviceType == DeviceType.Virtual
-                ? "https://localhost:5001"
-                : configuredUrl;
+            return "http://10.0.2.2:5001";
         }
 
-        // Windows (WinUI) — always the same machine as the API
-        return "https://localhost:5001";
-#else
-        return configuredUrl;
-#endif
+        return platform == DevicePlatform.WinUI
+            ? "https://localhost:7160"
+            : configuredUrl;
     }
 }

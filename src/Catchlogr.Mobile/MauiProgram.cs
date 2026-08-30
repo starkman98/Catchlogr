@@ -34,12 +34,18 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
-#if DEBUG
+#if DEBUG || LOCAL
 		builder.Logging.AddDebug();
 #endif
 
 		// Load and register app settings
 		var appSettings = AppSettings.Load();
+		var apiBaseUrl = PlatformApiUrl.Resolve(
+			appSettings.Api.BaseUrl,
+			appSettings.BackendEnvironment,
+			DeviceInfo.Current.Platform,
+			DeviceInfo.Current.DeviceType);
+		var apiBaseUri = new Uri(apiBaseUrl.TrimEnd('/') + '/');
 		builder.Services.AddSingleton(appSettings);
 		builder.Services.AddSingleton(appSettings.Api);
 		builder.Services.AddSingleton(appSettings.Sync);
@@ -77,44 +83,38 @@ public static class MauiProgram
 
         builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
         {
-            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
-            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + '/');
+            client.BaseAddress = apiBaseUri;
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
         });
 
         // --- API client ---
         // Typed HttpClient: BaseAddress and Timeout come from appsettings
-        builder.Services.AddHttpClient<IFishingTripApiClient, FishingTripApiClient>(client =>
+		builder.Services.AddHttpClient<IFishingTripApiClient, FishingTripApiClient>(client =>
 		{
-			var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
-			client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+			client.BaseAddress = apiBaseUri;
 			client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
 		})
         .AddHttpMessageHandler<AuthenticationMessageHandler>();
         builder.Services.AddHttpClient<ICatchApiClient, CatchApiClient>(client =>
         {
-            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
-            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.BaseAddress = apiBaseUri;
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
         })
         .AddHttpMessageHandler<AuthenticationMessageHandler>();
         builder.Services.AddHttpClient<IPhotoApiClient, PhotoApiClient>(client =>
         {
-            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
-            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.BaseAddress = apiBaseUri;
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
         })
         .AddHttpMessageHandler<AuthenticationMessageHandler>();
         builder.Services.AddHttpClient<IApiHealthClient, ApiHealthClient>(client =>
         {
-            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
-            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.BaseAddress = apiBaseUri;
             client.Timeout = TimeSpan.FromSeconds(10);
         });
         builder.Services.AddHttpClient<ILocationSearchApiClient, LocationSearchApiClient>(client =>
         {
-            var baseUrl = PlatformApiUrl.Resolve(appSettings.Api.BaseUrl);
-            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.BaseAddress = apiBaseUri;
             client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
         })
         .AddHttpMessageHandler<AuthenticationMessageHandler>();

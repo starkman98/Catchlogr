@@ -9,6 +9,11 @@ namespace Catchlogr.Mobile.Configuration;
 public class AppSettings
 {
     /// <summary>
+    /// Gets or sets the backend environment selected for this build.
+    /// </summary>
+    public BackendEnvironment BackendEnvironment { get; set; }
+
+    /// <summary>
     /// API configuration settings
     /// </summary>
     public ApiSettings Api { get; set; } = new();
@@ -35,26 +40,26 @@ public class AppSettings
     public static AppSettings Load()
     {
         var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "Catchlogr.Mobile.appsettings.json";
-
-#if DEBUG
-        // Try to load Development settings first in Debug builds
-        var devResourceName = "Catchlogr.Mobile.appsettings.Development.json";
-        using var devStream = assembly.GetManifestResourceStream(devResourceName);
-        if (devStream != null)
-        {
-            return LoadFromStream(devStream);
-        }
+#if LOCAL
+        const string resourceName = "Catchlogr.Mobile.appsettings.Local.json";
+        const BackendEnvironment expectedEnvironment = BackendEnvironment.Local;
+#elif DEBUG
+        const string resourceName = "Catchlogr.Mobile.appsettings.Development.json";
+        const BackendEnvironment expectedEnvironment = BackendEnvironment.Development;
+#else
+        const string resourceName = "Catchlogr.Mobile.appsettings.json";
+        const BackendEnvironment expectedEnvironment = BackendEnvironment.Production;
 #endif
 
-        // Fall back to default appsettings.json
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
         {
             throw new InvalidOperationException($"Could not find embedded resource: {resourceName}");
         }
 
-        return LoadFromStream(stream);
+        var settings = LoadFromStream(stream);
+        settings.Validate(expectedEnvironment);
+        return settings;
     }
 
     private static AppSettings LoadFromStream(Stream stream)
@@ -66,64 +71,47 @@ public class AppSettings
             PropertyNameCaseInsensitive = true
         }) ?? new AppSettings();
     }
-}
 
-/// <summary>
-/// API configuration settings
-/// </summary>
-public class ApiSettings
-{
-    /// <summary>
-    /// Base URL of the API server
-    /// </summary>
-    public string BaseUrl { get; set; } = "https://localhost:5001";
+    private void Validate(BackendEnvironment expectedEnvironment)
+    {
+        if (BackendEnvironment != expectedEnvironment)
+        {
+            throw new InvalidOperationException(
+                $"The mobile build expects the '{expectedEnvironment}' backend, " +
+                $"but the selected settings declare '{BackendEnvironment}'.");
+        }
 
-    /// <summary>
-    /// HTTP request timeout in seconds
-    /// </summary>
-    public int Timeout { get; set; } = 8;
-}
+        if (!Uri.TryCreate(Api.BaseUrl, UriKind.Absolute, out var apiUri))
+        {
+            throw new InvalidOperationException(
+                "Api:BaseUrl must be an absolute URL.");
+        }
 
-/// <summary>
-/// Sync configuration settings
-/// </summary>
-public class SyncSettings
-{
-    /// <summary>
-    /// Whether to automatically sync on app startup
-    /// </summary>
-    public bool AutoSyncOnStartup { get; set; } = true;
+        if (apiUri.Scheme != Uri.UriSchemeHttp &&
+            apiUri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException(
+                "Api:BaseUrl must use HTTP or HTTPS.");
+        }
 
-    /// <summary>
-    /// Interval between automatic syncs in minutes
-    /// </summary>
-    public int SyncIntervalMinutes { get; set; } = 15;
-}
+        if (BackendEnvironment != BackendEnvironment.Local &&
+            apiUri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidOperationException(
+                "Development and Production API URLs must use HTTPS.");
+        }
 
-/// <summary>
-/// Database configuration settings
-/// </summary>
-public class DatabaseSettings
-{
-    /// <summary>
-    /// Root directory under which account-specific storage is created.
-    /// </summary>
-    public string? RootDirectory { get; set; }
+        if (Api.Timeout <= 0)
+        {
+            throw new InvalidOperationException(
+                "Api:Timeout must be greater than zero.");
+        }
 
-    /// <summary>
-    /// SQLite database file name
-    /// </summary>
-    public string FileName { get; set; } = "catchlogr.db3";
-
-}
-
-/// <summary>
-/// Logging configuration settings
-/// </summary>
-public class LoggingSettings
-{
-    /// <summary>
-    /// Log level (Debug, Information, Warning, Error)
-    /// </summary>
-    public string LogLevel { get; set; } = "Information";
+        if (string.IsNullOrWhiteSpace(Database.FileName) ||
+            Path.GetFileName(Database.FileName) != Database.FileName)
+        {
+            throw new InvalidOperationException(
+                "Database:FileName must contain a file name without a path.");
+        }
+    }
 }
