@@ -51,7 +51,11 @@ public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
             {
                 ["LocationSearch:LocationIQ:ApiKey"] = "integration-test-key",
                 ["LocationSearch:LocationIQ:BaseUri"] = "https://location.test/",
-                ["Cors:AllowedOrigins:0"] = "https://mobile.test"
+                ["Cors:AllowedOrigins:0"] = "https://mobile.test",
+                ["PhotoStorage:Provider"] = "Local",
+                ["PhotoStorage:Local:Path"] = Path.Combine(
+                    _rootDirectory,
+                    "private-photos")
             });
         });
         builder.ConfigureServices(services =>

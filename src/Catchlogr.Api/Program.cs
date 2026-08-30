@@ -81,12 +81,9 @@ builder.Services.AddScoped<IFishingTripService, FishingTripService>();
 builder.Services.AddScoped<ICatchService, CatchService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddSingleton<IMoonPhaseService, MoonPhaseService>();
-builder.Services.AddSingleton<IPhotoObjectStorage>(_ =>
-{
-    return new LocalPhotoStorage(Path.Combine(
-        builder.Environment.ContentRootPath,
-        "private-photos"));
-});
+builder.Services.AddPhotoStorage(
+    builder.Configuration,
+    builder.Environment.ContentRootPath);
 
 // --- Validators (registers all validators in the Application assembly) ---
 builder.Services.AddValidatorsFromAssemblyContaining<CreateFishingTripRequestValidator>();
