@@ -10,6 +10,8 @@ namespace Catchlogr.Infrastructure.Email;
 /// <summary>Registers transactional email delivery for ASP.NET Core Identity.</summary>
 public static class IdentityEmailRegistration
 {
+    private const string ResendHttpClientName = "IdentityEmailResend";
+
     /// <summary>Adds the validated Resend client and Identity email sender.</summary>
     /// <param name="services">The application service collection.</param>
     /// <param name="configuration">The application configuration.</param>
@@ -45,12 +47,18 @@ public static class IdentityEmailRegistration
                 "Email public API base URL must be an absolute HTTPS URL.")
             .ValidateOnStart();
 
-        services.AddResend(options =>
+        var resendOptions = new ResendClientOptions
         {
-            options.ApiToken = section[nameof(EmailOptions.ApiKey)]
-                ?? string.Empty;
-            options.ThrowExceptions = true;
-        });
+            ApiToken = section[nameof(EmailOptions.ApiKey)] ?? string.Empty,
+            ThrowExceptions = true
+        };
+        services.AddHttpClient(ResendHttpClientName);
+        services.AddSingleton<IResend>(serviceProvider =>
+            ResendClient.Create(
+                resendOptions,
+                serviceProvider
+                    .GetRequiredService<IHttpClientFactory>()
+                    .CreateClient(ResendHttpClientName)));
         services.AddTransient<
             IEmailSender<ApplicationUser>,
             ResendIdentityEmailSender>();
