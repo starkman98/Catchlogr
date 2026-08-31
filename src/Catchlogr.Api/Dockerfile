@@ -17,6 +17,16 @@ RUN dotnet restore "src/Catchlogr.Api/Catchlogr.Api.csproj"
 
 COPY . .
 
+FROM build AS migrations
+
+RUN dotnet tool install --global dotnet-ef --version 10.0.11
+
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+WORKDIR /src
+
+FROM build AS publish
+
 WORKDIR "/src/src/Catchlogr.Api"
 
 RUN dotnet publish "Catchlogr.Api.csproj" \
@@ -27,6 +37,6 @@ RUN dotnet publish "Catchlogr.Api.csproj" \
 FROM base AS final
 WORKDIR /app
 
-COPY --from=build /app/publish .
+COPY --from=publish /app/publish .
 
 ENTRYPOINT ["dotnet", "Catchlogr.Api.dll"]

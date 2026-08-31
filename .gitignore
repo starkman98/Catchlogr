@@ -463,9 +463,3 @@ Temporary Items
 *.apk
 *.aab
 *.ipa
-
-# Entity Framework Core
-**/Migrations/*.Designer.cs
-!**/Migrations/*_Initial.Designer.cs
-!**/Migrations/*_AddFishingTripMoonPhase.Designer.cs
-!**/Migrations/*_AddPrivateCatchPhotos.Designer.cs
