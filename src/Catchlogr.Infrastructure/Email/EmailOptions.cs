@@ -22,8 +22,8 @@ public sealed class EmailOptions
     public string FromName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the externally reachable API base URL used for Identity
-    /// confirmation and password-reset links.
+    /// Gets or sets the externally reachable web application base URL used
+    /// for user-facing account-action links.
     /// </summary>
-    public Uri PublicApiBaseUrl { get; set; } = null!;
+    public Uri PublicWebBaseUrl { get; set; } = null!;
 }

@@ -67,7 +67,7 @@ public sealed class CatchlogrApiFactory : WebApplicationFactory<Program>
                 ["Email:ApiKey"] = "integration-test-key",
                 ["Email:FromAddress"] = "account@mail.catchlogr.test",
                 ["Email:FromName"] = "Catchlogr",
-                ["Email:PublicApiBaseUrl"] = "https://api.catchlogr.test",
+                ["Email:PublicWebBaseUrl"] = "https://api.catchlogr.test",
                 ["PhotoStorage:Local:Path"] = Path.Combine(
                     _rootDirectory,
                     "private-photos")

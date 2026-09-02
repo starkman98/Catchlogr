@@ -1,0 +1,24 @@
+﻿@page "/confirm-email"
+@model Catchlogr.Web.Pages.ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirm email";
+}
+
+@if (Model.Success)
+{
+    <h1>Email confirmed</h1>
+
+    <p>
+        Your Catchlogr account is ready.
+        You can return to the app.
+    </p>
+}
+else
+{
+    <h1>Unable to confirm email</h1>
+
+    <p>
+        The confirmation link is invalid, expired,
+        or may already have been used.
+    </p>
+}

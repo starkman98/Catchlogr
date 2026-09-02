@@ -41,9 +41,9 @@ public static class IdentityEmailRegistration
                 options => !string.IsNullOrWhiteSpace(options.FromName),
                 "Email sender name is required.")
             .Validate(
-                options => options.PublicApiBaseUrl is
+                options => options.PublicWebBaseUrl is
                     { IsAbsoluteUri: true } &&
-                    options.PublicApiBaseUrl.Scheme == Uri.UriSchemeHttps,
+                    options.PublicWebBaseUrl.Scheme == Uri.UriSchemeHttps,
                 "Email public API base URL must be an absolute HTTPS URL.")
             .ValidateOnStart();
 

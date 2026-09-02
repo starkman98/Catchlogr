@@ -23,7 +23,7 @@ public sealed class IdentityEmailRegistrationTests
                 ["Email:ApiKey"] = "test-key",
                 ["Email:FromAddress"] = "account@mail.catchlogr.com",
                 ["Email:FromName"] = "Catchlogr",
-                ["Email:PublicApiBaseUrl"] =
+                ["Email:PublicWebBaseUrl"] =
                     "https://api.catchlogr.test"
             })
             .Build();

@@ -12,7 +12,7 @@ namespace Catchlogr.Tests.Email;
 public sealed class ResendIdentityEmailSenderTests
 {
     /// <summary>
-    /// Verifies that confirmation links use the configured public API origin
+    /// Verifies that confirmation links use the configured public web origin
     /// and are encoded exactly once in HTML.
     /// </summary>
     [Fact]
@@ -40,10 +40,57 @@ public sealed class ResendIdentityEmailSenderTests
         message.To.Should().ContainSingle()
             .Which.ToString().Should().Be("angler@example.com");
         message.TextBody.Should().Contain(
-            "https://api.catchlogr.com/api/auth/confirmEmail?userId=123&code=abc_123");
+            "https://web.catchlogr.test/confirm-email?userId=123&code=abc_123");
         message.HtmlBody.Should().Contain(
             "userId=123&amp;code=abc_123");
         message.HtmlBody.Should().NotContain("&amp;amp;");
+    }
+
+    /// <summary>
+    /// Verifies that password-reset links use the public web reset route.
+    /// </summary>
+    [Fact]
+    public async Task SendPasswordResetLinkAsync_IdentityLink_SendsPublicLink()
+    {
+        var resend = Substitute.For<IResend>();
+        EmailMessage? sentMessage = null;
+        _ = resend.EmailSendAsync(
+            Arg.Do<EmailMessage>(message => sentMessage = message),
+            Arg.Any<CancellationToken>());
+        var sut = CreateSender(resend);
+
+        await sut.SendPasswordResetLinkAsync(
+            new ApplicationUser(),
+            "angler@example.com",
+            "https://internal.test/api/auth/resetPassword?email=angler%40example.com&amp;code=abc%2B123");
+
+        sentMessage.Should().NotBeNull();
+        sentMessage!.TextBody.Should().Contain(
+            "https://web.catchlogr.test/reset-password?email=angler%40example.com&code=abc%2B123");
+        sentMessage.HtmlBody.Should().Contain(
+            "email=angler%40example.com&amp;code=abc%2B123");
+        sentMessage.HtmlBody.Should().NotContain("&amp;amp;");
+    }
+
+    /// <summary>
+    /// Verifies that unexpected Identity routes are not exposed through email.
+    /// </summary>
+    [Fact]
+    public async Task SendConfirmationLinkAsync_UnsupportedPath_Throws()
+    {
+        var resend = Substitute.For<IResend>();
+        var sut = CreateSender(resend);
+
+        var action = () => sut.SendConfirmationLinkAsync(
+            new ApplicationUser(),
+            "angler@example.com",
+            "https://internal.test/api/auth/changeEmail?code=abc");
+
+        await action.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Unsupported Identity account-action URL*");
+        await resend.DidNotReceive().EmailSendAsync(
+            Arg.Any<EmailMessage>(),
+            Arg.Any<CancellationToken>());
     }
 
     /// <summary>Verifies that reset codes are available in both body formats.</summary>
@@ -76,7 +123,7 @@ public sealed class ResendIdentityEmailSenderTests
                 ApiKey = "test-key",
                 FromAddress = "account@mail.catchlogr.com",
                 FromName = "Catchlogr",
-                PublicApiBaseUrl = new Uri("https://api.catchlogr.com")
+                PublicWebBaseUrl = new Uri("https://web.catchlogr.test")
             }),
             Substitute.For<ILogger<ResendIdentityEmailSender>>());
 }

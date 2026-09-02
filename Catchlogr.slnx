@@ -27,6 +27,9 @@
     <Project Path="src/Catchlogr.Sync/Catchlogr.Sync.csproj">
       <BuildType Solution="Local|*" Project="Release" />
     </Project>
+    <Project Path="src/Catchlogr.Web/Catchlogr.Web.csproj" Id="df98b406-c673-4595-afb4-46203b9305a0">
+      <BuildType Solution="Local|*" Project="Debug" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj">

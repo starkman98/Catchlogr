@@ -33,6 +33,7 @@
 	<ProjectReference Include="..\..\src\Catchlogr.Domain\Catchlogr.Domain.csproj" />
 	<ProjectReference Include="..\..\src\Catchlogr.Infrastructure\Catchlogr.Infrastructure.csproj" />
 	<ProjectReference Include="..\..\src\Catchlogr.Sync\Catchlogr.Sync.csproj" />
+    <ProjectReference Include="..\..\src\Catchlogr.Web\Catchlogr.Web.csproj" />
   </ItemGroup>
 
 </Project>

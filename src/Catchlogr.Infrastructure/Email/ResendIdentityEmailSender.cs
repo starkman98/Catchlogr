@@ -148,11 +148,27 @@ public sealed class ResendIdentityEmailSender :
                 "Identity generated an invalid account-action URL.");
         }
 
+        var publicPath = generatedUri.AbsolutePath switch
+        {
+            "/api/auth/confirmEmail" => "/confirm-email",
+            "/api/auth/resetPassword" => "/reset-password",
+            _ => throw new InvalidOperationException(
+                $"Unsupported Identity account-action URL: {generatedUri.AbsolutePath}")
+        };
+
         var publicBase = new Uri(
-            _options.PublicApiBaseUrl.AbsoluteUri.TrimEnd('/') + "/");
-        return new Uri(
+            _options.PublicWebBaseUrl.AbsoluteUri.TrimEnd('/') + "/");
+
+        var publicUri = new Uri(
             publicBase,
-            generatedUri.PathAndQuery.TrimStart('/')).AbsoluteUri;
+            publicPath.TrimStart('/'));
+
+        var builder = new UriBuilder(publicUri)
+        {
+            Query = generatedUri.Query.TrimStart('?')
+        };
+
+        return builder.Uri.AbsoluteUri;
     }
 
     private static string BuildActionHtml(
