@@ -61,7 +61,7 @@ per backend after upgrading.
 ## API email links
 
 Mobile backend selection does not configure Identity email links. The API uses
-its existing `Email:PublicApiBaseUrl` setting:
+its existing `Email:PublicWebBaseUrl` setting:
 
 ```text
 Local API:       https://localhost:7160
@@ -70,7 +70,7 @@ Production API:  https://api.catchlogr.com
 ```
 
 For deployed environments, the environment-variable form is
-`Email__PublicApiBaseUrl`.
+`Email__PublicWebBaseUrl`.
 
 ## Security
 

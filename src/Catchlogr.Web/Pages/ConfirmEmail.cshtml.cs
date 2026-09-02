@@ -1,36 +1,43 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Catchlogr.Web.Services;
 
-namespace Catchlogr.Web.Pages
+namespace Catchlogr.Web.Pages;
+
+/// <summary>Handles public email-confirmation links.</summary>
+public sealed class ConfirmEmailModel : PageModel
 {
-    public class ConfirmEmailModel : PageModel
+    private readonly IIdentityApiClient _identityApiClient;
+
+    /// <summary>Initializes a new email-confirmation page model.</summary>
+    /// <param name="identityApiClient">The Catchlogr Identity API client.</param>
+    public ConfirmEmailModel(IIdentityApiClient identityApiClient)
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        _identityApiClient = identityApiClient;
+    }
 
-        public ConfirmEmailModel(IHttpClientFactory httpClientFactory)
+    /// <summary>Gets the result displayed by the page.</summary>
+    public IdentityActionResult Result { get; private set; } =
+        IdentityActionResult.Rejected;
+
+    /// <summary>Confirms the email address represented by the query string.</summary>
+    /// <param name="userId">The Identity user identifier.</param>
+    /// <param name="code">The one-time confirmation code.</param>
+    /// <param name="cancellationToken">Cancels the pending API request.</param>
+    public async Task OnGetAsync(
+        string? userId,
+        string? code,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userId) ||
+            string.IsNullOrWhiteSpace(code))
         {
-            _httpClientFactory = httpClientFactory;
+            Result = IdentityActionResult.Rejected;
+            return;
         }
 
-        public bool Success { get; private set; }
-
-        public async Task OnGetAsync(string? userId, string? code)
-        {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(code))
-            {
-                Success = false;
-                return;
-            }
-
-            var client = _httpClientFactory.CreateClient("CatchlogrApi");
-
-            var url = "/api/auth/confirmEmail" +
-                $"?userId={Uri.EscapeDataString(userId)}" +
-                $"&code={Uri.EscapeDataString(code)}";
-
-            var response = await client.GetAsync(url);
-
-            Success = response.IsSuccessStatusCode;
-        }
+        Result = await _identityApiClient.ConfirmEmailAsync(
+            userId,
+            code,
+            cancellationToken);
     }
 }

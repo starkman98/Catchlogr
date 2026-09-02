@@ -1,16 +1,26 @@
 ﻿@page "/confirm-email"
 @model Catchlogr.Web.Pages.ConfirmEmailModel
+@using Catchlogr.Web.Services
 @{
     ViewData["Title"] = "Confirm email";
 }
 
-@if (Model.Success)
+@if (Model.Result == IdentityActionResult.Succeeded)
 {
     <h1>Email confirmed</h1>
 
     <p>
         Your Catchlogr account is ready.
         You can return to the app.
+    </p>
+}
+else if (Model.Result == IdentityActionResult.ServiceUnavailable)
+{
+    <h1>Confirmation temporarily unavailable</h1>
+
+    <p>
+        We could not contact Catchlogr right now. Please try this link again
+        in a few minutes.
     </p>
 }
 else

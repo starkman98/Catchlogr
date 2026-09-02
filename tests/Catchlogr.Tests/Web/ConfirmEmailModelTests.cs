@@ -1,6 +1,5 @@
-using System.Net;
-using Catchlogr.Tests.TestDoubles;
 using Catchlogr.Web.Pages;
+using Catchlogr.Web.Services;
 using FluentAssertions;
 using NSubstitute;
 
@@ -21,69 +20,60 @@ public sealed class ConfirmEmailModelTests
         string? userId,
         string? code)
     {
-        var (sut, handler) = CreateModel(HttpStatusCode.OK);
+        var apiClient = Substitute.For<IIdentityApiClient>();
+        var sut = new ConfirmEmailModel(apiClient);
 
-        await sut.OnGetAsync(userId, code);
+        await sut.OnGetAsync(userId, code, CancellationToken.None);
 
-        sut.Success.Should().BeFalse();
-        handler.RequestCount.Should().Be(0);
+        sut.Result.Should().Be(IdentityActionResult.Rejected);
+        await apiClient.DidNotReceive().ConfirmEmailAsync(
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     /// <summary>
-    /// Verifies that a successful API confirmation displays the success state.
+    /// Verifies that the page displays each result returned by the API client.
     /// </summary>
-    [Fact]
-    public async Task OnGetAsync_ApiAcceptsConfirmation_Succeeds()
+    [Theory]
+    [InlineData(IdentityActionResult.Succeeded)]
+    [InlineData(IdentityActionResult.Rejected)]
+    [InlineData(IdentityActionResult.ServiceUnavailable)]
+    public async Task OnGetAsync_ApiResult_DisplaysResult(
+        IdentityActionResult expectedResult)
     {
-        var (sut, handler) = CreateModel(HttpStatusCode.OK);
+        var apiClient = Substitute.For<IIdentityApiClient>();
+        apiClient.ConfirmEmailAsync(
+                "user-123",
+                "abc_123",
+                Arg.Any<CancellationToken>())
+            .Returns(expectedResult);
+        var sut = new ConfirmEmailModel(apiClient);
 
-        await sut.OnGetAsync("user-123", "abc_123");
+        await sut.OnGetAsync(
+            "user-123",
+            "abc_123",
+            CancellationToken.None);
 
-        sut.Success.Should().BeTrue();
-        handler.RequestCount.Should().Be(1);
+        sut.Result.Should().Be(expectedResult);
     }
 
-    /// <summary>
-    /// Verifies that an API rejection displays the failure state.
-    /// </summary>
+    /// <summary>Verifies that request cancellation is passed to the API client.</summary>
     [Fact]
-    public async Task OnGetAsync_ApiRejectsConfirmation_Fails()
+    public async Task OnGetAsync_RequestCancellation_ForwardsToken()
     {
-        var (sut, handler) = CreateModel(HttpStatusCode.BadRequest);
+        var apiClient = Substitute.For<IIdentityApiClient>();
+        using var cancellationSource = new CancellationTokenSource();
+        var sut = new ConfirmEmailModel(apiClient);
 
-        await sut.OnGetAsync("user-123", "expired-code");
+        await sut.OnGetAsync(
+            "user-123",
+            "abc_123",
+            cancellationSource.Token);
 
-        sut.Success.Should().BeFalse();
-        handler.RequestCount.Should().Be(1);
-    }
-
-    /// <summary>
-    /// Verifies that query values are encoded exactly once for the API request.
-    /// </summary>
-    [Fact]
-    public async Task OnGetAsync_QueryValues_EncodesApiRequest()
-    {
-        var (sut, handler) = CreateModel(HttpStatusCode.OK);
-
-        await sut.OnGetAsync("user/123 +?", "abc+/=_ token");
-
-        handler.LastRequestUri.Should().Be(
-            "https://api.catchlogr.test/api/auth/confirmEmail" +
-            "?userId=user%2F123%20%2B%3F&code=abc%2B%2F%3D_%20token");
-    }
-
-    private static (ConfirmEmailModel Model, StubHttpMessageHandler Handler)
-        CreateModel(HttpStatusCode responseStatusCode)
-    {
-        var handler = new StubHttpMessageHandler((_, _) =>
-            Task.FromResult(new HttpResponseMessage(responseStatusCode)));
-        var client = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://api.catchlogr.test")
-        };
-        var factory = Substitute.For<IHttpClientFactory>();
-        factory.CreateClient("CatchlogrApi").Returns(client);
-
-        return (new ConfirmEmailModel(factory), handler);
+        await apiClient.Received(1).ConfirmEmailAsync(
+            "user-123",
+            "abc_123",
+            cancellationSource.Token);
     }
 }

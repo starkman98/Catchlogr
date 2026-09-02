@@ -42,7 +42,7 @@ public sealed class ResendIdentityEmailSender :
         string email,
         string confirmationLink)
     {
-        var publicLink = BuildPublicLink(confirmationLink);
+        var publicLink = RewriteConfirmEmailLink(confirmationLink);
         return SendAsync(
             email,
             "Confirm your Catchlogr account",
@@ -61,7 +61,7 @@ public sealed class ResendIdentityEmailSender :
         string email,
         string resetLink)
     {
-        var publicLink = BuildPublicLink(resetLink);
+        var publicLink = RewriteResetPasswordLink(resetLink);
         return SendAsync(
             email,
             "Reset your Catchlogr password",
@@ -81,26 +81,19 @@ public sealed class ResendIdentityEmailSender :
         string resetCode)
     {
         var decodedCode = WebUtility.HtmlDecode(resetCode);
-        var encodedCode = WebUtility.HtmlEncode(decodedCode);
-        var html = $$"""
-            <!doctype html>
-            <html lang="en">
-            <body style="margin:0;background:#f3f6f4;font-family:Arial,sans-serif;color:#17351f">
-              <div style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:12px;padding:32px">
-                <h1 style="margin-top:0;color:#175c32">Reset your password</h1>
-                <p>Enter this code in Catchlogr to choose a new password:</p>
-                <p style="font-size:20px;font-weight:700;word-break:break-all;background:#eef7f0;padding:16px;border-radius:8px">{{encodedCode}}</p>
-                <p style="color:#5c6f62">If you did not request this, you can ignore this email.</p>
-              </div>
-            </body>
-            </html>
-            """;
+        var publicLink = BuildResetPasswordLink(email, decodedCode);
 
         return SendAsync(
             email,
             "Reset your Catchlogr password",
-            html,
-            $"Enter this code in Catchlogr to reset your password:\n\n{decodedCode}\n\nIf you did not request this, you can ignore this email.",
+            BuildActionHtml(
+                "Reset your password",
+                "Use the link below to choose a new Catchlogr password.",
+                "Reset password",
+                publicLink,
+                decodedCode),
+            $"Use this link to choose a new Catchlogr password.\n\n{publicLink}" +
+            $"\n\nOr enter this reset code in the Catchlogr app:\n\n{decodedCode}",
             "password-reset-code");
     }
 
@@ -139,7 +132,22 @@ public sealed class ResendIdentityEmailSender :
         }
     }
 
-    private string BuildPublicLink(string encodedLink)
+    private string RewriteConfirmEmailLink(string encodedLink)
+        => RewriteIdentityLink(
+            encodedLink,
+            "/api/auth/confirmEmail",
+            "confirm-email");
+
+    private string RewriteResetPasswordLink(string encodedLink)
+        => RewriteIdentityLink(
+            encodedLink,
+            "/api/auth/resetPassword",
+            "reset-password");
+
+    private string RewriteIdentityLink(
+        string encodedLink,
+        string expectedIdentityPath,
+        string publicPath)
     {
         var decodedLink = WebUtility.HtmlDecode(encodedLink);
         if (!Uri.TryCreate(decodedLink, UriKind.Absolute, out var generatedUri))
@@ -148,20 +156,21 @@ public sealed class ResendIdentityEmailSender :
                 "Identity generated an invalid account-action URL.");
         }
 
-        var publicPath = generatedUri.AbsolutePath switch
+        if (!string.Equals(
+                generatedUri.AbsolutePath,
+                expectedIdentityPath,
+                StringComparison.Ordinal))
         {
-            "/api/auth/confirmEmail" => "/confirm-email",
-            "/api/auth/resetPassword" => "/reset-password",
-            _ => throw new InvalidOperationException(
-                $"Unsupported Identity account-action URL: {generatedUri.AbsolutePath}")
-        };
+            throw new InvalidOperationException(
+                $"Unsupported Identity account-action URL: {generatedUri.AbsolutePath}");
+        }
 
         var publicBase = new Uri(
             _options.PublicWebBaseUrl.AbsoluteUri.TrimEnd('/') + "/");
 
         var publicUri = new Uri(
             publicBase,
-            publicPath.TrimStart('/'));
+            publicPath);
 
         var builder = new UriBuilder(publicUri)
         {
@@ -171,16 +180,34 @@ public sealed class ResendIdentityEmailSender :
         return builder.Uri.AbsoluteUri;
     }
 
+    private string BuildResetPasswordLink(string email, string resetCode)
+    {
+        var publicBase = new Uri(
+            _options.PublicWebBaseUrl.AbsoluteUri.TrimEnd('/') + "/");
+        var builder = new UriBuilder(new Uri(publicBase, "reset-password"))
+        {
+            Query = $"email={Uri.EscapeDataString(email)}" +
+                $"&code={Uri.EscapeDataString(resetCode)}"
+        };
+
+        return builder.Uri.AbsoluteUri;
+    }
+
     private static string BuildActionHtml(
         string heading,
         string introduction,
         string actionText,
-        string actionLink)
+        string actionLink,
+        string? fallbackCode = null)
     {
         var encodedHeading = WebUtility.HtmlEncode(heading);
         var encodedIntroduction = WebUtility.HtmlEncode(introduction);
         var encodedActionText = WebUtility.HtmlEncode(actionText);
         var encodedActionLink = WebUtility.HtmlEncode(actionLink);
+        var fallbackHtml = string.IsNullOrWhiteSpace(fallbackCode)
+            ? string.Empty
+            : $"<p>Or enter this reset code in the Catchlogr app: " +
+                $"<strong>{WebUtility.HtmlEncode(fallbackCode)}</strong></p>";
 
         return $$"""
             <!doctype html>
@@ -192,6 +219,7 @@ public sealed class ResendIdentityEmailSender :
                 <p style="margin:28px 0">
                   <a href="{{encodedActionLink}}" style="display:inline-block;background:#175c32;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700">{{encodedActionText}}</a>
                 </p>
+                {{fallbackHtml}}
                 <p style="color:#5c6f62">If you did not request this, you can ignore this email.</p>
               </div>
             </body>

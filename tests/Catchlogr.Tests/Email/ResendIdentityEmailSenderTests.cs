@@ -110,8 +110,12 @@ public sealed class ResendIdentityEmailSenderTests
             "abc_123");
 
         sentMessage.Should().NotBeNull();
-        sentMessage!.TextBody.Should().Contain("abc_123");
-        sentMessage.HtmlBody.Should().Contain("abc_123");
+        sentMessage!.TextBody.Should().Contain(
+            "https://web.catchlogr.test/reset-password" +
+            "?email=angler%40example.com&code=abc_123");
+        sentMessage.HtmlBody.Should().Contain(
+            "email=angler%40example.com&amp;code=abc_123");
+        sentMessage.HtmlBody.Should().Contain(">abc_123</strong>");
         sentMessage.Subject.Should().Be("Reset your Catchlogr password");
     }
 

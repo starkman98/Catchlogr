@@ -44,7 +44,7 @@ public static class IdentityEmailRegistration
                 options => options.PublicWebBaseUrl is
                     { IsAbsoluteUri: true } &&
                     options.PublicWebBaseUrl.Scheme == Uri.UriSchemeHttps,
-                "Email public API base URL must be an absolute HTTPS URL.")
+                "Email public web base URL must be an absolute HTTPS URL.")
             .ValidateOnStart();
 
         var resendOptions = new ResendClientOptions
