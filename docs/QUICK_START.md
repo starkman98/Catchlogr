@@ -1,182 +1,87 @@
-# Catchlogr Quick Start Guide
+# Catchlogr quick start
 
-## 🚀 First Time Setup (5 minutes)
+This is the short path for an already provisioned development machine. For
+prerequisites and explanations, use the [root README](../README.md).
 
-### 1. Start Database
-```bash
-docker-compose up -d
+## First-time configuration
+
+From the repository root:
+
+```powershell
+Copy-Item deploy/docker/.env.example deploy/docker/.env
 ```
 
-### 2. Run API
-```bash
-cd src/Catchlogr.Api
-dotnet run
+Change `POSTGRES_PASSWORD` in `deploy/docker/.env`, then set the matching API
+connection string and the required provider/email secrets:
+
+```powershell
+dotnet user-secrets set ConnectionStrings:DefaultConnection `
+  Host=localhost;Port=5432;Database=catchlogr_dev;Username=catchlogr_user;Password=CHANGE_ME `
+  --project src/Catchlogr.Api
+dotnet user-secrets set LocationSearch:LocationIQ:ApiKey YOUR_LOCATIONIQ_KEY `
+  --project src/Catchlogr.Api
+dotnet user-secrets set Email:ApiKey YOUR_RESEND_KEY `
+  --project src/Catchlogr.Api
+dotnet user-secrets set Email:FromAddress account@YOUR_VERIFIED_DOMAIN `
+  --project src/Catchlogr.Api
+dotnet user-secrets set Email:FromName Catchlogr `
+  --project src/Catchlogr.Api
+dotnet user-secrets set Email:PublicWebBaseUrl https://localhost:7056 `
+  --project src/Catchlogr.Api
 ```
 
-### 3. Run Mobile App
-- Open `Catchlogr.sln` in Visual Studio
-- Set `Catchlogr.Mobile` as startup project
-- Press F5
+## Start the local stack
 
----
+```powershell
+docker compose --env-file deploy/docker/.env `
+  -f deploy/docker/compose.local.yml up -d
 
-## 📱 Mobile App: Connecting to Local API
+dotnet ef database update `
+  --project src/Catchlogr.Infrastructure `
+  --startup-project src/Catchlogr.Api
 
-### Android Emulator
-Edit `src/Catchlogr.Mobile/appsettings.Development.json`:
-```json
-{
-  "Api": {
-    "BaseUrl": "https://10.0.2.2:5001"
-  }
-}
+dotnet run --project src/Catchlogr.Api --launch-profile https
 ```
 
-### Physical Device
-Find your computer's IP address:
-```bash
-# Windows
-ipconfig
+In a second terminal:
 
-# Mac/Linux
-ifconfig
+```powershell
+dotnet run --project src/Catchlogr.Web --launch-profile https
 ```
 
-Then use that IP:
-```json
-{
-  "Api": {
-    "BaseUrl": "https://192.168.1.100:5001"
-  }
-}
+Verify the API:
+
+```powershell
+Invoke-RestMethod https://localhost:7160/health
 ```
 
----
+Swagger is available at `https://localhost:7160/swagger` in Development.
 
-## 🗄️ Database Commands
+## Run Mobile
 
-### Create Migration
-```bash
-cd src/Catchlogr.Api
-dotnet ef migrations add MigrationName
+Open `Catchlogr.slnx`, select the `Local` configuration, choose
+`Catchlogr.Mobile` as the startup project, and run the required target.
+
+The Android emulator is automatically redirected to `http://10.0.2.2:5001`.
+Windows uses `https://localhost:7160`. Physical devices need a reachable LAN URL
+or the deployed Development backend.
+
+## Common commands
+
+```powershell
+# Stop PostgreSQL without deleting data
+docker compose --env-file deploy/docker/.env `
+  -f deploy/docker/compose.local.yml down
+
+# View PostgreSQL logs
+docker compose --env-file deploy/docker/.env `
+  -f deploy/docker/compose.local.yml logs -f postgres
+
+# Run platform-neutral tests
+dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj
+dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
 ```
 
-### Apply Migrations
-```bash
-dotnet ef database update
-```
-
-### Reset Database
-```bash
-dotnet ef database drop
-dotnet ef database update
-```
-
----
-
-## 🐳 Docker Commands
-
-### Start PostgreSQL
-```bash
-docker-compose up -d
-```
-
-### Stop PostgreSQL
-```bash
-docker-compose down
-```
-
-### View Logs
-```bash
-docker-compose logs -f postgres
-```
-
-### Delete Database Volume (Fresh Start)
-```bash
-docker-compose down -v
-docker-compose up -d
-```
-
----
-
-## 🧪 Testing API
-
-### Health Check
-```bash
-curl https://localhost:5001/health
-```
-
-### Get Fishing Trips (once implemented)
-```bash
-curl https://localhost:5001/api/fishing-trips
-```
-
----
-
-## 🔍 Troubleshooting
-
-### "Can't connect to PostgreSQL"
-1. Check Docker is running: `docker ps`
-2. Restart container: `docker-compose restart`
-3. Check connection string in `appsettings.Development.json`
-
-### "Can't connect to API from Mobile"
-1. Verify API is running: `curl https://localhost:5001/health`
-2. Check `appsettings.Development.json` in Mobile project
-3. Android Emulator: Use `10.0.2.2` instead of `localhost`
-4. Physical device: Use computer's local IP address
-
-### "Migration Error"
-```bash
-# Install EF Core tools
-dotnet tool install --global dotnet-ef
-
-# Update EF Core tools
-dotnet tool update --global dotnet-ef
-```
-
-### "Build Error in Mobile"
-1. Clean solution: `dotnet clean`
-2. Restore packages: `dotnet restore`
-3. Rebuild: `dotnet build`
-
----
-
-## 📁 Project Structure Reference
-
-```
-Catchlogr/
-├── src/
-│   ├── Catchlogr.Api/              ← Web API (Minimal APIs)
-│   ├── Catchlogr.Application/      ← Business logic
-│   ├── Catchlogr.Contracts/        ← DTOs shared between API & Mobile
-│   ├── Catchlogr.Domain/           ← Entities & interfaces
-│   ├── Catchlogr.Infrastructure/   ← EF Core, repositories
-│   └── Catchlogr.Mobile/           ← MAUI app
-├── docs/
-│   ├── ROADMAP.md                   ← Development roadmap
-│   ├── MOBILE_CONFIGURATION.md      ← Mobile config details
-│   └── QUICK_START.md               ← This file
-├── docker-compose.yml               ← PostgreSQL setup
-└── Catchlogr.sln                   ← Solution file
-```
-
----
-
-## 🎯 Next Steps
-
-See [docs/ROADMAP.md](ROADMAP.md) for the full development plan.
-
-**Current Phase**: Foundation & Project Setup ✅
-**Next Phase**: Implement FishingTrip entity and CRUD operations
-
----
-
-## 🆘 Need Help?
-
-1. Check [README.md](../README.md) for detailed setup
-2. Check [docs/MOBILE_CONFIGURATION.md](MOBILE_CONFIGURATION.md) for config help
-3. Check [.github/copilot-instructions.md](../.github/copilot-instructions.md) for coding standards
-4. Open an issue on GitHub
-
-**Happy Fishing!** 🎣
+See [mobile configuration](MOBILE_CONFIGURATION.md),
+[identity email](IDENTITY_EMAIL.md), and
+[location search](LOCATION_SEARCH_INTEGRATION.md) for integration details.
