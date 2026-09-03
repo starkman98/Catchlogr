@@ -1,0 +1,76 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+  workflow_dispatch:
+
+concurrency:
+  group: catchlogr-dev
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release
+
+  deploy:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+    needs: test
+
+    environment:
+      name: development
+      url: https://dev.catchlogr.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy compose file
+        run: |
+          scp deploy/compose.dev.yml \
+            catchlogr-admin@192.162.50.150:/opt/catchlogr/compose.yml
+
+      - name: Deploy
+        run: |
+          ssh catchlogr-admin@192.162.50.150 << 'EOF'
+            set -e
+
+            cd /opt/catchlogr/app
+
+            git fetch origin
+            git checkout dev
+            git reset --hard dev
+
+            cd /opt/catchlogr
+
+            docker compose build
+            docker compose --profile tools run --rm migrate
+            docker compose up -d
+
+            docker compose ps
+          EOF
+
+      - name: Verify deployment
+        run: |
+          curl --fail --retry 5 --retry-delay 3 \
+            https://dev-api.catchlogr.com/health

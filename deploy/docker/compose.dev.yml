@@ -1,0 +1,104 @@
+services:
+  db:
+    image: postgres:16
+    container_name: catchlogr-postgres-dev
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./app
+      dockerfile: src/Catchlogr.Api/Dockerfile
+
+    container_name: catchlogr-api-dev
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+
+      LocationSearch__LocationIQ__ApiKey: ${LocationSearch__LocationIQ__ApiKey}
+
+      Email__ApiKey: ${Email__ApiKey}
+      Email__FromAddress: ${Email__FromAddress}
+      Email__FromName: ${Email__FromName}
+      Email__PublicWebBaseUrl: ${Email__PublicWebBaseUrl}
+
+      PhotoStorage__Provider: Local
+      PhotoStorage__Local__Path: /app/data/photos
+
+    volumes:
+      - /opt/catchlogr/data/photos:/app/data/photos
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  migrate:
+    profiles:
+      - tools
+
+    build:
+      context: ./app
+      dockerfile: src/Catchlogr.Api/Dockerfile
+      target: migrations
+
+    working_dir: /src
+
+    command:
+      - dotnet
+      - ef
+      - database
+      - update
+      - --project
+      - src/Catchlogr.Infrastructure
+      - --startup-project
+      - src/Catchlogr.Api
+
+    environment:
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./app
+      dockerfile: src/Catchlogr.Web/Dockerfile
+
+    container_name: catchlogr-web-dev
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+
+      Api__BaseUrl: https://dev-api.catchlogr.com
+
+    ports:
+      - "8081:8080"
+
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
