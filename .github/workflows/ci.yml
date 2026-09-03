@@ -57,3 +57,16 @@ jobs:
           dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj \
             --configuration Release \
             --no-build
+
+  validate-main-source:
+    if: github.base_ref == 'main'
+    runs-on: [self-hosted, linux, x64, catchlogr]
+
+    steps:
+      - name: Ensure only dev can merge to main
+        run: |
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "Only the dev branch may be merged into main."
+            echo "Source branch was: ${{ github.head_ref }}"
+            exit 1
+          fi
