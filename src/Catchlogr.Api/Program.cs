@@ -167,6 +167,8 @@ app.MapAuthenticationEndpoints();
 
 app.Run();
 
+// main protection test
+
 /// <summary>
 /// Exposes the top-level API entry point to integration-test hosts.
 /// </summary>
