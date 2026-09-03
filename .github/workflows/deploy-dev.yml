@@ -24,14 +24,21 @@ jobs:
         with:
           dotnet-version: 10.0.302
 
-      - name: Restore
-        run: dotnet restore
+      - name: Restore tests
+        run: |
+          dotnet restore tests/Catchlogr.Tests/Catchlogr.Tests.csproj
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      - name: Build tests
+        run: |
+          dotnet build tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+          --configuration Release \
+          --no-restore
 
       - name: Test
-        run: dotnet test --no-build --configuration Release
+        run: |
+          dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+          --configuration Release \
+          --no-build
 
   deploy:
     runs-on: [self-hosted, linux, x64, catchlogr]
@@ -47,19 +54,19 @@ jobs:
 
       - name: Copy compose file
         run: |
-          scp deploy/compose.dev.yml \
-            catchlogr-admin@192.162.50.150:/opt/catchlogr/compose.yml
+          scp deploy/docker/compose.dev.yml \
+            catchlogr-admin@192.168.50.150:/opt/catchlogr/compose.yml
 
       - name: Deploy
         run: |
-          ssh catchlogr-admin@192.162.50.150 << 'EOF'
+          ssh catchlogr-admin@192.168.50.150 << 'EOF'
             set -e
 
             cd /opt/catchlogr/app
 
             git fetch origin
             git checkout dev
-            git reset --hard dev
+            git reset --hard origin/dev
 
             cd /opt/catchlogr
 
