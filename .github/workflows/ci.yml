@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  test:
+  unit-tests:
     runs-on: [self-hosted, linux, x64, catchlogr]
 
     steps:
@@ -17,18 +17,43 @@ jobs:
       - name: Verify .NET
         run: dotnet --info
 
-      - name: Restore tests
+      - name: Restore unit tests
         run: |
           dotnet restore tests/Catchlogr.Tests/Catchlogr.Tests.csproj
 
-      - name: Build tests
+      - name: Build unit tests
         run: |
           dotnet build tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
             --configuration Release \
             --no-restore
 
-      - name: Test
+      - name: Run unit tests
         run: |
           dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+            --configuration Release \
+            --no-build
+
+  integration-tests:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify .NET
+        run: dotnet --info
+
+      - name: Restore API integration tests
+        run: dotnet restore tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
+
+      - name: Build API integration tests
+        run: |
+          dotnet build tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Run API integration tests
+        run: |
+          dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj \
             --configuration Release \
             --no-build
