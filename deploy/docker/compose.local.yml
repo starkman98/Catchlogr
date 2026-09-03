@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: catchlogr-postgres
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - catchlogr_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  catchlogr_postgres_data:

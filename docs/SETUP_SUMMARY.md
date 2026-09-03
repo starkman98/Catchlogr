@@ -1,14 +1,14 @@
 # 📝 What Was Just Set Up
 
-This document summarizes all the configuration and documentation created for the FishingLog project.
+This document summarizes all the configuration and documentation created for the Catchlogr project.
 
 ## ✅ Files Created
 
 ### Configuration Files
-- ✅ `src/FishingLog.Api/appsettings.Development.json` - API development configuration
-- ✅ `src/FishingLog.Mobile/appsettings.json` - Mobile production configuration  
-- ✅ `src/FishingLog.Mobile/appsettings.Development.json` - Mobile development configuration
-- ✅ `src/FishingLog.Mobile/Configuration/AppSettings.cs` - Configuration loader for Mobile
+- ✅ `src/Catchlogr.Api/appsettings.Development.json` - API development configuration
+- ✅ `src/Catchlogr.Mobile/appsettings.json` - Mobile production configuration
+- ✅ `src/Catchlogr.Mobile/appsettings.Development.json` - Mobile development configuration
+- ✅ `src/Catchlogr.Mobile/Configuration/AppSettings.cs` - Configuration loader for Mobile
 
 ### Documentation Files
 - ✅ `README.md` - Comprehensive project documentation with setup instructions
@@ -17,12 +17,12 @@ This document summarizes all the configuration and documentation created for the
 - ✅ `docs/MOBILE_CONFIGURATION.md` - Detailed mobile configuration guide
 
 ### Example Code
-- ✅ `src/FishingLog.Mobile/Services/ExampleApiClient.cs` - Shows how to use AppSettings
+- ✅ `src/Catchlogr.Mobile/Services/ExampleApiClient.cs` - Shows how to use AppSettings
 
 ### Enhanced Files
-- ✅ `.gitignore` - Enhanced with FishingLog-specific ignores
-- ✅ `src/FishingLog.Mobile/FishingLog.Mobile.csproj` - Added embedded resources
-- ✅ `src/FishingLog.Mobile/MauiProgram.cs` - Registered AppSettings in DI
+- ✅ `.gitignore` - Enhanced with Catchlogr-specific ignores
+- ✅ `src/Catchlogr.Mobile/Catchlogr.Mobile.csproj` - Added embedded resources
+- ✅ `src/Catchlogr.Mobile/MauiProgram.cs` - Registered AppSettings in DI
 
 ---
 
@@ -32,7 +32,7 @@ This document summarizes all the configuration and documentation created for the
 
 **Development** (`appsettings.Development.json`):
 ```
-Database: localhost:5432/fishinglog_dev
+Database: localhost:5432/catchlogr_dev
 Logging: Debug level with EF Core SQL queries
 CORS: Allows localhost origins
 ```
@@ -45,7 +45,7 @@ CORS: Allows localhost origins
 ```
 API Base URL: https://localhost:5001
 Sync: Disabled on startup, 5-minute intervals
-Database: fishinglog_dev.db3
+Database: catchlogr_dev.db3
 Logging: Debug level
 ```
 
@@ -53,7 +53,7 @@ Logging: Debug level
 ```
 API Base URL: https://localhost:5001 (will be changed to production URL later)
 Sync: Enabled on startup, 15-minute intervals
-Database: fishinglog.db3
+Database: catchlogr.db3
 ```
 
 **Usage**: Files are embedded as resources and loaded based on build configuration:
@@ -77,7 +77,7 @@ Database: fishinglog.db3
 
 ### Enhanced .gitignore Covers:
 - Standard Visual Studio files (from template)
-- **FishingLog-specific additions**:
+- **Catchlogr-specific additions**:
   - SQLite databases (`*.db3`)
   - Docker data volumes
   - User secrets and local config overrides
@@ -142,9 +142,9 @@ docs/
 4. Follow `README.md` for comprehensive setup
 
 ### For Configuration Changes:
-- **API**: Edit `src/FishingLog.Api/appsettings.Development.json`
-- **Mobile (Debug)**: Edit `src/FishingLog.Mobile/appsettings.Development.json`
-- **Mobile (Release)**: Edit `src/FishingLog.Mobile/appsettings.json`
+- **API**: Edit `src/Catchlogr.Api/appsettings.Development.json`
+- **Mobile (Debug)**: Edit `src/Catchlogr.Mobile/appsettings.Development.json`
+- **Mobile (Release)**: Edit `src/Catchlogr.Mobile/appsettings.json`
 
 **Remember**: Mobile config files are embedded at compile time, so you must rebuild after changes!
 
@@ -152,7 +152,7 @@ docs/
 
 ## 🎉 Summary
 
-Your FishingLog project now has:
+Your Catchlogr project now has:
 - ✅ Professional README with complete setup instructions
 - ✅ Comprehensive .gitignore for clean repository
 - ✅ Mobile configuration system with environment support

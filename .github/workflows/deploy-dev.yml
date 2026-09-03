@@ -1,0 +1,106 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+  workflow_dispatch:
+
+concurrency:
+  group: catchlogr-dev
+  cancel-in-progress: false
+
+jobs:
+  unit-tests:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify .NET
+        run: dotnet --info
+
+      - name: Restore unit tests
+        run: |
+          dotnet restore tests/Catchlogr.Tests/Catchlogr.Tests.csproj
+
+      - name: Build unit tests
+        run: |
+          dotnet build tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Run unit tests
+        run: |
+          dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+            --configuration Release \
+            --no-build
+
+  integration-tests:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify .NET
+        run: dotnet --info
+
+      - name: Restore API integration tests
+        run: dotnet restore tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
+
+      - name: Build API integration tests
+        run: |
+          dotnet build tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Run API integration tests
+        run: |
+          dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj \
+            --configuration Release \
+            --no-build
+
+  deploy:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+    needs: [unit-tests, integration-tests]
+
+    environment:
+      name: development
+      url: https://dev.catchlogr.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy compose file
+        run: |
+          scp deploy/docker/compose.dev.yml \
+            catchlogr-admin@192.168.50.150:/opt/catchlogr/compose.yml
+
+      - name: Deploy
+        run: |
+          ssh catchlogr-admin@192.168.50.150 << 'EOF'
+            set -e
+
+            cd /opt/catchlogr/app
+
+            git fetch origin
+            git checkout dev
+            git reset --hard origin/dev
+
+            cd /opt/catchlogr
+
+            docker compose build
+            docker compose --profile tools run --rm migrate
+            docker compose up -d
+
+            docker compose ps
+          EOF
+
+      - name: Verify deployment
+        run: |
+          curl --fail --retry 5 --retry-delay 3 \
+            https://dev-api.catchlogr.com/health

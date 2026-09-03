@@ -1,0 +1,34 @@
+﻿@page "/confirm-email"
+@model Catchlogr.Web.Pages.ConfirmEmailModel
+@using Catchlogr.Web.Services
+@{
+    ViewData["Title"] = "Confirm email";
+}
+
+@if (Model.Result == IdentityActionResult.Succeeded)
+{
+    <h1>Email confirmed</h1>
+
+    <p>
+        Your Catchlogr account is ready.
+        You can return to the app.
+    </p>
+}
+else if (Model.Result == IdentityActionResult.ServiceUnavailable)
+{
+    <h1>Confirmation temporarily unavailable</h1>
+
+    <p>
+        We could not contact Catchlogr right now. Please try this link again
+        in a few minutes.
+    </p>
+}
+else
+{
+    <h1>Unable to confirm email</h1>
+
+    <p>
+        The confirmation link is invalid, expired,
+        or may already have been used.
+    </p>
+}

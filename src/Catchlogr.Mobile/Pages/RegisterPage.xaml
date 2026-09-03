@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Catchlogr.Mobile.Pages.RegisterPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Catchlogr.Mobile.ViewModels"
+    x:DataType="vm:RegisterViewModel"
+    Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Margin="32"
+            MaximumWidthRequest="480"
+            Spacing="18"
+            VerticalOptions="Center">
+
+            <Label
+                FontAttributes="Bold"
+                FontSize="28"
+                HorizontalTextAlignment="Center"
+                Text="Create your account" />
+
+            <Label
+                HorizontalTextAlignment="Center"
+                Text="We will email you a link to confirm your account before you sign in."
+                TextColor="Gray" />
+
+            <Entry
+                AutomationId="RegisterEmailEntry"
+                IsEnabled="{Binding IsNotBusy}"
+                Keyboard="Email"
+                Placeholder="Email address"
+                ReturnType="Next"
+                Text="{Binding Email}" />
+
+            <Entry
+                AutomationId="RegisterPasswordEntry"
+                IsEnabled="{Binding IsNotBusy}"
+                IsPassword="True"
+                Placeholder="Password"
+                ReturnType="Next"
+                Text="{Binding Password}" />
+
+            <Entry
+                AutomationId="RegisterConfirmPasswordEntry"
+                IsEnabled="{Binding IsNotBusy}"
+                IsPassword="True"
+                Placeholder="Confirm password"
+                ReturnType="Go"
+                Text="{Binding ConfirmPassword}" />
+
+            <Label
+                IsVisible="{Binding HasErrorMessage}"
+                Text="{Binding ErrorMessage}"
+                TextColor="Red" />
+
+            <Grid>
+                <Button
+                    AutomationId="RegisterButton"
+                    Command="{Binding RegisterCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Text="Create account" />
+                <ActivityIndicator
+                    IsRunning="{Binding IsBusy}"
+                    IsVisible="{Binding IsBusy}"
+                    VerticalOptions="Center" />
+            </Grid>
+
+            <Button
+                AutomationId="OpenLoginButton"
+                BackgroundColor="Transparent"
+                Command="{Binding OpenLoginCommand}"
+                IsEnabled="{Binding IsNotBusy}"
+                Text="Already have an account? Sign in" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

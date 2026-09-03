@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.10.0" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="NSubstitute" Version="6.1.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Catchlogr.Application\Catchlogr.Application.csproj" />
+    <ProjectReference Include="..\..\src\Catchlogr.Contracts\Catchlogr.Contracts.csproj" />
+	<ProjectReference Include="..\..\src\Catchlogr.Domain\Catchlogr.Domain.csproj" />
+	<ProjectReference Include="..\..\src\Catchlogr.Infrastructure\Catchlogr.Infrastructure.csproj" />
+	<ProjectReference Include="..\..\src\Catchlogr.Sync\Catchlogr.Sync.csproj" />
+    <ProjectReference Include="..\..\src\Catchlogr.Web\Catchlogr.Web.csproj" />
+  </ItemGroup>
+
+</Project>

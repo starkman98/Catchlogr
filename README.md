@@ -1,4 +1,4 @@
-# FishingLog 🎣
+# Catchlogr 🎣
 
 A cross-platform fishing log application built with .NET MAUI (mobile) and ASP.NET Core (API). Track your fishing trips, catches, and sync data across devices with offline-first architecture.
 
@@ -38,16 +38,16 @@ A cross-platform fishing log application built with .NET MAUI (mobile) and ASP.N
 ## 📁 Project Structure
 
 ```
-FishingLog/
+Catchlogr/
 ├── src/
-│   ├── FishingLog.Api/              # ASP.NET Core Web API (Minimal APIs)
-│   ├── FishingLog.Application/      # Business logic and services
-│   ├── FishingLog.Contracts/        # Shared DTOs and contracts
-│   ├── FishingLog.Domain/           # Domain entities and interfaces
-│   ├── FishingLog.Infrastructure/   # Data access (EF Core, repositories)
-│   └── FishingLog.Mobile/           # .NET MAUI mobile app
+│   ├── Catchlogr.Api/              # ASP.NET Core Web API (Minimal APIs)
+│   ├── Catchlogr.Application/      # Business logic and services
+│   ├── Catchlogr.Contracts/        # Shared DTOs and contracts
+│   ├── Catchlogr.Domain/           # Domain entities and interfaces
+│   ├── Catchlogr.Infrastructure/   # Data access (EF Core, repositories)
+│   └── Catchlogr.Mobile/           # .NET MAUI mobile app
 ├── tests/
-│   └── FishingLog.Tests/            # xUnit unit tests (services, validators)
+│   └── Catchlogr.Tests/            # xUnit unit tests (services, validators)
 ├── docs/
 │   ├── ROADMAP.md                   # Development roadmap
 │   ├── MOBILE_ARCHITECTURE.md       # Mobile architecture overview
@@ -57,7 +57,7 @@ FishingLog/
 │   ├── SETUP_CHECKLIST.md           # Setup checklist
 │   └── SETUP_SUMMARY.md             # Setup summary
 ├── docker-compose.yml               # PostgreSQL local development
-└── FishingLog.sln
+└── Catchlogr.sln
 ```
 
 ## 🚀 Getting Started
@@ -74,8 +74,8 @@ FishingLog/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/starkman98/FishingLog.git
-cd FishingLog
+git clone https://github.com/starkman98/Catchlogr.git
+cd Catchlogr
 ```
 
 ### 2. Start PostgreSQL (Docker)
@@ -88,14 +88,14 @@ This starts a local PostgreSQL instance:
 
 - **Host**: `localhost`
 - **Port**: `5432`
-- **Database**: `fishinglog_dev`
-- **Username**: `fishinglog_user`
-- **Password**: `fishinglog_dev_password`
+- **Database**: `catchlogr_dev`
+- **Username**: `catchlogr_user`
+- **Password**: `catchlogr_dev_password`
 
 ### 3. Apply Database Migrations
 
 ```bash
-cd src/FishingLog.Api
+cd src/Catchlogr.Api
 dotnet ef database update
 ```
 
@@ -108,7 +108,7 @@ dotnet ef database update
 ### 4. Run the API
 
 ```bash
-cd src/FishingLog.Api
+cd src/Catchlogr.Api
 dotnet run
 ```
 
@@ -122,14 +122,14 @@ The API will be available at:
 
 **Option A: Visual Studio**
 
-1. Set `FishingLog.Mobile` as the startup project
+1. Set `Catchlogr.Mobile` as the startup project
 2. Select your target platform (Android/iOS/Windows)
 3. Press F5 to run
 
 **Option B: Command Line**
 
 ```bash
-cd src/FishingLog.Mobile
+cd src/Catchlogr.Mobile
 
 # For Android
 dotnet build -t:Run -f net10.0-android
@@ -147,12 +147,12 @@ dotnet build -t:Run -f net10.0-windows10.0.19041.0
 
 The API uses standard ASP.NET Core configuration files:
 
-`src/FishingLog.Api/appsettings.Development.json` (local dev):
+`src/Catchlogr.Api/appsettings.Development.json` (local dev):
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=fishinglog_dev;Username=fishinglog_user;Password=fishinglog_dev_password"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=catchlogr_dev;Username=catchlogr_user;Password=catchlogr_dev_password"
   }
 }
 ```
@@ -161,25 +161,30 @@ The API uses standard ASP.NET Core configuration files:
 
 The mobile app uses embedded JSON configuration files:
 
-`src/FishingLog.Mobile/appsettings.Development.json` (Debug builds):
+`src/Catchlogr.Mobile/appsettings.Local.json` (Local builds):
 
 ```json
 {
+  "BackendEnvironment": "Local",
   "Api": {
-    "BaseUrl": "https://localhost:5001"
+    "BaseUrl": "https://localhost:7160"
   }
 }
 ```
 
-`src/FishingLog.Mobile/appsettings.json` (Release builds):
+`src/Catchlogr.Mobile/appsettings.Development.json` (Debug builds):
 
 ```json
 {
+  "BackendEnvironment": "Development",
   "Api": {
-    "BaseUrl": "https://api.fishinglog.com"
+    "BaseUrl": "https://dev-api.catchlogr.com"
   }
 }
 ```
+
+`src/Catchlogr.Mobile/appsettings.json` is used by Release builds and targets
+`https://api.catchlogr.com`.
 
 See [docs/MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) for details.
 
@@ -195,10 +200,10 @@ See [docs/MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) for details.
 2. **Terminal 2** - Run API:
 
    ```bash
-   cd src/FishingLog.Api
+   cd src/Catchlogr.Api
    dotnet watch run
    ```
-3. **Visual Studio** - Run Mobile app (F5)
+3. **Visual Studio** - Select the Local configuration and run Mobile (F5)
 
 ### Testing API Endpoints
 
@@ -206,20 +211,20 @@ Use your favorite HTTP client (Postman, curl, or REST Client extension):
 
 ```bash
 # Health check
-curl https://localhost:5001/health
+curl https://localhost:7160/health
 
 # Get all fishing trips (once implemented)
-curl https://localhost:5001/api/fishing-trips
+curl https://localhost:7160/api/fishing-trips
 ```
 
 ### Connecting Mobile to API
 
-**Android Emulator**: Use `10.0.2.2` instead of `localhost`:
+**Android Emulator**: Local builds automatically use the host alias:
 
 ```json
 {
   "Api": {
-    "BaseUrl": "https://10.0.2.2:5001"
+    "BaseUrl": "http://10.0.2.2:5001"
   }
 }
 ```
@@ -251,7 +256,7 @@ dotnet test --collect:"XPlat Code Coverage"
 ### Create a New Migration
 
 ```bash
-cd src/FishingLog.Api
+cd src/Catchlogr.Api
 dotnet ef migrations add MigrationName
 ```
 
@@ -330,6 +335,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the detailed development roadmap.
 - [MOBILE_CONFIGURATION.md](docs/MOBILE_CONFIGURATION.md) - Mobile app configuration guide
 - [WEATHER_INTEGRATION.md](docs/WEATHER_INTEGRATION.md) - Weather enrichment architecture and implementation
 - [LOCATION_SEARCH_INTEGRATION.md](docs/LOCATION_SEARCH_INTEGRATION.md) - LocationIQ lake and place search integration
+- [IDENTITY_EMAIL.md](docs/IDENTITY_EMAIL.md) - Resend configuration, email confirmation, and password recovery
 - [QUICK_START.md](docs/QUICK_START.md) - Quick start guide
 - [SETUP_CHECKLIST.md](docs/SETUP_CHECKLIST.md) - Setup checklist
 - [SETUP_SUMMARY.md](docs/SETUP_SUMMARY.md) - Setup summary
@@ -365,7 +371,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📧 Contact
 
 - **GitHub**: [@starkman98](https://github.com/starkman98)
-- **Project**: [FishingLog](https://github.com/starkman98/FishingLog)
+- **Project**: [Catchlogr](https://github.com/starkman98/Catchlogr)
 
 ---
 

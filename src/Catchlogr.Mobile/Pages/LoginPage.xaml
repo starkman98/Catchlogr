@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Catchlogr.Mobile.Pages.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Catchlogr.Mobile.ViewModels"
+    x:DataType="vm:LoginViewModel"
+    Shell.NavBarIsVisible="False"
+    Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Margin="32"
+            MaximumWidthRequest="480"
+            Spacing="18"
+            VerticalOptions="Center">
+
+            <Label
+                FontAttributes="Bold"
+                FontSize="32"
+                HorizontalTextAlignment="Center"
+                Text="Catchlogr" />
+
+            <Label
+                HorizontalTextAlignment="Center"
+                Text="Sign in to sync your fishing trips across devices."
+                TextColor="Gray" />
+
+            <Entry
+                AutomationId="LoginEmailEntry"
+                IsEnabled="{Binding IsNotBusy}"
+                Keyboard="Email"
+                Placeholder="Email address"
+                ReturnType="Next"
+                Text="{Binding Email}" />
+
+            <Entry
+                AutomationId="LoginPasswordEntry"
+                IsEnabled="{Binding IsNotBusy}"
+                IsPassword="True"
+                Placeholder="Password"
+                ReturnType="Go"
+                Text="{Binding Password}" />
+
+            <Label
+                IsVisible="{Binding HasErrorMessage}"
+                Text="{Binding ErrorMessage}"
+                TextColor="Red" />
+
+            <Grid>
+                <Button
+                    AutomationId="LoginButton"
+                    Command="{Binding LoginCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    Text="Sign in" />
+                <ActivityIndicator
+                    IsRunning="{Binding IsBusy}"
+                    IsVisible="{Binding IsBusy}"
+                    VerticalOptions="Center" />
+            </Grid>
+
+            <Button
+                AutomationId="OpenForgotPasswordButton"
+                BackgroundColor="Transparent"
+                Command="{Binding OpenForgotPasswordCommand}"
+                IsEnabled="{Binding IsNotBusy}"
+                Text="Forgot password?" />
+
+            <Button
+                AutomationId="OpenCheckEmailButton"
+                BackgroundColor="Transparent"
+                Command="{Binding OpenCheckEmailCommand}"
+                IsEnabled="{Binding IsNotBusy}"
+                Text="Resend confirmation email" />
+
+            <Button
+                AutomationId="OpenRegisterButton"
+                BackgroundColor="Transparent"
+                Command="{Binding OpenRegisterCommand}"
+                IsEnabled="{Binding IsNotBusy}"
+                Text="Create a new account" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

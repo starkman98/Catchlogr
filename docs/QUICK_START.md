@@ -1,4 +1,4 @@
-# FishingLog Quick Start Guide
+# Catchlogr Quick Start Guide
 
 ## 🚀 First Time Setup (5 minutes)
 
@@ -9,13 +9,13 @@ docker-compose up -d
 
 ### 2. Run API
 ```bash
-cd src/FishingLog.Api
+cd src/Catchlogr.Api
 dotnet run
 ```
 
 ### 3. Run Mobile App
-- Open `FishingLog.sln` in Visual Studio
-- Set `FishingLog.Mobile` as startup project
+- Open `Catchlogr.sln` in Visual Studio
+- Set `Catchlogr.Mobile` as startup project
 - Press F5
 
 ---
@@ -23,7 +23,7 @@ dotnet run
 ## 📱 Mobile App: Connecting to Local API
 
 ### Android Emulator
-Edit `src/FishingLog.Mobile/appsettings.Development.json`:
+Edit `src/Catchlogr.Mobile/appsettings.Development.json`:
 ```json
 {
   "Api": {
@@ -57,7 +57,7 @@ Then use that IP:
 
 ### Create Migration
 ```bash
-cd src/FishingLog.Api
+cd src/Catchlogr.Api
 dotnet ef migrations add MigrationName
 ```
 
@@ -145,20 +145,20 @@ dotnet tool update --global dotnet-ef
 ## 📁 Project Structure Reference
 
 ```
-FishingLog/
+Catchlogr/
 ├── src/
-│   ├── FishingLog.Api/              ← Web API (Minimal APIs)
-│   ├── FishingLog.Application/      ← Business logic
-│   ├── FishingLog.Contracts/        ← DTOs shared between API & Mobile
-│   ├── FishingLog.Domain/           ← Entities & interfaces
-│   ├── FishingLog.Infrastructure/   ← EF Core, repositories
-│   └── FishingLog.Mobile/           ← MAUI app
+│   ├── Catchlogr.Api/              ← Web API (Minimal APIs)
+│   ├── Catchlogr.Application/      ← Business logic
+│   ├── Catchlogr.Contracts/        ← DTOs shared between API & Mobile
+│   ├── Catchlogr.Domain/           ← Entities & interfaces
+│   ├── Catchlogr.Infrastructure/   ← EF Core, repositories
+│   └── Catchlogr.Mobile/           ← MAUI app
 ├── docs/
 │   ├── ROADMAP.md                   ← Development roadmap
 │   ├── MOBILE_CONFIGURATION.md      ← Mobile config details
 │   └── QUICK_START.md               ← This file
 ├── docker-compose.yml               ← PostgreSQL setup
-└── FishingLog.sln                   ← Solution file
+└── Catchlogr.sln                   ← Solution file
 ```
 
 ---

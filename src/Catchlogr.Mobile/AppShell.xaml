@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Catchlogr.Mobile.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:Catchlogr.Mobile.Pages"
+    FlyoutBehavior="Disabled"
+    Title="Catchlogr">
+
+    <ShellContent
+        Title='Sign in'
+        ContentTemplate='{DataTemplate pages:LoginPage}'
+        FlyoutItemIsVisible='False'
+        Route='LoginPage' />
+
+    <ShellContent
+        Title="Trips"
+        ContentTemplate="{DataTemplate pages:FishingTripsPage}"
+        Route="FishingTripsPage" />
+
+</Shell>
