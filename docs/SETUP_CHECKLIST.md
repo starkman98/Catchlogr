@@ -1,220 +1,84 @@
-# Catchlogr Development Setup Checklist
+# Catchlogr development setup checklist
 
-Use this checklist to verify your development environment is properly configured.
+Use this after following the [root README](../README.md).
 
-## ✅ Prerequisites
+## Tooling
 
-- [ ] **.NET 10 SDK** installed
-  ```bash
-  dotnet --version
-  # Should show: 10.x.x or higher
+- [ ] `dotnet --version` resolves SDK 10.0.302 or a compatible .NET 10 SDK.
+- [ ] `docker compose version` succeeds.
+- [ ] `dotnet ef --version` succeeds.
+- [ ] The .NET MAUI workload is installed for mobile development.
+- [ ] Android SDK, Xcode, or Windows App SDK tooling is installed for the chosen target.
+
+## Repository and local database
+
+- [ ] `Catchlogr.slnx` opens successfully.
+- [ ] `deploy/docker/.env.example` was copied to `deploy/docker/.env`.
+- [ ] The placeholder PostgreSQL password was replaced locally.
+- [ ] PostgreSQL starts with:
+
+  ```powershell
+  docker compose --env-file deploy/docker/.env `
+    -f deploy/docker/compose.local.yml up -d
   ```
 
-- [ ] **Docker Desktop** installed and running
-  ```bash
-  docker --version
-  docker-compose --version
+- [ ] `docker compose ... ps` reports `catchlogr-postgres` as healthy.
+
+## API configuration
+
+- [ ] `ConnectionStrings:DefaultConnection` is stored in API user secrets.
+- [ ] `LocationSearch:LocationIQ:ApiKey` is stored in API user secrets.
+- [ ] All four `Email` settings are stored in API user secrets.
+- [ ] No real secret was added to an `appsettings*.json` or `.env.example` file.
+- [ ] Migrations apply with:
+
+  ```powershell
+  dotnet ef database update `
+    --project src/Catchlogr.Infrastructure `
+    --startup-project src/Catchlogr.Api
   ```
 
-- [ ] **Visual Studio 2022** (or VS Code) installed
-  - [ ] .NET MAUI workload installed
-  - [ ] Mobile development with .NET workload (for Android/iOS)
+- [ ] `dotnet run --project src/Catchlogr.Api --launch-profile https` starts.
+- [ ] `https://localhost:7160/health` returns healthy.
+- [ ] `https://localhost:7160/swagger` opens in Development.
 
-- [ ] **EF Core Tools** installed globally
-  ```bash
-  dotnet tool install --global dotnet-ef
-  # or update: dotnet tool update --global dotnet-ef
+## Web and identity
+
+- [ ] `dotnet run --project src/Catchlogr.Web --launch-profile https` starts.
+- [ ] `Email:PublicWebBaseUrl` points to the Web origin, not the API origin.
+- [ ] Registration sends a confirmation message using the configured sender.
+- [ ] Confirmation and password-reset links open the Web application.
+- [ ] Login succeeds only after confirmation under the default development policy.
+
+## Mobile
+
+- [ ] `Local`, `Debug`, or `Release` was selected intentionally.
+- [ ] Local Windows reaches `https://localhost:7160`.
+- [ ] The Android emulator reaches `http://10.0.2.2:5001`.
+- [ ] A physical device uses a reachable LAN URL or the Development backend.
+- [ ] Registration/login, offline trip creation, catch creation, and sync work.
+- [ ] Switching accounts does not expose another account's local rows or photos.
+
+## Tests
+
+- [ ] Platform-neutral tests pass:
+
+  ```powershell
+  dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj
+  dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
   ```
 
----
+- [ ] On Windows with MAUI installed, mobile tests pass:
 
-## ✅ Repository Setup
-
-- [ ] Repository cloned
-  ```bash
-  git clone https://github.com/starkman98/Catchlogr.git
-  cd Catchlogr
+  ```powershell
+  dotnet test tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
   ```
 
-- [ ] Solution builds successfully
-  ```bash
-  dotnet build
-  ```
+## Before committing
 
-- [ ] All projects restore without errors
-  ```bash
-  dotnet restore
-  ```
+- [ ] `git status --short` contains no secrets, local databases, or generated output.
+- [ ] Documentation was updated for changed commands, routes, configuration, or behavior.
+- [ ] The relevant focused tests and regression suites were run.
 
----
-
-## ✅ Database Setup
-
-- [ ] PostgreSQL container running
-  ```bash
-  docker-compose up -d
-  docker ps  # Should show catchlogr_postgres
-  ```
-
-- [ ] Database connection works
-  ```bash
-  docker exec -it catchlogr_postgres psql -U catchlogr_user -d catchlogr_dev
-  # Type \q to exit
-  ```
-
-- [ ] Migrations applied (when migrations exist)
-  ```bash
-  cd src/Catchlogr.Api
-  dotnet ef database update
-  ```
-
----
-
-## ✅ API Configuration
-
-- [ ] `appsettings.Development.json` exists in `src/Catchlogr.Api/`
-- [ ] Connection string points to local PostgreSQL:
-  ```json
-  {
-    "ConnectionStrings": {
-      "DefaultConnection": "Host=localhost;Port=5432;Database=catchlogr_dev;Username=catchlogr_user;Password=catchlogr_dev_password"
-    }
-  }
-  ```
-
-- [ ] API runs successfully
-  ```bash
-  cd src/Catchlogr.Api
-  dotnet run
-  # Should start on https://localhost:5001
-  ```
-
-- [ ] Health endpoint accessible (if implemented)
-  ```bash
-  curl https://localhost:5001/health
-  ```
-
----
-
-## ✅ Mobile Configuration
-
-- [ ] `appsettings.json` exists in `src/Catchlogr.Mobile/`
-- [ ] `appsettings.Development.json` exists in `src/Catchlogr.Mobile/`
-- [ ] Files marked as `EmbeddedResource` in `.csproj`
-- [ ] `Configuration/AppSettings.cs` class exists
-- [ ] Settings registered in `MauiProgram.cs`
-
-- [ ] Mobile app builds for target platform
-  ```bash
-  cd src/Catchlogr.Mobile
-  dotnet build -f net10.0-android  # For Android
-  ```
-
-- [ ] Can run mobile app from Visual Studio (F5)
-
----
-
-## ✅ Android-Specific Setup (Optional)
-
-- [ ] Android SDK installed
-  - [ ] Android 13.0 (API 33) or higher
-  - [ ] Android Emulator configured
-
-- [ ] Emulator can reach API
-  - [ ] `appsettings.Development.json` uses `10.0.2.2` instead of `localhost`
-  ```json
-  {
-    "Api": {
-      "BaseUrl": "https://10.0.2.2:5001"
-    }
-  }
-  ```
-
-- [ ] SSL certificate trusted on emulator (if needed)
-
----
-
-## ✅ iOS-Specific Setup (Optional, macOS only)
-
-- [ ] Xcode installed
-- [ ] iOS Simulator configured
-- [ ] Development certificate configured
-- [ ] Mobile app runs on iOS simulator
-
----
-
-## ✅ Windows-Specific Setup (Optional)
-
-- [ ] Windows App SDK installed
-- [ ] Mobile app runs on Windows (net10.0-windows10.0.19041.0)
-
----
-
-## ✅ Git Configuration
-
-- [ ] `.gitignore` is properly configured
-- [ ] No sensitive data (passwords, secrets) committed
-- [ ] `bin/`, `obj/`, `.vs/` folders ignored
-- [ ] `*.db3` (SQLite files) ignored
-
----
-
-## ✅ Editor/IDE Setup
-
-### Visual Studio 2022
-- [ ] Solution loads without errors
-- [ ] IntelliSense working
-- [ ] Can set breakpoints and debug
-- [ ] NuGet package restore works
-
-### VS Code (Optional)
-- [ ] C# extension installed
-- [ ] .NET MAUI extension installed
-- [ ] Can build and run from terminal
-
----
-
-## ✅ Documentation Review
-
-- [ ] Read [README.md](../README.md)
-- [ ] Read [docs/ROADMAP.md](ROADMAP.md)
-- [ ] Read [docs/MOBILE_CONFIGURATION.md](MOBILE_CONFIGURATION.md)
-- [ ] Read [.github/copilot-instructions.md](../.github/copilot-instructions.md)
-
----
-
-## ✅ First Test Run
-
-- [ ] **Terminal 1**: Start PostgreSQL
-  ```bash
-  docker-compose up
-  ```
-
-- [ ] **Terminal 2**: Run API
-  ```bash
-  cd src/Catchlogr.Api
-  dotnet watch run
-  ```
-
-- [ ] **Visual Studio**: Run Mobile app (F5)
-
-- [ ] All three components running simultaneously without errors
-
----
-
-## 🎉 Setup Complete!
-
-If all items are checked, your development environment is ready!
-
-### Next Steps:
-1. Check the current phase in [docs/ROADMAP.md](ROADMAP.md)
-2. Pick a task from the roadmap
-3. Start coding!
-
-### Troubleshooting:
-- See [docs/QUICK_START.md](QUICK_START.md) for common issues
-- Open an issue on GitHub if you're stuck
-
----
-
-**Last Updated**: Phase 0 - Foundation & Project Setup
+See [mobile configuration](MOBILE_CONFIGURATION.md), [sync strategy](SYNC_STRATEGY.md),
+and [identity email](IDENTITY_EMAIL.md) for troubleshooting details.

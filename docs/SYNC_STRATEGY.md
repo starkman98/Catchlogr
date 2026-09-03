@@ -1,114 +1,127 @@
-# Sync Strategy
+# Sync strategy
 
-Catchlogr uses an **offline-first, explicit sync** model. The mobile app stores all data locally in SQLite and syncs with the server API when connectivity is available.
+Catchlogr uses explicit, offline-first synchronization. User edits are committed
+to account-scoped SQLite first. The API and PostgreSQL are the cross-device
+system of record once changes synchronize.
 
----
+## Components and order
 
-## Core Concepts
+`ISyncOrchestrator.SyncAsync` executes:
 
-| Concept | Description |
-|---|---|
-| **Dirty flag** | `IsDirty = true` on a local record means it has unsaved changes that need to be uploaded |
-| **Sync cursor** | `LastSyncUtc` stored in `SyncMetadata` — the timestamp of the last successful download |
-| **ServerId** | The server-assigned GUID stored on the local entity after first upload |
-| **Last-write-wins** | Conflict resolution strategy: the record with the newest `LastModified` timestamp wins |
+1. `FishingTripSyncService.SyncAsync`;
+2. `CatchSyncService.SyncAsync`.
 
----
+Trips run first because catches require a parent trip server ID. Both services
+live in the platform-neutral `Catchlogr.Sync` project; Mobile supplies SQLite
+repositories and authenticated typed API clients through dependency injection.
 
-## Local Database Schema
+## Local metadata
 
-Every synced entity has these extra columns in SQLite:
+Every synchronized row includes:
 
-```
-Id              int       Local auto-increment primary key
-ServerId        string?   GUID from server (null until first upload)
-LastModifiedUtc DateTime  UTC timestamp of last change (local or server)
-IsDirty         bool      True = has local changes not yet uploaded
-IsDeleted       bool      True = soft-deleted, pending server delete
-```
+| Field | Purpose |
+| --- | --- |
+| `Id` | Local auto-increment primary key; never sent to the API |
+| `ServerId` | Server GUID stored as a string; null before first upload |
+| `LastModifiedUtc` | UTC conflict timestamp |
+| `IsDirty` | Local work still needs upload |
+| `IsDeleted` | Local soft deletion still needs propagation |
 
-The `SyncMetadata` table tracks one row per entity type:
+`SyncMetadataEntity` stores an independent cursor for `FishingTrip` and `Catch`.
+The first download starts at `2000-01-01T00:00:00Z`.
 
-```
-EntityType      string    e.g. "FishingTrip"
-LastSyncUtc     DateTime? UTC timestamp of last successful download (null = never synced)
-```
+## Reconciliation algorithm
 
----
+Each entity service uploads dirty rows before downloading remote changes.
 
-## Sync Algorithm
+### Upload
 
-`FishingTripSyncService.SyncAsync()` runs in two sequential phases:
+- A row without `ServerId` is created on the API.
+- An existing non-deleted row is updated on the API.
+- A deleted row is deleted remotely and then permanently removed locally.
+- A newly created catch waits until its parent trip has a server ID.
+- Successful responses are applied in full, including server timestamps and
+  server-owned enrichment fields.
+- Network or timeout failures are logged and leave the row pending for a later sync.
 
-### Phase 1 — Upload (Local → Server)
+### Download
 
-1. Query local DB for all records where `IsDirty = true`
-2. For each dirty record:
-   - **New record** (`ServerId == null`): call `POST /api/fishing-trips` → save the returned `ServerId` and clear `IsDirty`
-   - **Updated record** (`ServerId != null`, `IsDeleted = false`): call `PUT /api/fishing-trips/{id}` → clear `IsDirty`
-   - **Deleted record** (`IsDeleted = true`): call `DELETE /api/fishing-trips/{id}` → remove the local row permanently
-3. Network errors are caught per-record and logged — the record stays dirty and will retry on the next sync
+- The client calls the entity collection endpoint with `modifiedSince=<cursor>`.
+- A missing local row is inserted clean.
+- A dirty local row newer than the response is retained.
+- Otherwise the server response replaces the local synchronized fields.
+- When results exist, the cursor advances to the maximum server
+  `LastModified` value in that response. It does not advance to the device clock.
+- A failed download leaves the cursor unchanged.
 
-### Phase 2 — Download (Server → Local)
+The current conflict rule is last-write-wins by UTC modification timestamp.
+Clock skew and whole-record overwrites remain known trade-offs.
 
-1. Read `LastSyncUtc` from `SyncMetadata` for `FishingTrip` (defaults to `2000-01-01` on first sync)
-2. Call `GET /api/fishing-trips?modifiedSince={LastSyncUtc}` to fetch only incremental changes
-3. For each remote record received:
-   - **Not in local DB**: insert as a clean record (`IsDirty = false`)
-   - **In local DB, local is dirty AND newer**: skip — local wins (the upload phase already queued it)
-   - **In local DB, server is newer OR local is clean**: overwrite local with server data, clear `IsDirty`
-4. After all records are applied, advance `LastSyncUtc` to `DateTime.UtcNow`
+## Weather retry
 
----
+Before uploading trips, trip sync captures eligible clean trips that already have
+a server ID and coordinates but no provider-weather sample. After normal upload
+and download, it revalidates those candidates and calls:
 
-## Conflict Resolution
-
-Strategy: **last-write-wins** based on `LastModified` timestamp.
-
-```
-Local dirty AND Local.LastModifiedUtc > Remote.LastModified  →  Local wins (skip download)
-Server newer OR Local is clean                                →  Server wins (overwrite local)
+```http
+POST /api/fishing-trips/{id}/weather/retry
 ```
 
-This is the simplest viable strategy for an MVP. The trade-off is that if two devices edit the same trip while offline, the device that syncs last will overwrite the other. For a personal fishing log this is acceptable.
+Capturing candidates before upload avoids retrying a newly uploaded trip during
+the same sync. Provider/network failure does not fail the completed reconciliation;
+the trip stays eligible next time.
 
-> **Future improvement**: Per-field merging or a conflict notification UI (see roadmap Phase 5+).
+## Private-photo synchronization
 
----
+Catch photo state includes a private local path, the current server photo URL,
+an upload-pending flag, and an optional old URL pending deletion.
 
-## API Endpoint Used
+- New catches are created first so an upload has a catch server ID.
+- Pending files upload to `POST /api/catches/{catchId}/photos`.
+- The returned authenticated photo URL is persisted before the catch update so a
+  retry can reuse it.
+- Remote photos are downloaded through the authenticated API for offline display.
+- Replaced or deleted photos are removed after the related catch synchronization
+  succeeds.
 
+## API endpoints used
+
+```http
+GET    /api/fishing-trips?modifiedSince=<utc>
+POST   /api/fishing-trips
+PUT    /api/fishing-trips/{id}
+DELETE /api/fishing-trips/{id}
+
+GET    /api/catches?modifiedSince=<utc>
+POST   /api/fishing-trips/{tripId}/catches
+PUT    /api/catches/{id}
+DELETE /api/catches/{id}
+
+POST   /api/catches/{catchId}/photos
+GET    /api/photos/{photoId}
+DELETE /api/photos/{photoId}
 ```
-GET /api/fishing-trips?modifiedSince=2024-06-01T00:00:00Z
-```
 
-Returns only trips whose `LastModified` is after the given UTC timestamp. This keeps sync payloads small as the dataset grows.
+All listed endpoints require bearer authentication and are scoped to the current
+user.
 
----
+## Triggers
 
-## Error Handling
+Full synchronization currently occurs from:
 
-| Scenario | Behaviour |
-|---|---|
-| Network unavailable during upload | Per-record catch — record stays dirty, logged as warning, retried next sync |
-| Network unavailable during download | Entire download phase aborted gracefully, cursor not advanced |
-| Server returns 404 on update | Treated as unexpected — logged, record stays dirty |
-| Timeout | Caught as `TaskCanceledException`, logged, sync continues where possible |
+- pull-to-refresh on the trip list;
+- automatic trip-list refresh on page appearance;
+- refresh on the trip-details page; and
+- logout preparation, when pending work exists and connectivity permits.
 
----
+## Known limitations
 
-## Triggering a Sync
-
-Sync is triggered:
-- Manually via the **Sync button** in the `FishingTripsPage` toolbar
-- On **pull-to-refresh** in the trips list
-- Automatically on app resume (planned — Phase 3)
-
----
-
-## Known Limitations (MVP)
-
-- No per-field conflict merging — last-write-wins only
-- Sync cursor is a single timestamp per entity type — no per-record cursors
-- Deletions are permanent after sync; no recycle bin
-- `FishingTripSyncService` lives in `Catchlogr.Mobile` — see roadmap for planned refactor into a testable class library
+- Conflict resolution is whole-record last-write-wins, without a conflict UI.
+- Cursors are timestamps rather than opaque server-issued tokens.
+- Deletions are permanent after successful propagation; there is no recycle bin.
+- The API hard-deletes rows and exposes no deletion tombstones, so a deletion
+  made on one client is not currently discoverable by another client that
+  already cached the row.
+- Upload loops continue past per-record network failures, so a single sync can
+  partially succeed.
+- There is no general-purpose scheduled background sync service.

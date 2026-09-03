@@ -58,19 +58,24 @@ dirty rows, or sync cursors from another backend. Existing unscoped
 `catchlogr.auth.*` tokens are intentionally not migrated; users sign in once
 per backend after upgrading.
 
-## API email links
+## Identity email links
 
 Mobile backend selection does not configure Identity email links. The API uses
-its existing `Email:PublicWebBaseUrl` setting:
+`Email:PublicWebBaseUrl`, which must be the externally reachable Catchlogr Web
+origin rather than the API origin. The Web app receives confirmation/reset
+parameters and calls the API over HTTPS.
+
+Typical values are:
 
 ```text
-Local API:       https://localhost:7160
-Development API: https://dev-api.catchlogr.com
-Production API:  https://api.catchlogr.com
+Local Web:       https://localhost:7056
+Development Web: https://dev.catchlogr.com
+Production Web:  https://catchlogr.com
 ```
 
-For deployed environments, the environment-variable form is
-`Email__PublicWebBaseUrl`.
+Use the real production origin when it is finalized. For deployed environments,
+the environment-variable form is `Email__PublicWebBaseUrl`. See
+[Identity email and password recovery](IDENTITY_EMAIL.md).
 
 ## Security
 
