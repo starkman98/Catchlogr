@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux, x64, catchlogr]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.302
+
+      - name: Restore tests
+        run: |
+          dotnet restore tests/Catchlogr.Tests/Catchlogr.Tests.csproj
+
+      - name: Build tests
+        run: |
+          dotnet build tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+            --configuration Release \
+            --no-restore
+
+      - name: Test
+        run: |
+          dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj \
+            --configuration Release \
+            --no-build
