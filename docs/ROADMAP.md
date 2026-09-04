@@ -19,7 +19,7 @@ release is complete.
 ### Architecture and development environment
 
 - [x] .NET 10 solution with Domain, Application, Contracts, Infrastructure, API,
-  Sync, Mobile, and Web projects
+      Sync, Mobile, and Web projects
 - [x] PostgreSQL through EF Core migrations
 - [x] Local and development Docker Compose definitions
 - [x] Local/Development/Production mobile backend configurations
@@ -75,8 +75,8 @@ release is complete.
 
 ## Current hardening backlog
 
-- [ ] Add a Windows CI job for `Catchlogr.Mobile.Tests`
-- [ ] Add documentation link/path validation to CI
+- [x] Add a Windows CI job for `Catchlogr.Mobile.Tests`
+- [x] Add documentation link/path validation to CI
 - [ ] Define and test an intentional production password policy
 - [ ] Add API rate limiting and provider-aware caching for location search
 - [ ] Add structured centralized logging and operational alerting
