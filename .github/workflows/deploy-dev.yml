@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - dev
+    paths-ignore:
+      - README.md
+      - docs/**
+      - scripts/**
 
   workflow_dispatch:
 
