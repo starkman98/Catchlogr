@@ -95,16 +95,27 @@ source-generator syntax. Field-based `[ObservableProperty] private T _value;`
 must not be introduced.
 
 Date/time picker values are converted at the ViewModel boundary only. Stored
-entities and API contracts use UTC; pickers show local time.
+entities and API contracts use UTC; pickers show local time:
+
+```csharp
+// Load UTC into local pickers.
+var local = entity.StartTime.ToLocalTime();
+StartDate = local.Date;
+StartTimeOfDay = local.TimeOfDay;
+
+// Save local picker values as UTC.
+private static DateTime ToUtc(DateTime date, TimeSpan time)
+    => DateTime.SpecifyKind(date.Date + time, DateTimeKind.Local).ToUniversalTime();
+```
 
 ## Navigation
 
 `AppRoutes` centralizes route names and `IAppNavigator` isolates ViewModels from
-`Shell.Current`. `AppShell` registers routes for:
-
-- login, registration, check-email, forgot-password, and reset-password pages;
-- fishing-trip list, details, and add/edit pages; and
-- catch list and add/edit pages.
+`Shell.Current` for identity navigation. Trip/catch ViewModels also use direct
+Shell navigation; the abstraction is not universal yet. AppShell.xaml defines
+login and trip-list Shell content. AppShell.xaml.cs registers relative routes
+for registration/check-email/password flows, trip details/add-edit, and catch
+add-edit. The catch list is embedded in trip details, not a separate Shell page.
 
 Pages and ViewModels are transient registrations so navigation receives fresh
 state. Query parameters carry local integer IDs, never internal database objects.

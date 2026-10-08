@@ -3,11 +3,15 @@
 Validates Catchlogr's local Markdown links, heading anchors, and code fences.
 
 .DESCRIPTION
-Scans README.md and docs/**/*.md. External URLs are intentionally skipped so
+Scans README.md, agent entry points, docs/**/*.md, and optional shared skills or
+Copilot instruction directories. External URLs are intentionally skipped so
 temporary network or third-party failures cannot make pull-request CI flaky.
 
 .EXAMPLE
 pwsh ./scripts/validate-docs.ps1
+
+.EXAMPLE
+./scripts/validate-docs.ps1
 #>
 [CmdletBinding()]
 param(
@@ -18,7 +22,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $resolvedRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
-$documentationRoot = Join-Path $resolvedRoot 'docs'
 $pathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
     [StringComparison]::OrdinalIgnoreCase
 }
@@ -70,7 +73,7 @@ function ConvertTo-GitHubAnchor {
 
     $value = [regex]::Replace($Heading, '<[^>]+>', '')
     $value = [regex]::Replace($value, '!?\[([^\]]+)\]\([^)]+\)', '$1')
-    $value = $value.Replace([char] 96, '').Replace('*', '')
+    $value = $value.Replace(([char] 96).ToString(), '').Replace('*', '')
     $value = $value.ToLowerInvariant()
     $value = [regex]::Replace($value, '[^\p{L}\p{M}\p{Nd}\s_-]', '')
     return [regex]::Replace($value.Trim(), '\s+', '-')
@@ -94,7 +97,7 @@ function Get-MarkdownAnchors {
     $fenceCharacter = $null
     $fenceLength = 0
 
-    foreach ($line in Get-Content -LiteralPath $cacheKey) {
+    foreach ($line in Get-Content -LiteralPath $cacheKey -Encoding utf8) {
         $fenceMatch = [regex]::Match(
             $line,
             '^\s*(?<marker>(?:\x60){3,}|~{3,})')
@@ -240,15 +243,19 @@ function Test-MarkdownTarget {
 }
 
 $documents = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
-$rootReadme = Join-Path $resolvedRoot 'README.md'
-if (Test-Path -LiteralPath $rootReadme -PathType Leaf) {
-    $documents.Add((Get-Item -LiteralPath $rootReadme))
+foreach ($relativePath in @('README.md', 'AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md')) {
+    $documentPath = Join-Path $resolvedRoot $relativePath
+    if (Test-Path -LiteralPath $documentPath -PathType Leaf) {
+        $documents.Add((Get-Item -LiteralPath $documentPath))
+    }
 }
 
-if (Test-Path -LiteralPath $documentationRoot -PathType Container) {
-    $additionalDocuments = Get-ChildItem -LiteralPath $documentationRoot -Filter '*.md' -File -Recurse
-    foreach ($document in $additionalDocuments) {
-        $documents.Add($document)
+foreach ($relativeDirectory in @('docs', '.agents/skills', '.github/instructions')) {
+    $directoryPath = Join-Path $resolvedRoot $relativeDirectory
+    if (Test-Path -LiteralPath $directoryPath -PathType Container) {
+        foreach ($document in Get-ChildItem -LiteralPath $directoryPath -Filter '*.md' -File -Recurse) {
+            $documents.Add($document)
+        }
     }
 }
 
@@ -258,7 +265,7 @@ if ($documents.Count -eq 0) {
 }
 
 foreach ($document in $documents) {
-    $lines = Get-Content -LiteralPath $document.FullName
+    $lines = @(Get-Content -LiteralPath $document.FullName -Encoding utf8)
     $insideFence = $false
     $fenceCharacter = $null
     $fenceLength = 0
@@ -289,6 +296,11 @@ foreach ($document in $documents) {
 
         if ($insideFence) {
             continue
+        }
+
+        # Check the repository's standalone Claude import as well as Markdown links.
+        if ($document.Name -eq 'CLAUDE.md' -and $line -match '^\s*@(?<target>\S+)\s*$') {
+            Test-MarkdownTarget -Document $document -Line $lineNumber -RawTarget $Matches['target']
         }
 
         foreach ($match in [regex]::Matches(

@@ -1,36 +1,28 @@
-# Catchlogr documentation
+# Documentation map
 
-The root [README](../README.md) is the canonical entry point for local setup.
-This index lists the maintained supporting documents.
+[AGENTS.md](../AGENTS.md) contains shared agent rules.
+[README](../README.md) is the only local setup guide. Read individual guides
+when needed; do not load the entire documentation directory for every task.
 
-## Getting started
+| Guide owns | Document | Verify changes against |
+| --- | --- | --- |
+| Setup and implemented overview | [README](../README.md) | [SDK](../global.json), [solution](../Catchlogr.slnx), launch settings, Compose |
+| Check selection and test limitations | [Validation](VALIDATION.md) | [CI](../.github/workflows/ci.yml), test projects/factories |
+| MVVM, local storage, navigation, UTC examples | [Mobile architecture](MOBILE_ARCHITECTURE.md) | [Mobile composition](../src/Catchlogr.Mobile/MauiProgram.cs), Pages, ViewModels |
+| Backend selection and device addresses | [Mobile configuration](MOBILE_CONFIGURATION.md) | [AppSettings](../src/Catchlogr.Mobile/Configuration/AppSettings.cs), [URL resolver](../src/Catchlogr.Mobile/Configuration/PlatformApiUrl.cs), Mobile project/settings |
+| Reconciliation and photo state | [Sync strategy](SYNC_STRATEGY.md) | [Trip sync](../src/Catchlogr.Sync/Services/FishingTripSyncService.cs), [catch sync](../src/Catchlogr.Sync/Services/CatchSyncService.cs), local repositories |
+| Weather/moon ownership and enrichment | [Weather](WEATHER_INTEGRATION.md) | [Trip service](../src/Catchlogr.Application/Services/FishingTripService.cs), provider adapter/options |
+| Location search behavior | [Location](LOCATION_SEARCH_INTEGRATION.md) | [Endpoint](../src/Catchlogr.Api/Endpoints/LocationEndpoints.cs), [adapter](../src/Catchlogr.Infrastructure/Location/LocationIqLocationSearchService.cs) |
+| Identity email and Web actions | [Identity email](IDENTITY_EMAIL.md) | [API composition](../src/Catchlogr.Api/Program.cs), Email, Web pages |
+| CI triggers and deployment | [CI/CD](CI-CD.md) | [CI](../.github/workflows/ci.yml), [deployment](../.github/workflows/deploy-dev.yml), [Compose](../deploy/docker/compose.dev.yml) |
+| Unimplemented product/hardening work | [Roadmap](ROADMAP.md) | Implementation and regression evidence before marking complete |
 
-- [Quick Start](QUICK_START.md) — shortest local startup path
-- [Setup Checklist](SETUP_CHECKLIST.md) — environment and smoke-test checklist
-- [Mobile Configuration](MOBILE_CONFIGURATION.md) — backend selection, URLs,
-  local state isolation, and embedded settings
-
-## Architecture and features
-
-- [Mobile Architecture](MOBILE_ARCHITECTURE.md) — MVVM, local storage,
-  authentication, navigation, and project boundaries
-- [Sync Strategy](SYNC_STRATEGY.md) — trip/catch ordering, conflict handling,
-  weather retry, and private photos
-- [Weather Integration](WEATHER_INTEGRATION.md) — server enrichment and offline display
-- [Location Search Integration](LOCATION_SEARCH_INTEGRATION.md) — LocationIQ boundary
-- [Identity Email](IDENTITY_EMAIL.md) — Resend, confirmation, and password recovery
-
-## Delivery and planning
-
-- [CI/CD](CI-CD.md) — current GitHub Actions and development deployment
-- [Roadmap](ROADMAP.md) — implemented baseline and future work
-
-`SETUP_SUMMARY.md` is a compatibility stub for an obsolete Phase 0 snapshot and
-is not maintained as an operational guide.
-
-## Documentation maintenance
-
-When code changes commands, routes, configuration, architecture, or user-visible
-behavior, update the relevant guide in the same pull request. Treat executable
-files—project files, launch settings, endpoint mappings, Compose definitions, and
-workflows—as the final source of truth when resolving drift.
+## Maintenance
+- Update the owning guide in the same change as code or workflow changes.
+- Describe current behavior separately from requirements and future work.
+- Link to commands and configuration at their owning location; avoid copies.
+- Keep backlog items in ROADMAP.md, not repeated at the end of feature guides.
+- Remove obsolete documents; Git history preserves historical snapshots.
+- Run `./scripts/validate-docs.ps1` in PowerShell after documentation/instruction edits.
+  It checks local links, heading anchors, code fences, and Claude's local import.
+  It does not prove that prose matches code; review the sources above.

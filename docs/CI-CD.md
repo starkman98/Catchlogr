@@ -1,7 +1,8 @@
 # CI/CD
 
-Catchlogr uses two GitHub Actions workflows on a self-hosted Linux runner labelled
-`self-hosted`, `linux`, `x64`, and `catchlogr`.
+Catchlogr uses two GitHub Actions workflows. Backend and documentation jobs use
+a self-hosted Linux runner labelled `self-hosted`, `linux`, `x64`, and
+`catchlogr`; pull-request Mobile tests use `windows-latest`.
 
 ## Branch flow
 
@@ -25,7 +26,12 @@ job rejects a pull request to `main` unless its source branch is `dev`.
    - restores `tests/Catchlogr.Api.IntegrationTests`;
    - builds it in Release; and
    - runs it without rebuilding.
-3. `validate-main-source`
+3. `mobile-tests`
+   - installs SDK 10.0.302 and the maui-windows workload on windows-latest;
+   - restores and runs Catchlogr.Mobile.Tests in Release.
+4. `documentation`
+   - runs scripts/validate-docs.ps1 with pwsh.
+5. `validate-main-source`
    - runs only for a pull request targeting `main`;
    - requires the source branch to be `dev`.
 
@@ -33,17 +39,20 @@ The API integration suite replaces PostgreSQL with EF Core InMemory, Resend with
 an in-memory sender, and photo storage with an isolated temporary directory. CI
 therefore does not require a PostgreSQL service.
 
-`tests/Catchlogr.Mobile.Tests` targets Windows/MAUI and is not executed by the
-Linux workflow. Run it on a configured Windows machine until a Windows CI job is
-added.
-
-The self-hosted runner supplies the pinned .NET SDK; workflows verify it with
-`dotnet --info` rather than installing it on every job.
+The self-hosted runner supplies the .NET SDK; its jobs report dotnet --info
+instead of installing an SDK. The Windows job explicitly installs the version
+above. See [Validation](VALIDATION.md) for local commands and test limitations.
 
 ## Development deployment
 
-`.github/workflows/deploy-dev.yml` runs on pushes to `dev` and manual dispatch.
-It has the following dependency chain:
+`.github/workflows/deploy-dev.yml` runs on pushes to `dev` unless all changed
+paths match README.md, docs/**, or scripts/**. It also permits manual dispatch;
+that trigger has no branch guard in the workflow. The remote script always
+deploys origin/dev. Agent instruction files are not in the path exclusions, so
+merging an AGENTS.md, CLAUDE.md, or Copilot instruction edit can trigger deployment.
+
+The deployment workflow gates on its own backend test jobs, not Mobile or
+documentation checks. It has the following dependency chain:
 
 ```text
 unit-tests ───────┐
