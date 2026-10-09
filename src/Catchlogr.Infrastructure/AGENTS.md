@@ -20,7 +20,8 @@ or the provider directory for adapters. Consult only the affected guide:
 [email](../../docs/IDENTITY_EMAIL.md).
 
 Run affected adapter/storage unit tests using
-[Validation](../../docs/VALIDATION.md). For schema changes, review the migration
+[Validation](../../docs/VALIDATION.md) and the root validation helper.
+For schema changes, review the migration
 and apply it to disposable local PostgreSQL. API tests use EF InMemory and do
 not establish PostgreSQL SQL, constraint, or migration correctness. Migration
 commands live in the [README](../../README.md).

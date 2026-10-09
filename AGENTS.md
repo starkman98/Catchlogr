@@ -72,6 +72,9 @@ Application, Domain, Contracts, and Web use the shared rules and relevant guide.
 | Product scope and known hardening work | [Roadmap](docs/ROADMAP.md) |
 
 ## Finish
+- Preview relevant checks with `./scripts/validate-change.ps1`; add `-BaseRef`
+  for committed branch changes and `-Run` to execute. Review its manual items
+  and broaden for behavioral effects that paths cannot establish.
 - Run the smallest relevant checks; broaden for affected boundaries or failures.
   Documentation-only work needs documentation validation, not a solution build.
 - Update the existing owning guide in the same change when behavior, routes,

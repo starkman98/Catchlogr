@@ -19,5 +19,6 @@ Infrastructure for exception-to-response handling. For account/email flows,
 read [Identity email](../../docs/IDENTITY_EMAIL.md); Web owns its Razor pages.
 
 Run affected API integration tests and relevant service/validator unit tests
-using [Validation](../../docs/VALIDATION.md). Cover unauthenticated and
+using [Validation](../../docs/VALIDATION.md) and the root validation helper.
+Cover unauthenticated and
 cross-account requests when changing authorization or resource access.

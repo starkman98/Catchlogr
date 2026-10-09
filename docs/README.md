@@ -33,7 +33,7 @@ a focused request to identify the applicable instructions and smallest checks.
 | Guide owns | Document | Verify changes against |
 | --- | --- | --- |
 | Setup and implemented overview | [README](../README.md) | [SDK](../global.json), [solution](../Catchlogr.slnx), launch settings, Compose |
-| Check selection and test limitations | [Validation](VALIDATION.md) | [CI](../.github/workflows/ci.yml), test projects/factories |
+| Check selection and test limitations | [Validation](VALIDATION.md) | [Selection helper](../scripts/Validation.psm1), [CI](../.github/workflows/ci.yml), test projects/factories |
 | MVVM, local storage, navigation, UTC examples | [Mobile architecture](MOBILE_ARCHITECTURE.md) | [Mobile composition](../src/Catchlogr.Mobile/MauiProgram.cs), Pages, ViewModels |
 | Backend selection and device addresses | [Mobile configuration](MOBILE_CONFIGURATION.md) | [AppSettings](../src/Catchlogr.Mobile/Configuration/AppSettings.cs), [URL resolver](../src/Catchlogr.Mobile/Configuration/PlatformApiUrl.cs), Mobile project/settings |
 | Reconciliation and photo state | [Sync strategy](SYNC_STRATEGY.md) | [Trip sync](../src/Catchlogr.Sync/Services/FishingTripSyncService.cs), [catch sync](../src/Catchlogr.Sync/Services/CatchSyncService.cs), local repositories |

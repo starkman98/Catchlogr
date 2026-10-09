@@ -2,8 +2,9 @@
 
 Applies to this directory and descendants, together with the root instructions.
 
-- Choose suites and commands from [Validation](../docs/VALIDATION.md). Start
-  with affected tests while iterating; broaden when a boundary changes.
+- Preview suites with `./scripts/validate-change.ps1` from the repository root;
+  use [Validation](../docs/VALIDATION.md) for commands and broadening rules.
+  Start with affected tests while iterating; broaden when a boundary changes.
 - Test observable behavior and failure recovery. Reuse existing fixtures and
   test doubles; avoid tests that merely mirror implementation details.
 - Catchlogr.Tests covers services, validators, provider adapters, Sync, and Web

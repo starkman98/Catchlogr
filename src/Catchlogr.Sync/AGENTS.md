@@ -20,6 +20,7 @@ for storage/API boundaries. For persisted fields or DTO changes, inspect both
 Mobile repository/client mappings and server mappings.
 
 Run the affected FishingTripSyncServiceTests or CatchSyncServiceTests in
-Catchlogr.Tests using [Validation](../../docs/VALIDATION.md). Broaden to Mobile
+Catchlogr.Tests using [Validation](../../docs/VALIDATION.md). The root validation
+helper selects the full unit suite for service changes. Broaden to Mobile
 or API checks when those boundaries change; sync mocks do not prove SQLite
 upgrade compatibility or real network behavior.

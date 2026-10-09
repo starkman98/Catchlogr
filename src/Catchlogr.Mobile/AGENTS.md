@@ -19,6 +19,7 @@ SQLite, or Configuration for backend selection. Read only the relevant guide:
 [sync](../../docs/SYNC_STRATEGY.md).
 
 For code changes, select affected Mobile tests using
-[Validation](../../docs/VALIDATION.md); they require Windows and MAUI.
+[Validation](../../docs/VALIDATION.md) and the root validation helper; they
+require Windows and MAUI.
 XAML/platform changes also need an affected-target build and UI/device checks.
 SQLite schema changes need an upgrade check against an existing local database.
