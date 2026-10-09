@@ -4,6 +4,32 @@
 [README](../README.md) is the only local setup guide. Read individual guides
 when needed; do not load the entire documentation directory for every task.
 
+## Agent instruction maintenance
+
+Root [AGENTS.md](../AGENTS.md) owns shared rules and the scoped-instruction map.
+Project/test AGENTS.md files own local constraints and point to these guides.
+Keep commands and detailed behavior in their existing owning guide; update it
+in the same change as the behavior. Add a scope only when it needs distinct rules.
+
+- Codex discovers instructions along the path to its working directory. Root
+  instructions explicitly require reading affected scopes for sessions launched
+  at the root. See [Codex discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+- Each scoped CLAUDE.md imports its adjacent AGENTS.md. Claude loads nested
+  CLAUDE.md files on demand; the root import stays small. Check loaded files with
+  `/context`. See [Claude memory](https://code.claude.com/docs/en/memory).
+- Copilot's path-specific files in .github/instructions use applyTo globs and
+  direct the agent to the owning AGENTS.md. Support varies by Copilot surface;
+  confirm the adapter appears in instruction references where available. If
+  linked files cannot be read, attach the root and relevant scoped instructions.
+  See [Copilot instructions](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions).
+
+Keep adapters as pointers/imports rather than copies of project rules. Link
+validation checks their targets; it cannot establish that an installed agent
+actually loads or follows them. After changes, check a session in each tool with
+a focused request to identify the applicable instructions and smallest checks.
+
+## Guide ownership
+
 | Guide owns | Document | Verify changes against |
 | --- | --- | --- |
 | Setup and implemented overview | [README](../README.md) | [SDK](../global.json), [solution](../Catchlogr.slnx), launch settings, Compose |
@@ -25,4 +51,5 @@ when needed; do not load the entire documentation directory for every task.
 - Remove obsolete documents; Git history preserves historical snapshots.
 - Run `./scripts/validate-docs.ps1` in PowerShell after documentation/instruction edits.
   It checks local links, heading anchors, code fences, and Claude's local import.
+  Scoped AGENTS.md/CLAUDE.md files under src/tests and Copilot adapters are included.
   It does not prove that prose matches code; review the sources above.

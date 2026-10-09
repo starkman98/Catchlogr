@@ -3,8 +3,9 @@
 Validates Catchlogr's local Markdown links, heading anchors, and code fences.
 
 .DESCRIPTION
-Scans README.md, agent entry points, docs/**/*.md, and optional shared skills or
-Copilot instruction directories. External URLs are intentionally skipped so
+Scans README.md, root and src/tests agent entry points, docs/**/*.md, and optional
+shared skills or Copilot instruction directories. Build outputs are skipped.
+External URLs are intentionally skipped so
 temporary network or third-party failures cannot make pull-request CI flaky.
 
 .EXAMPLE
@@ -255,6 +256,31 @@ foreach ($relativeDirectory in @('docs', '.agents/skills', '.github/instructions
     if (Test-Path -LiteralPath $directoryPath -PathType Container) {
         foreach ($document in Get-ChildItem -LiteralPath $directoryPath -Filter '*.md' -File -Recurse) {
             $documents.Add($document)
+        }
+    }
+}
+
+# Discover scoped entry points without traversing generated dependency/build trees.
+foreach ($relativeDirectory in @('src', 'tests')) {
+    $directoryPath = Join-Path $resolvedRoot $relativeDirectory
+    if (-not (Test-Path -LiteralPath $directoryPath -PathType Container)) {
+        continue
+    }
+
+    $pendingDirectories = [System.Collections.Generic.Stack[string]]::new()
+    $pendingDirectories.Push($directoryPath)
+    while ($pendingDirectories.Count -gt 0) {
+        $currentDirectory = $pendingDirectories.Pop()
+        foreach ($entry in Get-ChildItem -LiteralPath $currentDirectory) {
+            if ($entry -is [System.IO.DirectoryInfo]) {
+                if ($entry.Name -notin @('bin', 'obj', 'node_modules') -and
+                    -not ($entry.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                    $pendingDirectories.Push($entry.FullName)
+                }
+            }
+            elseif ($entry.Name -in @('AGENTS.md', 'CLAUDE.md')) {
+                $documents.Add($entry)
+            }
         }
     }
 }

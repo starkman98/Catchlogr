@@ -6,6 +6,9 @@ Shared instructions for Codex, GitHub Copilot, and Claude Code.
 - Give a short plan before editing, then proceed within the requested scope.
 - Inspect the working-tree diff; preserve unrelated changes.
 - Search targeted paths with `rg`. Read the relevant guide below, not all docs.
+- Before editing a scoped directory below, read its AGENTS.md, even when the
+  session starts at the repository root. For cross-project changes, read only
+  the affected scopes. Local rules supplement these shared rules.
 - Ask only when a missing decision materially affects the result. Choose simple
   implementation details yourself; do not repeatedly ask for the same approval.
 - Repository instructions do not override tool permissions. Explain access
@@ -13,15 +16,10 @@ Shared instructions for Codex, GitHub Copilot, and Claude Code.
 - Do not push, merge, deploy, or apply migrations to a shared database unless
   requested. A push to `dev` can deploy the application and run migrations.
 
-## Project map
-- Mobile: MAUI MVVM, device features, SQLite repositories, typed API clients.
-- Sync: platform-neutral local entities, abstractions, and reconciliation.
-- Api: Minimal API endpoints, authentication, and server DI composition.
-- Application: business services, validation, and provider-neutral interfaces.
-- Domain: domain entities and repository interfaces.
-- Contracts: API DTOs, separate from domain entities; prefer immutable records.
-- Infrastructure: PostgreSQL/EF Core, Identity, provider adapters, photo storage.
-- Web: Razor Pages for account confirmation and password recovery.
+## Architecture boundaries
+Application owns business services/validation; Domain owns entities/repository
+interfaces. Contracts owns API DTOs, separate from domain entities; prefer
+immutable records. Web owns Razor account confirmation/password recovery pages.
 
 Mobile references Application, Contracts, and Sync; never Infrastructure.
 Sync references Contracts and must not depend on MAUI or server infrastructure.
@@ -32,31 +30,34 @@ providers directly. HTTPS is required except the configured Local mobile backend
 - Prefer small, composable classes; use DI and thin repositories.
 - One type per file; filename matches the type. Add XML summaries to public
   types and members; add usage examples where they clarify non-obvious behavior.
-- Keep endpoint handlers thin and use Minimal APIs. Validate inputs with
-  FluentValidation or focused helpers; return meaningful validation errors.
-- Use appropriate HTTP statuses: 201 creation, 400 validation, 404 missing or
-  inaccessible resource, 409 conflict.
+- Validate inputs with FluentValidation or focused helpers; return meaningful
+  validation errors.
 - Enforce resource ownership. Preserve ASP.NET Core Identity bearer/refresh-token
   authentication; do not assume tokens are JWTs or add auth shortcuts.
-- Preserve backend/account isolation for SQLite, tokens, cursors, and photos.
 - Use async/await for I/O, with CancellationToken parameters; never block using
   `.Result` or `.Wait()`. Propagate cancellation where supported.
 - Use nullable reference types, input guards, and structured error handling.
   Log useful errors without secrets, tokens, connection strings, precise
   coordinates, or provider URLs containing credentials.
 - Use C# naming: PascalCase public members, _camelCase private fields, I-prefixed
-  interfaces. Register services in Program.cs or MauiProgram.cs as appropriate.
-- Store timestamps as UTC. Convert local picker values at the ViewModel boundary.
-- ViewModels use injected abstractions, not SQLite or HttpClient directly.
-- Use partial-property ObservableProperty syntax; keep Mobile's preview language
-  setting. Marshal background UI updates to the main thread; expose busy state.
-- Use EF Core migrations for server schema changes. External identifiers are
-  GUIDs; local integer IDs stay local. Never commit secrets; keep production
-  CORS restricted to explicit origins.
-- Preserve upload-before-download and trip-before-catch sync ordering.
-  Do not claim atomic reconciliation or remote-delete propagation already exists.
+  interfaces. Store timestamps as UTC.
+- External identifiers are GUIDs; local integer IDs stay local. Never commit
+  secrets; keep production CORS restricted to explicit origins.
+
+## Scoped instructions
+
+| Editing | Read first |
+| --- | --- |
+| Mobile | [Mobile rules](src/Catchlogr.Mobile/AGENTS.md) |
+| Sync | [Sync rules](src/Catchlogr.Sync/AGENTS.md) |
+| API | [API rules](src/Catchlogr.Api/AGENTS.md) |
+| Infrastructure | [Infrastructure rules](src/Catchlogr.Infrastructure/AGENTS.md) |
+| Tests | [Test rules](tests/AGENTS.md) |
+
+Application, Domain, Contracts, and Web use the shared rules and relevant guide.
 
 ## Read only what the task needs
+
 | Task | Guide |
 | --- | --- |
 | First-time setup, project layout | [README](README.md) |

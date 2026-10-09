@@ -50,6 +50,11 @@ as passing.
   project. Passing them does not validate Android/iOS UI or device behavior.
 - Documentation validation is offline and does not check external URLs or
   semantic accuracy. Review changed prose against its owning source files.
+  It includes scoped AGENTS.md/CLAUDE.md under src/tests and Copilot instruction
+  adapters; generated bin/obj/node_modules and directory reparse points under
+  src/tests are skipped. It does not verify runtime instruction loading in an
+  installed agent. See the [documentation map](README.md#agent-instruction-maintenance)
+  for adapter maintenance and manual loading checks.
 
 See [CI/CD](CI-CD.md) for where these checks run and
 [README](../README.md) for local database setup and migration commands.
