@@ -6,8 +6,8 @@ Shared instructions for Codex, GitHub Copilot, and Claude Code.
 - Give a short plan before editing, then proceed within the requested scope.
 - Inspect the working-tree diff; preserve unrelated changes.
 - Search targeted paths with `rg`. Read the relevant guide below, not all docs.
-- For validation or documentation maintenance, use the relevant shared workflow
-  from [the skill index](docs/README.md#shared-agent-workflows) when useful.
+- Select applicable workflows from the table below without waiting for the user
+  to name a skill. Read only those needed for the task.
 - Before editing a scoped directory below, read its AGENTS.md, even when the
   session starts at the repository root. For cross-project changes, read only
   the affected scopes. Local rules supplement these shared rules.
@@ -17,6 +17,21 @@ Shared instructions for Codex, GitHub Copilot, and Claude Code.
   failures accurately; never disable safeguards to avoid an approval.
 - Do not push, merge, deploy, or apply migrations to a shared database unless
   requested. A push to `dev` can deploy the application and run migrations.
+
+## Task workflows
+
+Use native skill discovery when available; otherwise read the linked SKILL.md
+directly and follow it. Apply only relevant parts, preserve the user's scope,
+and avoid loading every workflow. Workflow selection needs no extra approval.
+
+| Task involves | Workflow |
+| --- | --- |
+| A feature or field crossing project boundaries | [change-feature](.agents/skills/change-feature/SKILL.md) |
+| Reconciliation, cursors, conflicts, deletion, photo retries | [review-sync](.agents/skills/review-sync/SKILL.md) |
+| Persisted structure, migrations, existing-data upgrades | [change-schema](.agents/skills/change-schema/SKILL.md) |
+| Authentication lifecycle, account/backend isolation, resource ownership | [review-account-isolation](.agents/skills/review-account-isolation/SKILL.md) |
+| Validation or build/test failure diagnosis | [validate-change](.agents/skills/validate-change/SKILL.md) |
+| Documentation changes or affected documented behavior | [maintain-docs](.agents/skills/maintain-docs/SKILL.md) |
 
 ## Architecture boundaries
 Application owns business services/validation; Domain owns entities/repository

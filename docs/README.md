@@ -30,31 +30,44 @@ a focused request to identify the applicable instructions and smallest checks.
 
 ## Shared agent workflows
 
-Load only the workflow relevant to the current task:
+Agents select applicable workflows from the task table in root AGENTS.md without
+waiting for the user to name them. Read only the relevant skill bodies:
 
 | Workflow | Shared source | Example request |
 | --- | --- | --- |
 | Focused validation and failure diagnosis | [validate-change](../.agents/skills/validate-change/SKILL.md) | Validate this branch against origin/dev and explain remaining manual checks. |
 | Documentation accuracy and pruning | [maintain-docs](../.agents/skills/maintain-docs/SKILL.md) | Review the documentation affected by this sync change. |
+| Features across project boundaries | [change-feature](../.agents/skills/change-feature/SKILL.md) | Add water temperature to catches, including offline editing and sync. |
+| Sync transitions and failure recovery | [review-sync](../.agents/skills/review-sync/SKILL.md) | Investigate catches disappearing after an interrupted sync. |
+| Persistence and upgrade compatibility | [change-schema](../.agents/skills/change-schema/SKILL.md) | Add this persisted field while preserving existing databases. |
+| Authentication and data isolation | [review-account-isolation](../.agents/skills/review-account-isolation/SKILL.md) | Fix account switching showing the previous user's photos. |
 
-Codex discovers repository skills in .agents/skills; select `$validate-change`
-or `$maintain-docs`, or describe the task. Copilot supports this directory in
-skill-enabled surfaces; ask it to use the named skill. See the official
+Codex discovers repository skills in .agents/skills and allows implicit selection
+by default. Copilot supports this directory in skill-enabled surfaces and selects
+skills by their descriptions. Describe the task normally; explicit skill names
+are optional. See the official
 [Codex skills](https://learn.chatgpt.com/docs/build-skills) and
 [Copilot skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
 documentation. Discovery and invocation depend on the installed client.
 
-Claude Code uses thin command adapters: `/validate-change` and `/maintain-docs`.
-They explicitly direct Claude to read the shared workflow, so its body stays in
-one place. These use Claude's supported .claude/commands format; they avoid
-symlinks on Windows and a second set of SKILL.md files that Copilot could also
-discover. See [Claude skills and command compatibility](https://code.claude.com/docs/en/skills).
+Claude Code uses a thin .claude/commands adapter for each skill. This supported
+format allows automatic selection from its description as well as explicit
+`/skill-name` invocation. Each adapter directs Claude to read the shared workflow,
+so its body stays in one place without Windows symlinks or duplicate SKILL.md
+discovery. See [Claude skills and command compatibility](https://code.claude.com/docs/en/skills).
+
+Keep meaningful trigger descriptions in both the shared skill and its Claude
+adapter. Preserve default automatic invocation: do not add Codex's
+allow_implicit_invocation: false or Claude's disable-model-invocation: true for
+these workflows. Selecting a workflow does not authorize external mutations or
+bypass tool permissions.
 
 Start a fresh session after adding workflows if the client does not refresh its
-discovery list. Check each tool with the example requests above and confirm that
-it reads the shared source, chooses appropriate checks, and reports manual limits.
-When discovery is unavailable, explicitly ask it to read the shared file. Offline
-link validation covers the sources and adapters, not live client loading.
+discovery list. Check each tool with the example requests above, without naming
+skills, and confirm it reads the shared source, chooses appropriate checks, and
+reports manual limits. Root instructions provide direct-file routing when native
+discovery is unavailable. Client settings can still disable skills or repository
+instructions; offline link validation cannot establish live client behavior.
 
 ## Guide ownership
 
