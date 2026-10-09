@@ -28,6 +28,34 @@ validation checks their targets; it cannot establish that an installed agent
 actually loads or follows them. After changes, check a session in each tool with
 a focused request to identify the applicable instructions and smallest checks.
 
+## Shared agent workflows
+
+Load only the workflow relevant to the current task:
+
+| Workflow | Shared source | Example request |
+| --- | --- | --- |
+| Focused validation and failure diagnosis | [validate-change](../.agents/skills/validate-change/SKILL.md) | Validate this branch against origin/dev and explain remaining manual checks. |
+| Documentation accuracy and pruning | [maintain-docs](../.agents/skills/maintain-docs/SKILL.md) | Review the documentation affected by this sync change. |
+
+Codex discovers repository skills in .agents/skills; select `$validate-change`
+or `$maintain-docs`, or describe the task. Copilot supports this directory in
+skill-enabled surfaces; ask it to use the named skill. See the official
+[Codex skills](https://learn.chatgpt.com/docs/build-skills) and
+[Copilot skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
+documentation. Discovery and invocation depend on the installed client.
+
+Claude Code uses thin command adapters: `/validate-change` and `/maintain-docs`.
+They explicitly direct Claude to read the shared workflow, so its body stays in
+one place. These use Claude's supported .claude/commands format; they avoid
+symlinks on Windows and a second set of SKILL.md files that Copilot could also
+discover. See [Claude skills and command compatibility](https://code.claude.com/docs/en/skills).
+
+Start a fresh session after adding workflows if the client does not refresh its
+discovery list. Check each tool with the example requests above and confirm that
+it reads the shared source, chooses appropriate checks, and reports manual limits.
+When discovery is unavailable, explicitly ask it to read the shared file. Offline
+link validation covers the sources and adapters, not live client loading.
+
 ## Guide ownership
 
 | Guide owns | Document | Verify changes against |

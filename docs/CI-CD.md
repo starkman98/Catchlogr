@@ -30,7 +30,9 @@ job rejects a pull request to `main` unless its source branch is `dev`.
    - installs SDK 10.0.302 and the maui-windows workload on windows-latest;
    - restores and runs Catchlogr.Mobile.Tests in Release.
 4. `documentation`
-   - runs scripts/validate-docs.ps1 with pwsh.
+   - runs scripts/validate-docs.ps1 with pwsh;
+   - runs the dependency-free validation helper tests with pwsh using disposable
+     Git fixtures and fake application runners.
 5. `validate-main-source`
    - runs only for a pull request targeting `main`;
    - requires the source branch to be `dev`.

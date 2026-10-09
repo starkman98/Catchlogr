@@ -6,6 +6,8 @@ Shared instructions for Codex, GitHub Copilot, and Claude Code.
 - Give a short plan before editing, then proceed within the requested scope.
 - Inspect the working-tree diff; preserve unrelated changes.
 - Search targeted paths with `rg`. Read the relevant guide below, not all docs.
+- For validation or documentation maintenance, use the relevant shared workflow
+  from [the skill index](docs/README.md#shared-agent-workflows) when useful.
 - Before editing a scoped directory below, read its AGENTS.md, even when the
   session starts at the repository root. For cross-project changes, read only
   the affected scopes. Local rules supplement these shared rules.

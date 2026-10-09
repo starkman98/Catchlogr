@@ -54,6 +54,15 @@ API/DTO mappings, persisted fields, and shared behavior before reducing checks.
 Code-only changes can also require an owning-guide update; the helper cannot
 determine semantic documentation accuracy.
 
+The helper also suggests owning guides for source, configuration, test, and
+workflow paths. Each suggestion lists its triggering files and whether the guide
+is already changed. Review affected claims against implementation and tests;
+update the guide only when documented behavior changes. An already changed guide
+still needs accuracy review. Suggestions are advisory, do not select additional
+automated checks or affect exit status, and cannot cover every semantic dependency.
+The mapping lives alongside check selection in Validation.psm1; the
+[documentation map](README.md#guide-ownership) owns guide responsibilities.
+
 Run mode executes each selected command once, sequentially, from the Git root
 and reports status and elapsed time. Failed or blocked checks produce exit 1;
 other selected checks still run. Windows and the MAUI Windows workload are
@@ -61,6 +70,13 @@ required for Mobile. It never installs tools/workloads, pushes, deploys, or runs
 migrations. Missing/unsupported SDKs and other command errors remain failures.
 Manual database/UI/deployment reviews are not executed or marked passed; exit 0
 means only that selected automated checks passed (or preview succeeded).
+
+The helper's tests capture expected command and Git failures in disposable
+fixtures, printing only their assertion summary when successful. An unexpected
+entry-point assertion includes captured stdout/stderr for diagnosis. Real
+validation failures still print their details and return a nonzero exit code.
+CI runs these helper tests alongside documentation validation, using fake runners
+rather than nesting real application test suites.
 
 Both helper and documentation scripts support Windows PowerShell 5.1 and
 PowerShell 7. If script execution or filesystem access is blocked, use the

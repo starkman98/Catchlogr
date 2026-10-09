@@ -10,10 +10,11 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'Validation.psm1') -Force
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('catchlogr-validation-' + [guid]::NewGuid().ToString('N'))
 $assertions = 0
+$entryDiagnostics = ''
 
 function Assert-True {
     param([bool] $Condition, [string] $Message)
-    if (-not $Condition) { throw $Message }
+    if (-not $Condition) { throw "$Message`n$script:entryDiagnostics" }
     $script:assertions++
 }
 function Invoke-FixtureGit {
@@ -30,6 +31,32 @@ function Set-FixtureFile {
 function Get-Ids {
     param($Plan)
     return (@($Plan.Checks | ForEach-Object Id) -join ',')
+}
+
+function Invoke-FixtureEntry {
+    param([switch] $Run, [string] $BaseRef)
+    # Capture native stderr directly: PS 5.1's 2>&1 can throw before exit-code assertions.
+    $command = "& '" + $entry.Replace("'", "''") + "' -RepositoryRoot '" + $fixtureRoot.Replace("'", "''") + "'"
+    if ($Run) { $command += ' -Run' }
+    if ($BaseRef) { $command += " -BaseRef '" + $BaseRef.Replace("'", "''") + "'" }
+    $start = [Diagnostics.ProcessStartInfo]::new()
+    $start.FileName = (Get-Process -Id $PID).Path
+    $start.Arguments = '-NoProfile -EncodedCommand ' + [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    $start.UseShellExecute = $false
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = $start
+    try {
+        [void] $process.Start()
+        $errors = $process.StandardError.ReadToEndAsync()
+        $output = $process.StandardOutput.ReadToEnd()
+        $process.WaitForExit()
+        $errorText = $errors.GetAwaiter().GetResult()
+        $script:entryDiagnostics = "Fixture stdout:`n$output`nFixture stderr:`n$errorText"
+        return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output; Error = $errorText }
+    }
+    finally { $process.Dispose() }
 }
 
 try {
@@ -60,6 +87,7 @@ try {
     $plan = Get-ValidationPlan -RepositoryRoot (Join-Path $fixtureRoot 'docs')
     Assert-True ((Get-Ids $plan) -eq 'docs') 'Documentation-only changes selected application checks.'
     Assert-True ($plan.Paths.Count -eq 2) 'Staged/unstaged union, spaces, or ignored-file handling failed.'
+    Assert-True ($plan.DocumentationReview.Count -eq 0) 'Documentation-only edits suggested unrelated guides.'
     Invoke-FixtureGit @('add', 'docs')
     Invoke-FixtureGit @('commit', '--quiet', '-m', 'Fixture documentation')
     $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot -BaseRef 'fixture-base'
@@ -73,8 +101,34 @@ try {
     Assert-True ($plan.Paths -contains 'src/Catchlogr.Api/Old name.cs') 'Rename source was missed.'
     Assert-True ($plan.Paths -contains 'src/Catchlogr.Mobile/New name.cs') 'Rename destination was missed.'
     Assert-True ($plan.Paths -contains 'src/Catchlogr.Sync/Services/Example.cs') 'Deletion was missed.'
+    Assert-True (@($plan.DocumentationReview | Where-Object Guide -eq 'docs/SYNC_STRATEGY.md').Count -eq 1) 'Deleted source lost its documentation reminder.'
     Invoke-FixtureGit @('add', '--all')
     Invoke-FixtureGit @('commit', '--quiet', '-m', 'Fixture boundaries')
+
+    Set-FixtureFile 'src/Catchlogr.Sync/Services/Reminder.cs'
+    Set-FixtureFile 'src/Catchlogr.Sync/Services/Another.cs'
+    $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot
+    Assert-True ((Get-Ids $plan) -eq 'unit') 'Documentation reminders expanded automated checks.'
+    Assert-True ($plan.DocumentationReview.Count -eq 1 -and $plan.DocumentationReview[0].Guide -eq 'docs/SYNC_STRATEGY.md') 'Sync guide was not suggested exactly once.'
+    Assert-True ($plan.DocumentationReview[0].Reasons.Count -eq 2 -and -not $plan.DocumentationReview[0].Changed) 'Guide reasons or unchanged state were lost.'
+    Set-FixtureFile 'docs/SYNC_STRATEGY.md'
+    $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot
+    Assert-True ($plan.DocumentationReview[0].Changed) 'Changed guide was not identified.'
+    Remove-Item -LiteralPath (Join-Path $fixtureRoot 'src/Catchlogr.Sync/Services/Reminder.cs'), (Join-Path $fixtureRoot 'src/Catchlogr.Sync/Services/Another.cs'), (Join-Path $fixtureRoot 'docs/SYNC_STRATEGY.md')
+
+    foreach ($case in @(
+        @{ Path = 'src/Catchlogr.Api/Endpoints/New.cs'; Guide = 'README.md'; Ids = 'unit,api' },
+        @{ Path = 'src/Catchlogr.Mobile/Configuration/New.cs'; Guide = 'docs/MOBILE_CONFIGURATION.md'; Ids = 'mobile' },
+        @{ Path = 'src/Catchlogr.Infrastructure/Weather/New.cs'; Guide = 'docs/WEATHER_INTEGRATION.md'; Ids = 'unit,api' },
+        @{ Path = '.github/workflows/ownership.yml'; Guide = 'docs/CI-CD.md'; Ids = 'docs,unit,api,mobile' }
+    )) {
+        Set-FixtureFile $case.Path
+        Invoke-FixtureGit @('add', '--all')
+        Invoke-FixtureGit @('commit', '--quiet', '-m', 'Fixture guide ownership')
+        $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot -BaseRef 'HEAD~1'
+        Assert-True ((Get-Ids $plan) -eq $case.Ids) "Unexpected branch checks for $($case.Path)"
+        Assert-True (@($plan.DocumentationReview | Where-Object Guide -eq $case.Guide).Count -eq 1) "Missing branch guide reminder for $($case.Path)"
+    }
 
     foreach ($case in @(
         @{ Path = 'src/Catchlogr.Mobile/AGENTS.md'; Ids = 'docs' },
@@ -108,13 +162,13 @@ try {
     Set-FixtureFile 'src/Catchlogr.Api/Two.cs'
     $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot
     Assert-True ($plan.Checks.Count -eq 2) 'Checks were duplicated.'
-    $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { 0 })
+    $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { 0 } 6>$null)
     Assert-True (@($results | Where-Object Status -eq 'Passed').Count -eq 2) 'Successful commands were not recorded.'
-    $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { 7 })
+    $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { 7 } 6>$null)
     Assert-True (@($results | Where-Object Status -eq 'Failed').Count -eq 2) 'Failed exit codes were lost.'
     $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { 'Missing prerequisite' } -CommandRunner { throw 'Must not execute' })
     Assert-True (@($results | Where-Object Status -eq 'Blocked').Count -eq 2) 'Blocked checks were executed or reported as passing.'
-    $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { throw 'Execution failed' })
+    $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { throw 'Execution failed' } 6>$null)
     Assert-True (@($results | Where-Object Status -eq 'Failed').Count -eq 2) 'Thrown command errors were lost.'
 
     Remove-Item -LiteralPath (Join-Path $fixtureRoot 'src/Catchlogr.Api/One.cs'), (Join-Path $fixtureRoot 'src/Catchlogr.Api/Two.cs')
@@ -128,19 +182,21 @@ try {
     Set-FixtureFile 'scripts/validate-docs.ps1' "Set-Content -LiteralPath marker.txt -Value executed`nexit 7"
     Set-FixtureFile 'docs/preview.md'
     $entry = Join-Path (Split-Path -Parent $PSScriptRoot) 'validate-change.ps1'
-    $shell = (Get-Process -Id $PID).Path
-    & $shell -NoProfile -File $entry -RepositoryRoot $fixtureRoot | Out-Host
-    Assert-True ($LASTEXITCODE -eq 0) 'Preview entry point failed.'
+    $result = Invoke-FixtureEntry
+    Assert-True ($result.ExitCode -eq 0) 'Preview entry point failed.'
+    Assert-True ($result.Output -match 'Documentation review suggested: docs/VALIDATION.md') 'Preview omitted guide reminders.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $fixtureRoot 'marker.txt'))) 'Preview executed a validation command.'
-    & $shell -NoProfile -File $entry -RepositoryRoot $fixtureRoot -Run | Out-Host
-    Assert-True ($LASTEXITCODE -eq 1) 'Entry point did not propagate command failure.'
+    $result = Invoke-FixtureEntry -Run
+    Assert-True ($result.ExitCode -eq 1) 'Entry point did not propagate command failure.'
+    Assert-True ($result.Output -match 'Command exit code: 7') 'Actual command failure details were hidden.'
     Assert-True (Test-Path -LiteralPath (Join-Path $fixtureRoot 'marker.txt')) 'Run entry point did not execute its selected check.'
     Remove-Item -LiteralPath (Join-Path $fixtureRoot 'marker.txt')
     Set-FixtureFile 'scripts/validate-docs.ps1' "Write-Host 'Fixture validation passed'"
-    & $shell -NoProfile -File $entry -RepositoryRoot $fixtureRoot -Run | Out-Host
-    Assert-True ($LASTEXITCODE -eq 0) 'Successful script retained a stale native exit code.'
-    & $shell -NoProfile -File $entry -RepositoryRoot $fixtureRoot -BaseRef missing-base | Out-Host
-    Assert-True ($LASTEXITCODE -eq 1) 'Entry point did not propagate invalid base reference.'
+    $result = Invoke-FixtureEntry -Run
+    Assert-True ($result.ExitCode -eq 0) 'Successful script retained a stale native exit code.'
+    $result = Invoke-FixtureEntry -BaseRef 'missing-base'
+    Assert-True ($result.ExitCode -eq 1) 'Entry point did not propagate invalid base reference.'
+    Assert-True ($result.Error -match 'Git failed') 'Actual Git failure details were hidden.'
     Write-Host "Validation helper checks passed: $assertions assertions."
 }
 finally {

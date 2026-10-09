@@ -251,7 +251,7 @@ foreach ($relativePath in @('README.md', 'AGENTS.md', 'CLAUDE.md', '.github/copi
     }
 }
 
-foreach ($relativeDirectory in @('docs', '.agents/skills', '.github/instructions')) {
+foreach ($relativeDirectory in @('docs', '.agents/skills', '.claude/commands', '.github/instructions')) {
     $directoryPath = Join-Path $resolvedRoot $relativeDirectory
     if (Test-Path -LiteralPath $directoryPath -PathType Container) {
         foreach ($document in Get-ChildItem -LiteralPath $directoryPath -Filter '*.md' -File -Recurse) {

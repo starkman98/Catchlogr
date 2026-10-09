@@ -81,6 +81,32 @@ function Get-ValidationPlan {
         @{ Pattern = '^scripts/validate-docs\.ps1$'; Checks = @('docs') },
         @{ Pattern = '^\.github/workflows/|^deploy/|(^|/)(Dockerfile|compose[^/]*\.ya?ml)$'; Checks = @('unit', 'api', 'mobile', 'docs'); Manual = 'Review workflow triggers, required checks, deployment/service configuration, and docs/CI-CD.md; tests do not establish deployment correctness.' }
     )
+    # Advisory ownership hints, independent of automated check selection.
+    $guideRules = @(
+        @{ Pattern = '^src/Catchlogr\.Sync/|^src/Catchlogr\.Mobile/(Data|Services/.*Sync)'; Guides = @('docs/SYNC_STRATEGY.md') },
+        @{ Pattern = '^src/Catchlogr\.Mobile/'; Guides = @('docs/MOBILE_ARCHITECTURE.md') },
+        @{ Pattern = '^src/Catchlogr\.Mobile/Configuration/|^src/Catchlogr\.Mobile/.*appsettings|^src/Catchlogr\.Mobile/Platforms/'; Guides = @('docs/MOBILE_CONFIGURATION.md') },
+        @{ Pattern = '^src/.*(Weather|Moon)|^src/Catchlogr\.Application/Services/FishingTripService\.cs$'; Guides = @('docs/WEATHER_INTEGRATION.md') },
+        @{ Pattern = '^src/.*(LocationSearch|LocationIq|LocationEndpoints)'; Guides = @('docs/LOCATION_SEARCH_INTEGRATION.md') },
+        @{ Pattern = '^src/Catchlogr\.Web/|^src/.*(Identity|Email)|^src/Catchlogr\.Api/Program\.cs$'; Guides = @('docs/IDENTITY_EMAIL.md') },
+        @{ Pattern = '^src/Catchlogr\.(Api|Contracts|Domain)/|^src/Catchlogr\.Infrastructure/Persistence/|(^|/)(global\.json|NuGet\.Config|Directory\.[^/]+)$|\.(csproj|sln|slnx)$'; Guides = @('README.md') },
+        @{ Pattern = '^scripts/(validate-|Validation\.psm1|tests/)|^tests/'; Guides = @('docs/VALIDATION.md') },
+        @{ Pattern = '^\.github/workflows/|^deploy/|(^|/)(Dockerfile|compose[^/]*\.ya?ml)$'; Guides = @('docs/CI-CD.md') }
+    )
+    $guideReasons = @{}
+    foreach ($path in ($paths | Sort-Object)) {
+        if ($path -match '\.md$') { continue }
+        foreach ($rule in $guideRules) {
+            if ($path -notmatch $rule.Pattern) { continue }
+            foreach ($guide in $rule.Guides) {
+                if (-not $guideReasons.ContainsKey($guide)) { $guideReasons[$guide] = [Collections.Generic.List[string]]::new() }
+                if (-not $guideReasons[$guide].Contains($path)) { $guideReasons[$guide].Add($path) }
+            }
+        }
+    }
+    $documentationReview = foreach ($guide in ($guideReasons.Keys | Sort-Object)) {
+        [pscustomobject]@{ Guide = $guide; Reasons = @($guideReasons[$guide].ToArray()); Changed = $paths.Contains($guide) }
+    }
     $reasons = @{}
     $manual = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
     foreach ($path in ($paths | Sort-Object)) {
@@ -137,6 +163,7 @@ function Get-ValidationPlan {
         Paths = @($paths | Sort-Object)
         Checks = @($checks)
         Manual = @($manual | Sort-Object)
+        DocumentationReview = @($documentationReview)
         Prerequisites = @($prerequisites.ToArray())
     }
 }

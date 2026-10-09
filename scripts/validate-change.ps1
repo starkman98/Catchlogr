@@ -30,6 +30,11 @@ try {
     }
     foreach ($item in $plan.Prerequisites) { Write-Host "Prerequisite: $item" }
     foreach ($item in $plan.Manual) { Write-Host "Manual review required: $item" }
+    foreach ($item in $plan.DocumentationReview) {
+        $state = if ($item.Changed) { 'changed; verify accuracy' } else { 'update only if documented behavior changed' }
+        Write-Host ("Documentation review suggested: {0} ({1})" -f $item.Guide, $state)
+        Write-Host ("  Because: {0}" -f ($item.Reasons -join ', '))
+    }
     if (-not $Run) { Write-Host 'Preview only. Use -Run to execute automated checks.'; exit 0 }
     $results = @(Invoke-ValidationPlan -Plan $plan)
     foreach ($result in $results) {
