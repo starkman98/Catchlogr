@@ -118,6 +118,33 @@ evidence. Use `--no-restore` only when dependencies are already restored; use
 code change. Report missing prerequisites instead of reporting a skipped check
 as passing.
 
+## Mobile restore and import recovery
+
+If a normal Mobile test build reports the Windows App SDK
+`CustomBeforeMicrosoftCommonTargets` import error after a diagnostic restore,
+check whether that restore used a global `-p:TargetFrameworks=...` override.
+The test project has a single TargetFramework, while Mobile is multi-targeted.
+That override can leave generated NuGet props conditioned on TargetFramework,
+skipping the test project's early WinUI props import on a subsequent normal build.
+Windows App SDK targets then fail because their required props never ran.
+
+Restore the test project with its normal properties before building again:
+
+```powershell
+dotnet restore tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
+dotnet test tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj --configuration Release --no-restore
+```
+
+This repaired the observed generated imports without editing project files,
+reinstalling workloads, deleting caches, or disabling the SDK's import checks.
+Avoid applying TargetFrameworks overrides to the entire mixed project graph;
+restore with normal properties before returning to normal builds after diagnostics.
+NuGet generates the props/targets under obj; do not patch them manually. See
+[NuGet build imports](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files)
+and [restore options](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-restore).
+Missing runtime packs and denied NuGet access are separate prerequisite failures;
+this import recovery is not evidence that those prerequisites exist on a fresh machine.
+
 ## Measured local baseline
 
 Observed on Windows with SDK 10.0.401 (allowed by global.json roll-forward),
@@ -140,14 +167,17 @@ Windows Event Log access errors and took 100.48 s. The supported approved retry
 passed without source changes. Do not treat sandbox failures as product
 regressions or silently disable logging/security to make tests pass.
 
-Mobile restore initially reported up-to-date in 1.45 s, but its Release build
-failed in 2.25 s with NETSDK1112 (missing win-x64 runtime pack). An explicit
-runtime restore then encountered sandbox-denied NuGet network access. An
-approved Windows-only win-x64 restore succeeded in 43.36 s, but the subsequent
-build failed in 0.77 s with a Windows App SDK CustomBeforeMicrosoftCommonTargets
-import error, reproduced outside the sandbox. Mobile tests were not run; this
-is an unresolved local build issue, not a passing Mobile baseline. Diagnose it
-separately before using Mobile validation results to assess application changes.
+Mobile initially failed with NETSDK1112 (missing win-x64 runtime pack). An
+approved diagnostic restore downloaded the dependencies but used a global
+TargetFrameworks override, leaving incompatible generated imports for normal builds.
+Follow-up on the same date repaired those imports with a normal restore and
+successfully built the Windows Mobile app and test project in Release:
+**58 tests passed, zero failed or skipped**, with test execution reported as 776 ms.
+The build emitted five XC0025 warnings for bindings with explicit Source whose
+compilation is not enabled; they did not prevent the build or tests from passing.
+No application source, package versions, or build properties changed. This was
+not a cold-cache run; runtime packs downloaded during the earlier attempt remained
+available. See [import recovery](#mobile-restore-and-import-recovery).
 
 The helper's own checks take approximately 7 s including disposable Git fixtures
 and child-shell checks; documentation validation takes approximately 0.5 s here.
