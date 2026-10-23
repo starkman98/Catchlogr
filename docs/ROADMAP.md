@@ -48,7 +48,7 @@ Sync limitations are described in [Sync strategy](SYNC_STRATEGY.md#known-limitat
 ## Agent workflow follow-up
 
 - [x] Add focused feature-change and sync-review skills shared across the chosen tools.
-- [ ] Add environment diagnostics and validation profiles reusing existing test commands.
+- [x] Add environment diagnostics and validation profiles reusing existing test commands.
 - [ ] Check project reference boundaries automatically.
 - [ ] Confirm Copilot and Claude load shared instructions in the installed clients.
-- [ ] Review agent-file deployment exclusions before merging instruction-only changes to dev.
+- [x] Exclude agent guidance from automatic development deployment; retain mixed-change deployment and PR validation.

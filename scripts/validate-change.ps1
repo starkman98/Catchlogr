@@ -12,6 +12,8 @@ changes since the merge base. Preview does not restore, build, test, or fetch.
 [CmdletBinding()]
 param(
     [string] $BaseRef,
+    [ValidateSet('Changed', 'Backend', 'Mobile')]
+    [string] $Profile = 'Changed',
     [switch] $Run,
     [string] $RepositoryRoot = (Split-Path -Parent $PSScriptRoot)
 )
@@ -19,8 +21,9 @@ param(
 $ErrorActionPreference = 'Stop'
 try {
     Import-Module (Join-Path $PSScriptRoot 'Validation.psm1') -Force
-    $plan = Get-ValidationPlan -RepositoryRoot $RepositoryRoot -BaseRef $BaseRef
-    if ($plan.Paths.Count -eq 0) { Write-Host 'No changed files; no checks selected.'; exit 0 }
+    $plan = Get-ValidationPlan -RepositoryRoot $RepositoryRoot -BaseRef $BaseRef -Profile $Profile
+    if ($plan.Checks.Count -eq 0) { Write-Host 'No changed files; no checks selected.'; exit 0 }
+    Write-Host "Validation profile: $Profile"
     Write-Host 'Changed files:'
     $plan.Paths | ForEach-Object { Write-Host "  $_" }
     Write-Host 'Selected checks (normal incremental restore/build):'

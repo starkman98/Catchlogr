@@ -36,7 +36,9 @@ function Get-ValidationPlan {
     [CmdletBinding()]
     param(
         [string] $RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
-        [string] $BaseRef
+        [string] $BaseRef,
+        [ValidateSet('Changed', 'Backend', 'Mobile')]
+        [string] $Profile = 'Changed'
     )
 
     $root = (Invoke-ValidationGit $RepositoryRoot @('rev-parse', '--show-toplevel')).Trim()
@@ -77,7 +79,7 @@ function Get-ValidationPlan {
         @{ Pattern = '^tests/Catchlogr\.Tests/'; Checks = @('unit') },
         @{ Pattern = '^tests/Catchlogr\.Api\.IntegrationTests/'; Checks = @('api') },
         @{ Pattern = '^tests/Catchlogr\.Mobile\.Tests/'; Checks = @('mobile') },
-        @{ Pattern = '^scripts/(validate-change\.ps1|Validation\.psm1|tests/)'; Checks = @('helper', 'docs') },
+        @{ Pattern = '^scripts/(validate-change\.ps1|diagnose-environment\.ps1|Environment\.psm1|Validation\.psm1|tests/)'; Checks = @('helper', 'docs') },
         @{ Pattern = '^scripts/validate-docs\.ps1$'; Checks = @('docs') },
         @{ Pattern = '^\.github/workflows/|^deploy/|(^|/)(Dockerfile|compose[^/]*\.ya?ml)$'; Checks = @('unit', 'api', 'mobile', 'docs'); Manual = 'Review workflow triggers, required checks, deployment/service configuration, and docs/CI-CD.md; tests do not establish deployment correctness.' }
     )
@@ -90,7 +92,7 @@ function Get-ValidationPlan {
         @{ Pattern = '^src/.*(LocationSearch|LocationIq|LocationEndpoints)'; Guides = @('docs/LOCATION_SEARCH_INTEGRATION.md') },
         @{ Pattern = '^src/Catchlogr\.Web/|^src/.*(Identity|Email)|^src/Catchlogr\.Api/Program\.cs$'; Guides = @('docs/IDENTITY_EMAIL.md') },
         @{ Pattern = '^src/Catchlogr\.(Api|Contracts|Domain)/|^src/Catchlogr\.Infrastructure/Persistence/|(^|/)(global\.json|NuGet\.Config|Directory\.[^/]+)$|\.(csproj|sln|slnx)$'; Guides = @('README.md') },
-        @{ Pattern = '^scripts/(validate-|Validation\.psm1|tests/)|^tests/'; Guides = @('docs/VALIDATION.md') },
+        @{ Pattern = '^scripts/(validate-|diagnose-environment\.ps1|Environment\.psm1|Validation\.psm1|tests/)|^tests/'; Guides = @('docs/VALIDATION.md') },
         @{ Pattern = '^\.github/workflows/|^deploy/|(^|/)(Dockerfile|compose[^/]*\.ya?ml)$'; Guides = @('docs/CI-CD.md') }
     )
     $guideReasons = @{}
@@ -131,6 +133,18 @@ function Get-ValidationPlan {
             [void] $manual.Add("Unmapped path '$path': conservative checks selected; review its effects and extend the mapping if needed.")
         }
     }
+    # Profiles add minimum coverage; changed-file checks and manual items survive.
+    $profileIds = switch ($Profile) {
+        'Backend' { 'unit'; 'api' }
+        'Mobile' { 'mobile'; 'mobile-build' }
+    }
+    foreach ($id in $profileIds) {
+        if (-not $reasons.ContainsKey($id)) { $reasons[$id] = [Collections.Generic.List[string]]::new() }
+        $reasons[$id].Add("$Profile profile")
+    }
+    if ($Profile -eq 'Mobile') {
+        [void] $manual.Add('Windows build does not validate Android/iOS or device UI; exercise affected platform flows manually.')
+    }
     $definitions = @(
         @{ Id = 'docs'; Command = (Join-Path $root 'scripts/validate-docs.ps1'); Arguments = @() },
         @{ Id = 'helper'; Command = (Join-Path $root 'scripts/tests/validate-change.tests.ps1'); Arguments = @() },
@@ -160,6 +174,7 @@ function Get-ValidationPlan {
     [pscustomobject]@{
         RepositoryRoot = $root
         BaseRef = $BaseRef
+        Profile = $Profile
         Paths = @($paths | Sort-Object)
         Checks = @($checks)
         Manual = @($manual | Sort-Object)

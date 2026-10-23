@@ -48,10 +48,17 @@ above. See [Validation](VALIDATION.md) for local commands and test limitations.
 ## Development deployment
 
 `.github/workflows/deploy-dev.yml` runs on pushes to `dev` unless all changed
-paths match README.md, docs/**, or scripts/**. It also permits manual dispatch;
-that trigger has no branch guard in the workflow. The remote script always
-deploys origin/dev. Agent instruction files are not in the path exclusions, so
-merging an AGENTS.md, CLAUDE.md, or Copilot instruction edit can trigger deployment.
+paths match its `paths-ignore` list. This covers README.md, docs/**, scripts/**,
+AGENTS.md and CLAUDE.md at any depth, .agents/skills/**, .claude/commands/**,
+.github/copilot-instructions.md, and .github/instructions/**. Instruction-only
+pushes therefore skip deployment. A mixed push containing application, build,
+Compose, or workflow changes still triggers it. The rest of .github/** is not
+excluded. See [GitHub path-filter semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore).
+
+Pull-request CI has no path exclusions and continues validating instructions,
+skills, and documentation. Manual dispatch remains available independently of
+push path filters; that trigger has no branch guard in the workflow. The remote
+script always deploys origin/dev.
 
 The deployment workflow gates on its own backend test jobs, not Mobile or
 documentation checks. It has the following dependency chain:

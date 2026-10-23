@@ -28,6 +28,47 @@ its subdirectories. It does not fetch refs. An invalid base or missing merge bas
 fails explicitly. Without BaseRef, a clean working tree selects no checks even
 if the branch contains commits; use BaseRef when validating a whole branch.
 
+## Explicit validation profiles and environment diagnostics
+
+`Changed` is the default profile described above. `Backend` adds the complete
+unit and API integration suites; `Mobile` adds Mobile tests and a Windows app
+build. Profiles work even in a clean checkout. They are additive: changed-file
+checks, documentation suggestions, and manual review items remain in the plan.
+A Backend profile can therefore also select Mobile checks when the diff needs them.
+Commands and deduplication are shared with changed-file selection, not copied.
+
+```powershell
+# Preview first; add -Run to execute
+./scripts/validate-change.ps1 -Profile Backend
+./scripts/validate-change.ps1 -Profile Mobile -BaseRef origin/dev
+
+# Inspect prerequisites without restoring, building, or repairing anything
+./scripts/diagnose-environment.ps1
+./scripts/diagnose-environment.ps1 -Profile Mobile
+```
+
+The diagnostic command defaults to Backend and accepts `-RepositoryRoot` pointing
+to a checkout root containing global.json. It runs Git's version command and
+`dotnet --version` from that root, allowing the CLI to enforce SDK selection and
+roll-forward. Mobile also checks Windows and the installed MAUI Windows workload
+with `dotnet workload list`. It reports restore-asset presence as information,
+never as proof of freshness. These are inspection commands; no explicit network
+probe, restore, build, install, cache deletion, or security change is performed.
+
+Exit 1 means a prerequisite is blocked or inspection failed; exit 0 means only
+the inspected prerequisites passed. Missing restore assets are informational:
+normal validation restores them. NuGet connectivity, cached runtime packs,
+generated import correctness, and build/test access remain unverified. Raw
+command output is suppressed; if inspection is blocked, run the indicated version
+or workload command directly and inspect its first actionable error. For the
+observed Mobile import problem, follow [restore recovery](#mobile-restore-and-import-recovery).
+For access failures, use supported approval mechanisms rather than changing policy.
+
+See Microsoft's [SDK selection rules](https://learn.microsoft.com/en-us/dotnet/core/tools/global-json)
+for how repository working directory affects SDK resolution.
+
+## Selection and execution behavior
+
 Preview prints changed paths, selected commands/reasons, detectable prerequisites,
 and manual review items. It includes both sides of renames and deleted files,
 deduplicates checks, and ignores Git-ignored untracked files. It reads Git and
@@ -71,7 +112,10 @@ migrations. Missing/unsupported SDKs and other command errors remain failures.
 Manual database/UI/deployment reviews are not executed or marked passed; exit 0
 means only that selected automated checks passed (or preview succeeded).
 
-The helper's tests capture expected command and Git failures in disposable
+The helper's tests cover profile selection, diagnostic failures with fake probes,
+and representative instruction-only/mixed deployment paths. The filter fixture
+checks the simple glob forms in the workflow; it does not run GitHub Actions.
+They capture expected command and Git failures in disposable
 fixtures, printing only their assertion summary when successful. An unexpected
 entry-point assertion includes captured stdout/stderr for diagnosis. Real
 validation failures still print their details and return a nonzero exit code.

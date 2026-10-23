@@ -8,6 +8,12 @@ on:
       - README.md
       - docs/**
       - scripts/**
+      - '**/AGENTS.md'
+      - '**/CLAUDE.md'
+      - .agents/skills/**
+      - .claude/commands/**
+      - .github/copilot-instructions.md
+      - .github/instructions/**
 
   workflow_dispatch:
 

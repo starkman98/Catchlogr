@@ -8,6 +8,7 @@ Uses disposable Git repositories and fake runners, never real application tests.
 param()
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'Validation.psm1') -Force
+Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'Environment.psm1') -Force
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('catchlogr-validation-' + [guid]::NewGuid().ToString('N'))
 $assertions = 0
 $entryDiagnostics = ''
@@ -34,10 +35,11 @@ function Get-Ids {
 }
 
 function Invoke-FixtureEntry {
-    param([switch] $Run, [string] $BaseRef)
+    param([switch] $Run, [string] $BaseRef, [string] $Profile = 'Changed')
     # Capture native stderr directly: PS 5.1's 2>&1 can throw before exit-code assertions.
     $command = "& '" + $entry.Replace("'", "''") + "' -RepositoryRoot '" + $fixtureRoot.Replace("'", "''") + "'"
     if ($Run) { $command += ' -Run' }
+    $command += " -Profile '$Profile'"
     if ($BaseRef) { $command += " -BaseRef '" + $BaseRef.Replace("'", "''") + "'" }
     $start = [Diagnostics.ProcessStartInfo]::new()
     $start.FileName = (Get-Process -Id $PID).Path
@@ -78,6 +80,13 @@ try {
     Invoke-FixtureGit @('branch', 'fixture-base')
     $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot
     Assert-True ($plan.Paths.Count -eq 0 -and $plan.Checks.Count -eq 0) 'Clean repository selected checks.'
+    $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot -Profile Backend
+    Assert-True ((Get-Ids $plan) -eq 'unit,api') 'Backend profile did not select suites in a clean repository.'
+    $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot -Profile Mobile
+    Assert-True ((Get-Ids $plan) -eq 'mobile,mobile-build' -and $plan.Manual.Count -gt 0) 'Mobile profile omitted build or manual review.'
+    $entry = Join-Path (Split-Path -Parent $PSScriptRoot) 'validate-change.ps1'
+    $result = Invoke-FixtureEntry -Profile Backend
+    Assert-True ($result.ExitCode -eq 0 -and $result.Output -match 'Backend profile' -and $result.Output -match 'Preview only') 'Clean repository profile preview exited without selecting checks.'
 
     Set-FixtureFile 'docs/existing.md' 'staged'
     Invoke-FixtureGit @('add', 'docs/existing.md')
@@ -86,6 +95,8 @@ try {
     Set-FixtureFile 'ignored/not selected.cs'
     $plan = Get-ValidationPlan -RepositoryRoot (Join-Path $fixtureRoot 'docs')
     Assert-True ((Get-Ids $plan) -eq 'docs') 'Documentation-only changes selected application checks.'
+    $profilePlan = Get-ValidationPlan -RepositoryRoot $fixtureRoot -Profile Backend
+    Assert-True ((Get-Ids $profilePlan) -eq 'docs,unit,api') 'Profile lost changed-file checks.'
     Assert-True ($plan.Paths.Count -eq 2) 'Staged/unstaged union, spaces, or ignored-file handling failed.'
     Assert-True ($plan.DocumentationReview.Count -eq 0) 'Documentation-only edits suggested unrelated guides.'
     Invoke-FixtureGit @('add', 'docs')
@@ -142,6 +153,8 @@ try {
         @{ Path = 'src/Catchlogr.Infrastructure/Persistence/New.cs'; Ids = 'unit,api' },
         @{ Path = 'src/Catchlogr.Mobile/Data/New.cs'; Ids = 'mobile' },
         @{ Path = 'scripts/Validation.psm1'; Ids = 'docs,helper' },
+        @{ Path = 'scripts/diagnose-environment.ps1'; Ids = 'docs,helper' },
+        @{ Path = 'scripts/Environment.psm1'; Ids = 'docs,helper' },
         @{ Path = '.github/workflows/new.yml'; Ids = 'docs,unit,api,mobile' },
         @{ Path = 'unknown configuration.json'; Ids = 'docs,helper,unit,api,mobile' }
     )) {
@@ -162,6 +175,8 @@ try {
     Set-FixtureFile 'src/Catchlogr.Api/Two.cs'
     $plan = Get-ValidationPlan -RepositoryRoot $fixtureRoot
     Assert-True ($plan.Checks.Count -eq 2) 'Checks were duplicated.'
+    $profilePlan = Get-ValidationPlan -RepositoryRoot $fixtureRoot -Profile Backend
+    Assert-True ($profilePlan.Checks.Count -eq 2 -and $profilePlan.Checks[0].Reasons -contains 'Backend profile') 'Profile duplicated checks or omitted selection reasons.'
     $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { 0 } 6>$null)
     Assert-True (@($results | Where-Object Status -eq 'Passed').Count -eq 2) 'Successful commands were not recorded.'
     $results = @(Invoke-ValidationPlan $plan -PrerequisiteChecker { $null } -CommandRunner { 7 } 6>$null)
@@ -197,6 +212,67 @@ try {
     $result = Invoke-FixtureEntry -BaseRef 'missing-base'
     Assert-True ($result.ExitCode -eq 1) 'Entry point did not propagate invalid base reference.'
     Assert-True ($result.Error -match 'Git failed') 'Actual Git failure details were hidden.'
+
+    # Diagnostics use fake commands: no SDK, workload, network, or app tests required.
+    Set-FixtureFile 'global.json' '{"sdk":{"version":"10.0.302","rollForward":"latestFeature"}}'
+    $goodProbe = {
+        param($Command, $CommandArguments)
+        if ((Get-Location).Path -ne $fixtureRoot) { throw 'Probe did not run from repository root.' }
+        $output = if ($Command -eq 'git') { 'git version 2.50.0' }
+            elseif ($CommandArguments[0] -eq '--version') { '10.0.401' }
+            else { "Installed workloads`nmaui-windows 10.0.20 SDK 10.0.401" }
+        [pscustomobject]@{ ExitCode = 0; Output = $output }
+    }
+    $originalLocation = (Get-Location).Path
+    $diagnostics = @(Get-EnvironmentDiagnostics -RepositoryRoot $fixtureRoot -CommandProbe $goodProbe)
+    Assert-True (@($diagnostics | Where-Object Status -eq 'Blocked').Count -eq 0) 'Valid backend prerequisites were blocked.'
+    Assert-True (($diagnostics | Where-Object Id -eq 'sdk').Detail -match '10.0.401') 'Resolved roll-forward SDK was not reported.'
+    Assert-True (($diagnostics | Where-Object Id -eq 'tests/Catchlogr.Tests').Detail -match 'absent') 'Missing assets not explained.'
+    Set-FixtureFile 'tests/Catchlogr.Tests/obj/project.assets.json' '{}'
+    $diagnostics = @(Get-EnvironmentDiagnostics -RepositoryRoot $fixtureRoot -CommandProbe $goodProbe)
+    Assert-True (($diagnostics | Where-Object Id -eq 'tests/Catchlogr.Tests').Detail -match 'does not prove freshness') 'Existing assets were incorrectly treated as ready.'
+    $diagnostics = @(Get-EnvironmentDiagnostics -RepositoryRoot $fixtureRoot -Profile Mobile -CommandProbe $goodProbe -IsWindowsHost $true)
+    Assert-True (($diagnostics | Where-Object Id -eq 'workload').Status -eq 'Passed') 'Installed MAUI Windows workload was not recognized.'
+    $diagnostics = @(Get-EnvironmentDiagnostics -RepositoryRoot $fixtureRoot -Profile Mobile -CommandProbe $goodProbe -IsWindowsHost $false)
+    Assert-True (($diagnostics | Where-Object Id -eq 'windows').Status -eq 'Blocked') 'Non-Windows Mobile diagnostics passed.'
+    $badProbe = { [pscustomobject]@{ ExitCode = 1; Output = 'private diagnostic output' } }
+    $diagnostics = @(Get-EnvironmentDiagnostics -RepositoryRoot $fixtureRoot -Profile Mobile -CommandProbe $badProbe -IsWindowsHost $true)
+    Assert-True (@($diagnostics | Where-Object Status -eq 'Blocked').Count -eq 2) 'Missing Git/SDK prerequisites were not blocked.'
+    Assert-True (($diagnostics | Where-Object Id -eq 'workload').Status -eq 'Info') 'Workloads inspected despite SDK failure.'
+    Assert-True (($diagnostics | ConvertTo-Json) -notmatch 'private diagnostic output') 'Diagnostics leaked raw command output.'
+    $missingWorkload = {
+        param($Command, $CommandArguments)
+        if ($CommandArguments[0] -eq 'workload') { return [pscustomobject]@{ ExitCode = 0; Output = 'android 36.0.0' } }
+        & $goodProbe $Command $CommandArguments
+    }
+    $diagnostics = @(Get-EnvironmentDiagnostics -RepositoryRoot $fixtureRoot -Profile Mobile -CommandProbe $missingWorkload -IsWindowsHost $true)
+    Assert-True (($diagnostics | Where-Object Id -eq 'workload').Status -eq 'Blocked') 'Missing MAUI Windows workload passed.'
+    Assert-True ((Get-Location).Path -eq $originalLocation) 'Diagnostics did not restore the working directory.'
+
+    # Check the real deployment filter against instruction-only and mixed changes.
+    # Only the simple glob forms used here are supported by this fixture matcher.
+    $workflow = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) '.github/workflows/deploy-dev.yml'
+    $yaml = Get-Content -LiteralPath $workflow -Raw
+    $ignoreBlock = [regex]::Match($yaml, '(?ms)^    paths-ignore:\r?\n(?<paths>(?:      - [^\r\n]+\r?\n)+)').Groups['paths'].Value
+    Assert-True ($ignoreBlock.Length -gt 0) 'Deployment path exclusions were not found.'
+    $patterns = @($ignoreBlock -split '\r?\n' | Where-Object { $_.Trim() } | ForEach-Object { ($_ -replace '^      - ', '').Trim("'") })
+    function Test-DeploymentIgnored {
+        param([string] $Path)
+        foreach ($pattern in $patterns) {
+            $expression = [regex]::Escape($pattern).Replace('\*\*/', '(?:.*/)?').Replace('\*\*', '.*').Replace('\*', '[^/]*')
+            if ($Path -cmatch ('^' + $expression + '$')) { return $true }
+        }
+        return $false
+    }
+    $agentPaths = @('AGENTS.md', 'CLAUDE.md', 'src/Catchlogr.Mobile/AGENTS.md', 'tests/CLAUDE.md', '.agents/skills/review-sync/SKILL.md', '.claude/commands/review-sync.md', '.github/copilot-instructions.md', '.github/instructions/mobile.instructions.md')
+    foreach ($path in $agentPaths) { Assert-True (Test-DeploymentIgnored $path) "Agent guidance would deploy: $path" }
+    foreach ($path in @('src/Catchlogr.Api/Program.cs', 'deploy/docker/compose.dev.yml', '.github/workflows/deploy-dev.yml', '.github/workflows/ci.yml', 'global.json')) {
+        Assert-True (-not (Test-DeploymentIgnored $path)) "Runtime/build/workflow change was excluded from deployment: $path"
+    }
+    $mixed = @('AGENTS.md', 'src/Catchlogr.Api/Program.cs')
+    Assert-True (@($mixed | Where-Object { -not (Test-DeploymentIgnored $_) }).Count -gt 0) 'Mixed application/guidance changes would skip deployment.'
+    $ci = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $workflow) 'ci.yml') -Raw
+    Assert-True ($ci -notmatch 'paths-ignore:' -and $ci -match 'scripts/validate-docs.ps1') 'Instruction-only PRs lost CI documentation validation.'
     Write-Host "Validation helper checks passed: $assertions assertions."
 }
 finally {
