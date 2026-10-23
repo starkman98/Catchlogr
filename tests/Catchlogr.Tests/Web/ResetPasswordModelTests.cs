@@ -58,6 +58,9 @@ public sealed class ResetPasswordModelTests
     [InlineData(IdentityActionResult.Succeeded)]
     [InlineData(IdentityActionResult.Rejected)]
     [InlineData(IdentityActionResult.ServiceUnavailable)]
+    [InlineData(IdentityActionResult.PasswordInvalidLength)]
+    [InlineData(IdentityActionResult.PasswordBlocklisted)]
+    [InlineData(IdentityActionResult.PasswordPredictable)]
     public async Task OnPostAsync_ApiResult_DisplaysResult(
         IdentityActionResult expectedResult)
     {

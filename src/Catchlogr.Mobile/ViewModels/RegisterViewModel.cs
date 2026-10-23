@@ -26,6 +26,10 @@ public partial class RegisterViewModel : BaseViewModel
     [ObservableProperty]
     public partial string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>Whether the password and its confirmation are hidden.</summary>
+    [ObservableProperty]
+    public partial bool HidePassword { get; set; } = true;
+
     /// <summary>A safe, user-facing registration error.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
@@ -65,6 +69,10 @@ public partial class RegisterViewModel : BaseViewModel
             await _navigator.GoToAsync(
                 AppRoutes.CheckEmailFor(Email),
                 ct);
+        }
+        catch (PasswordValidationException exception)
+        {
+            ErrorMessage = exception.Message;
         }
         catch (HttpRequestException exception)
             when (exception.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Conflict)

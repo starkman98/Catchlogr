@@ -41,7 +41,7 @@ public sealed class AuthenticationService : IAuthenticationService
             new RegisterRequest(email.Trim(), password),
             ct);
 
-        response.EnsureSuccessStatusCode();
+        await EnsurePasswordResponseAsync(response, ct);
     }
 
     /// <inheritdoc/>
@@ -93,7 +93,7 @@ public sealed class AuthenticationService : IAuthenticationService
                 newPassword),
             ct);
 
-        response.EnsureSuccessStatusCode();
+        await EnsurePasswordResponseAsync(response, ct);
     }
 
     /// <inheritdoc/>
@@ -252,6 +252,17 @@ public sealed class AuthenticationService : IAuthenticationService
         return await response.Content.ReadFromJsonAsync<AccessTokenResponse>(ct)
             ?? throw new InvalidOperationException(
                 "The authentication API returned an empty token response.");
+    }
+
+    private static async Task EnsurePasswordResponseAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var codes = PasswordValidationErrors.Read(await response.Content.ReadAsStringAsync(ct));
+            if (codes.Count > 0)
+                throw new PasswordValidationException(codes);
+        }
+        response.EnsureSuccessStatusCode();
     }
 
     private static void ValidateCredentials(string email, string password)

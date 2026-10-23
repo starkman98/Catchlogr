@@ -36,6 +36,43 @@ public sealed class AuthenticationServiceTests
             TestContext.Current.CancellationToken);
     }
 
+    /// <summary>Maps known policy failures safely for both password-setting operations.</summary>
+    [Theory]
+    [InlineData(false, "PasswordInvalidLength")]
+    [InlineData(false, "PasswordBlocklisted")]
+    [InlineData(true, "PasswordPredictable")]
+    public async Task SetPassword_KnownPolicyError_ThrowsSafeValidationException(bool reset, string code)
+    {
+        var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = JsonContent.Create(new { errors = new Dictionary<string, string[]> { [code] = ["untrusted server text"] } })
+        }));
+        var sut = CreateService(handler, Substitute.For<ITokenStore>());
+        Func<Task> action = () => reset
+            ? sut.ResetPasswordAsync("angler@example.com", "code", "reeds beside quiet water")
+            : sut.RegisterAsync("angler@example.com", "reeds beside quiet water");
+
+        var error = await action.Should().ThrowAsync<PasswordValidationException>();
+        error.Which.Message.Should().Be(PasswordRequirements.GetErrorMessage(code));
+    }
+
+    /// <summary>Keeps unrelated and malformed errors generic.</summary>
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("{\"errors\":{\"DuplicateEmail\":[\"private data\"]}}")]
+    public async Task RegisterAsync_UnknownError_DoesNotExposeServerMessage(string body)
+    {
+        var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(body)
+        }));
+        var sut = CreateService(handler, Substitute.For<ITokenStore>());
+        var error = await FluentActions.Invoking(() => sut.RegisterAsync("angler@example.com", "reeds beside quiet water"))
+            .Should().ThrowAsync<HttpRequestException>();
+        error.Which.Should().NotBeOfType<PasswordValidationException>();
+        error.Which.Message.Should().NotContain("private data");
+    }
+
     /// <summary>Verifies that blank registration credentials are rejected locally.</summary>
     [Theory]
     [InlineData("", "Password1!")]

@@ -107,6 +107,24 @@ public sealed class IdentityApiClientTests
             .Should().Be("NewPassword1!");
     }
 
+    /// <summary>Maps recognized policy failures without exposing arbitrary server messages.</summary>
+    [Theory]
+    [InlineData("PasswordInvalidLength", IdentityActionResult.PasswordInvalidLength)]
+    [InlineData("PasswordBlocklisted", IdentityActionResult.PasswordBlocklisted)]
+    [InlineData("PasswordPredictable", IdentityActionResult.PasswordPredictable)]
+    [InlineData("InvalidToken", IdentityActionResult.Rejected)]
+    [InlineData("DuplicateEmail", IdentityActionResult.Rejected)]
+    public async Task ResetPasswordAsync_ValidationFailure_ReturnsSafeResult(string code, IdentityActionResult expected)
+    {
+        var (sut, _) = CreateClient((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(new { errors = new Dictionary<string, string[]> { [code] = ["untrusted text"] } }))
+        }));
+        (await sut.ResetPasswordAsync("angler@example.com", "code", "reeds beside quiet water",
+            TestContext.Current.CancellationToken))
+            .Should().Be(expected);
+    }
+
     private static (IdentityApiClient Client, StubHttpMessageHandler Handler)
         CreateClient(
             Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>

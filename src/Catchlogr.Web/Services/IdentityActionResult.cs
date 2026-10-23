@@ -10,5 +10,14 @@ public enum IdentityActionResult
     Rejected,
 
     /// <summary>The Identity API could not currently process the action.</summary>
-    ServiceUnavailable
+    ServiceUnavailable,
+
+    /// <summary>The new password has an unsupported length.</summary>
+    PasswordInvalidLength,
+
+    /// <summary>The new password appears in the bundled blocklist.</summary>
+    PasswordBlocklisted,
+
+    /// <summary>The new password is based on the service or account.</summary>
+    PasswordPredictable
 }

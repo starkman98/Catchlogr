@@ -64,6 +64,9 @@ later attempt.
 `AuthenticationService` registers, signs in, refreshes tokens, requests email
 confirmation and password-reset messages, and reads the current user.
 `SecureTokenStore` keeps access and refresh tokens in platform SecureStorage.
+Registration and password reset show the server's
+[password-policy guidance](IDENTITY_EMAIL.md#password-policy) and recognized policy
+errors. Password entry offers visibility controls; the API owns policy enforcement.
 
 `AuthenticationMessageHandler` attaches bearer tokens to protected API calls
 and coordinates token refresh. Typed clients implement the abstractions used by
