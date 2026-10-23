@@ -28,7 +28,7 @@ For a Local build, the mobile app resolves the endpoint as follows:
 
 | Platform | API address |
 | --- | --- |
-| Windows | `https://localhost:7160` |
+| Windows | Always `https://localhost:7160` (overrides the configured Local URL) |
 | Android emulator | `http://10.0.2.2:5001` |
 | iOS simulator / Mac Catalyst | Configured Local URL, normally `https://localhost:7160` |
 | Physical device | Configured Local URL |
@@ -39,7 +39,9 @@ cleartext access is restricted to that host by
 
 To connect a physical device directly to the local API, temporarily set
 `Api:BaseUrl` in `appsettings.Local.json` to the PC's LAN address, ensure
-the API listens on the LAN interface, and rebuild. For routine physical-device
+the API listens on the LAN interface, and rebuild. Android's current cleartext
+policy permits only 10.0.2.2, so a physical Android device also needs trusted HTTPS
+or an intentional local-only network-security change. For routine physical-device
 development, prefer the Debug configuration and the deployed development API.
 
 ## Local state isolation

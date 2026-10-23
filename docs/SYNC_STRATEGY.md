@@ -54,6 +54,10 @@ Each entity service uploads dirty rows before downloading remote changes.
   `LastModified` value in that response. It does not advance to the device clock.
 - A failed download leaves the cursor unchanged.
 
+Downloaded rows and the cursor are saved separately, without a shared SQLite
+transaction. Cancellation can interrupt row application before the cursor write;
+atomic reconciliation is not currently guaranteed.
+
 The current conflict rule is last-write-wins by UTC modification timestamp.
 Clock skew and whole-record overwrites remain known trade-offs.
 
@@ -81,8 +85,9 @@ an upload-pending flag, and an optional old URL pending deletion.
 - The returned authenticated photo URL is persisted before the catch update so a
   retry can reuse it.
 - Remote photos are downloaded through the authenticated API for offline display.
-- Replaced or deleted photos are removed after the related catch synchronization
-  succeeds.
+- For replacement, old photos are removed after the catch update succeeds.
+- For catch deletion, sync removes remote photos before deleting the catch, then
+  permanently removes the local row.
 
 ## API endpoints used
 
@@ -124,4 +129,9 @@ Full synchronization currently occurs from:
   already cached the row.
 - Upload loops continue past per-record network failures, so a single sync can
   partially succeed.
+- Row application and cursor advancement are not atomic. Download loops can
+  break on cancellation and still attempt to store the response's maximum
+  timestamp; a catch with a missing local parent is skipped without excluding
+  its timestamp from cursor calculation. Cursor advancement does not prove every
+  response row was applied.
 - There is no general-purpose scheduled background sync service.

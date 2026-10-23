@@ -91,7 +91,7 @@ Focused tests:
 
 ```powershell
 dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj `
-  --filter FullyQualifiedName~Weather|FullyQualifiedName~MoonPhase
+  --filter "FullyQualifiedName~Weather|FullyQualifiedName~MoonPhase|FullyQualifiedName~FishingTripSyncServiceTests"
 ```
 
 Manual outage/retry check:
@@ -103,9 +103,4 @@ Manual outage/retry check:
 5. Sync again and confirm weather reaches PostgreSQL and SQLite.
 6. Confirm the user's water temperature and free-text weather are unchanged.
 
-## Future work
-
-- Add provider metrics, caching, and rate-limit handling.
-- Test SQLite upgrades from every released schema version.
-- Consider a separate observation series only if analytics need changing weather
-  throughout a trip or weather at individual catch times.
+Planned hardening is tracked in [Roadmap](ROADMAP.md).

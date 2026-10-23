@@ -1,65 +1,45 @@
 # Identity email and password recovery
 
-Catchlogr uses ASP.NET Core Identity's minimal API endpoints and Resend for
-transactional account email. New accounts must confirm their email before
-login.
+The API uses ASP.NET Core Identity Minimal APIs and Resend for account email.
+The default policy requires email confirmation before login. Access and refresh
+tokens use Identity's bearer scheme; do not assume JWT format.
 
-## Required API configuration
+## Configuration
 
-The API reads these settings from the standard ASP.NET Core configuration
-pipeline:
+The API validates four Email settings at startup:
 
-    Email:ApiKey
-    Email:FromAddress
-    Email:FromName
-    Email:PublicWebBaseUrl
+| Setting | Purpose |
+| --- | --- |
+| ApiKey | Resend sending key |
+| FromAddress | Valid sender on your verified domain |
+| FromName | Sender display name |
+| PublicWebBaseUrl | Externally reachable absolute HTTPS Web origin |
 
-- ApiKey is the Resend sending API key.
-- FromAddress must belong to the verified Resend domain, for example
-  account@mail.catchlogr.com.
-- FromName is the sender display name, normally Catchlogr.
-- PublicWebBaseUrl is the externally reachable HTTPS web origin, such as
-  https://dev.catchlogr.com. Identity account-action links are rewritten to
-  user-facing Razor Pages on this origin before sending.
+Use the [README setup commands](../README.md#2-configure-api-secrets).
+Environment variables use double underscores, such as Email__PublicWebBaseUrl.
+Local Web is https://localhost:7056; development Web is https://dev.catchlogr.com.
+Use the Web origin, not the API origin. Mobile backend selection does not
+configure email links. A local link works only on a device that can reach it.
 
-For local development, use user secrets:
+## Flow
 
-    dotnet user-secrets set "Email:ApiKey" "<resend-api-key>" --project src/Catchlogr.Api
-    dotnet user-secrets set "Email:FromAddress" "account@mail.catchlogr.com" --project src/Catchlogr.Api
-    dotnet user-secrets set "Email:FromName" "Catchlogr" --project src/Catchlogr.Api
-    dotnet user-secrets set "Email:PublicWebBaseUrl" "https://dev.catchlogr.com" --project src/Catchlogr.Api
+1. Registration sends a confirmation link and opens Mobile's check-email page,
+   which can resend the message.
+2. ResendIdentityEmailSender rewrites account-action links to Web Razor Pages.
+3. The user confirms via Web and returns to Mobile to sign in.
+4. Forgot password sends a reset link without revealing whether the account
+   exists; the email also includes a code for the mobile reset form.
+5. The Web reset page sends the email, reset code, and password to the API over
+   HTTPS; the API validates the Identity code and password rules.
 
-In an environment file or container configuration, use ASP.NET Core's
-double-underscore form:
-
-    Email__ApiKey=...
-    Email__FromAddress=account@mail.catchlogr.com
-    Email__FromName=Catchlogr
-    Email__PublicWebBaseUrl=https://dev.catchlogr.com
-
-Never commit the API key. All four settings are validated when the API starts.
-
-## Mobile flow
-
-1. Registration sends a confirmation link and opens the check-email page.
-2. The check-email page can resend the confirmation message.
-3. The user opens the HTTPS confirmation link, then returns to sign in.
-4. Forgot password sends a public reset link without revealing whether an
-   account exists. The email also includes the one-time code so the existing
-   mobile reset form remains available.
-5. The web reset-password page accepts the new password and sends the email,
-   reset code, and new password to the API over HTTPS.
-6. The API validates the one-time Identity code and password rules. The web
-   page then displays success, rejection, or temporary-unavailability status.
+Web uses IIdentityApiClient, not database access. It sets Referrer-Policy to
+no-referrer to limit account-action URL leakage. Keep codes and tokens out of logs.
 
 ## Verification
 
-Run:
-
-    dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
-    dotnet test tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
-    dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj
-
-Integration tests replace Resend with an in-memory sender and exercise the real
-Identity confirmation and reset tokens. A manual delivery smoke test should
-still be performed against the verified mail.catchlogr.com domain.
+Use the [validation guide](VALIDATION.md): API integration tests exercise real
+Identity confirmation/reset tokens with a capturing email sender; Web behavior
+is covered in Catchlogr.Tests and Mobile flows in Catchlogr.Mobile.Tests.
+These checks do not prove Resend delivery. When changing delivery/configuration,
+perform a separate smoke check using the configured verified sender and confirm
+the recipient can reach Web and complete the action.

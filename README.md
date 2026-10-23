@@ -71,15 +71,15 @@ Catchlogr/
 - .NET SDK `10.0.302` or a compatible .NET 10 feature band
 - Docker with Compose v2
 - the .NET MAUI workload for mobile development
-- Visual Studio 2022 on Windows, or a compatible .NET/MAUI environment
+- an IDE/toolchain supporting the pinned .NET 10 SDK and chosen MAUI target
 - Xcode on macOS for iOS and Mac Catalyst
 - a LocationIQ access token
 - Resend credentials and a verified sender for real email delivery
 
-Install EF Core tools if needed:
+Install EF Core tools matching the repository's EF Core major version:
 
 ```powershell
-dotnet tool install --global dotnet-ef
+dotnet tool install --global dotnet-ef --version "10.*"
 ```
 
 ## Local setup
@@ -166,18 +166,17 @@ Local Windows uses `https://localhost:7160`; the Android emulator is
 automatically redirected to `http://10.0.2.2:5001`. See
 [mobile configuration](docs/MOBILE_CONFIGURATION.md) for other targets.
 
-## Tests
+## Verification
 
-```powershell
-dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj
-dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
+After first-time setup, check API health, register and confirm an account, sign
+in, save a trip/catch offline, then reconnect and sync. Check that switching
+accounts does not expose another account's local rows or photos. This smoke
+check needs a reachable Web origin and configured email delivery.
 
-# Windows with the MAUI workload
-dotnet test tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
-```
-
-Linux CI runs the first two suites. Mobile tests are currently a separate
-Windows-only check.
+Use [Validation](docs/VALIDATION.md) for focused test commands and limitations.
+Pull-request CI runs unit/API suites on Linux, Mobile tests on Windows, and
+documentation validation. Routine test runs do not need real provider keys or
+a local PostgreSQL instance; running the application does.
 
 ## Database commands
 
