@@ -10,7 +10,7 @@ Sync limitations are described in [Sync strategy](SYNC_STRATEGY.md#known-limitat
 
 ## Current hardening backlog
 
-- [ ] Define and test an intentional production password policy.
+- [x] Define and test an intentional production password policy.
 - [ ] Add API rate limiting and provider-aware caching for location search.
 - [ ] Add weather provider metrics, caching, and rate-limit handling.
 - [ ] Add structured centralized logging and operational alerting.
@@ -26,6 +26,18 @@ Sync limitations are described in [Sync strategy](SYNC_STRATEGY.md#known-limitat
 - [ ] Make downloaded row application and cursor advancement atomic; test interruption/cancellation.
 
 ## Future product work
+
+### Account security
+
+- [ ] Consider optional authenticator-app MFA (TOTP) with verified setup, sign-in,
+  single-use recovery codes, and a defined lost-device recovery policy.
+  Require recent authentication for security-setting changes and verify
+  access/refresh-session behavior after password or MFA changes. Identity's 2FA
+  endpoints are currently mapped, but Mobile has no 2FA login/setup experience;
+  review endpoint exposure before enabling or advertising support. MFA is deferred
+  from the password-policy change. Evaluate passkeys separately for phishing resistance.
+- [ ] Add authentication endpoint throttling beyond per-account login lockout,
+  covering registration, password recovery, and confirmation-email requests.
 
 ### Teams and sharing
 - [ ] Team, membership, and invitation domain model.

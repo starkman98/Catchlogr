@@ -4,6 +4,7 @@ using Catchlogr.Mobile.ViewModels;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Catchlogr.Contracts.AuthenticationDTOs;
 
 namespace Catchlogr.Mobile.Tests.ViewModels;
 
@@ -49,6 +50,24 @@ public sealed class RegisterViewModelTests
             Arg.Any<CancellationToken>());
         sut.Password.Should().BeEmpty();
         sut.ConfirmPassword.Should().BeEmpty();
+        sut.IsBusy.Should().BeFalse();
+    }
+
+    /// <summary>Shows policy guidance without navigating or clearing the form after rejection.</summary>
+    [Fact]
+    public async Task RegisterCommand_PolicyRejected_ShowsSpecificError()
+    {
+        var authenticationService = Substitute.For<IAuthenticationService>();
+        authenticationService.RegisterAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PasswordValidationException([PasswordRequirements.Blocklisted])));
+        var sut = CreateViewModel(authenticationService);
+        sut.Email = "angler@example.com";
+        sut.Password = sut.ConfirmPassword = "passwordpassword";
+
+        await sut.RegisterCommand.ExecuteAsync(null);
+
+        sut.ErrorMessage.Should().Be(PasswordRequirements.GetErrorMessage(PasswordRequirements.Blocklisted));
+        sut.Password.Should().Be("passwordpassword");
         sut.IsBusy.Should().BeFalse();
     }
 

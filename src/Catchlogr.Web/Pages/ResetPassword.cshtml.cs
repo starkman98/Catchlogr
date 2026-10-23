@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Catchlogr.Web.Services;
+using Catchlogr.Contracts.AuthenticationDTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -44,6 +45,15 @@ public sealed class ResetPasswordModel : PageModel
 
     /// <summary>Gets the completed reset result, when one is available.</summary>
     public IdentityActionResult? Result { get; private set; }
+
+    /// <summary>Gets safe guidance for a rejected new password.</summary>
+    public string? PasswordErrorMessage => Result switch
+    {
+        IdentityActionResult.PasswordInvalidLength => PasswordRequirements.GetErrorMessage(PasswordRequirements.InvalidLength),
+        IdentityActionResult.PasswordBlocklisted => PasswordRequirements.GetErrorMessage(PasswordRequirements.Blocklisted),
+        IdentityActionResult.PasswordPredictable => PasswordRequirements.GetErrorMessage(PasswordRequirements.Predictable),
+        _ => null
+    };
 
     /// <summary>Validates the password-reset link before displaying the form.</summary>
     public void OnGet()

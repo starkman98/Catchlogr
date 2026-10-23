@@ -18,6 +18,8 @@ using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity;
 using Catchlogr.Api.Authentication;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Catchlogr.Contracts.AuthenticationDTOs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +52,14 @@ builder.Services
 
         options.SignIn.RequireConfirmedEmail = true;
 
+        // The application validator handles Unicode length and weak-password checks.
+        options.Password.RequiredLength = PasswordRequirements.MinimumLength;
+        options.Password.RequireDigit = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredUniqueChars = 1;
+
         options.Lockout.AllowedForNewUsers = true;
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.DefaultLockoutTimeSpan =
@@ -57,15 +67,15 @@ builder.Services
     })
     .AddEntityFrameworkStores<CatchlogrDbContext>();
 
+builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
+builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, ApplicationPasswordValidator>();
+
 builder.Services.Configure<BearerTokenOptions>(
     IdentityConstants.BearerScheme,
     options =>
     {
         options.BearerTokenExpiration = TimeSpan.FromMinutes(30);
         options.RefreshTokenExpiration = TimeSpan.FromDays(14);
-
-        //For the first checkpoint, you can leave Identity’s default password policy unchanged. Before production, define the policy
-        //intentionally and consider checking passwords against a breached-password list.
     });
 
 builder.Services.AddHttpContextAccessor();

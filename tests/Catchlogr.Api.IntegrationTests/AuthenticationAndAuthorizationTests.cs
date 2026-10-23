@@ -14,7 +14,7 @@ namespace Catchlogr.Api.IntegrationTests;
 /// </summary>
 public sealed class AuthenticationAndAuthorizationTests
 {
-    private const string Password = "Password1!";
+    private const string Password = "reeds beside quiet water";
 
     /// <summary>Verifies that a new account can register.</summary>
     [Fact]
@@ -98,7 +98,7 @@ public sealed class AuthenticationAndAuthorizationTests
     [Fact]
     public async Task PasswordReset_EmailedCode_ChangesPassword()
     {
-        const string newPassword = "NewPassword1!";
+        const string newPassword = "another quiet water passphrase";
         using var scenario = await ApiScenario.CreateAsync(
             requireConfirmedEmail: true);
         using var registration = await RegisterAsync(
@@ -110,6 +110,7 @@ public sealed class AuthenticationAndAuthorizationTests
             new Uri(WebUtility.HtmlDecode(confirmationLink)).PathAndQuery,
             TestContext.Current.CancellationToken);
         confirmation.EnsureSuccessStatusCode();
+        var originalTokens = await LoginAsync(scenario.Client, "reset@example.com");
 
         using var forgotPassword = await scenario.Client.PostAsJsonAsync(
             "/api/auth/forgotPassword",
@@ -132,6 +133,16 @@ public sealed class AuthenticationAndAuthorizationTests
         forgotPassword.IsSuccessStatusCode.Should().BeTrue();
         resetPassword.IsSuccessStatusCode.Should().BeTrue();
         tokens.AccessToken.Should().NotBeNullOrWhiteSpace();
+        using var oldLogin = await scenario.Client.PostAsJsonAsync(
+            "/api/auth/login?useCookies=false",
+            new LoginRequest("reset@example.com", Password),
+            TestContext.Current.CancellationToken);
+        oldLogin.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var refresh = await scenario.Client.PostAsJsonAsync(
+            "/api/auth/refresh",
+            new RefreshTokenRequest(originalTokens.RefreshToken),
+            TestContext.Current.CancellationToken);
+        refresh.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>Verifies that correct credentials return access and refresh tokens.</summary>

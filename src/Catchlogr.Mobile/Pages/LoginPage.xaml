@@ -37,10 +37,17 @@
             <Entry
                 AutomationId="LoginPasswordEntry"
                 IsEnabled="{Binding IsNotBusy}"
-                IsPassword="True"
+                IsPassword="{Binding HidePassword}"
+                IsTextPredictionEnabled="False"
+                IsSpellCheckEnabled="False"
                 Placeholder="Password"
                 ReturnType="Go"
                 Text="{Binding Password}" />
+
+            <HorizontalStackLayout Spacing="8">
+                <Switch IsToggled="{Binding HidePassword}" AutomationId="LoginHidePasswordSwitch" />
+                <Label Text="Hide password" VerticalOptions="Center" />
+            </HorizontalStackLayout>
 
             <Label
                 IsVisible="{Binding HasErrorMessage}"

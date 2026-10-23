@@ -30,6 +30,10 @@ public partial class ResetPasswordViewModel : BaseViewModel, IQueryAttributable
     [ObservableProperty]
     public partial string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>Whether the password and its confirmation are hidden.</summary>
+    [ObservableProperty]
+    public partial bool HidePassword { get; set; } = true;
+
     /// <summary>A safe, user-facing error.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
@@ -92,6 +96,10 @@ public partial class ResetPasswordViewModel : BaseViewModel, IQueryAttributable
             ConfirmPassword = string.Empty;
             StatusMessage =
                 "Your password has been reset. You can now sign in.";
+        }
+        catch (PasswordValidationException exception)
+        {
+            ErrorMessage = exception.Message;
         }
         catch (HttpRequestException exception)
             when (exception.StatusCode == HttpStatusCode.BadRequest)

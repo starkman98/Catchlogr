@@ -74,6 +74,20 @@ public sealed class IdentityApiClient : IIdentityApiClient
                     resetCode,
                     newPassword),
                 cancellationToken);
+            if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var codes = PasswordValidationErrors.Read(
+                    await response.Content.ReadAsStringAsync(cancellationToken));
+                var passwordResult = codes.FirstOrDefault() switch
+                {
+                    PasswordRequirements.InvalidLength => IdentityActionResult.PasswordInvalidLength,
+                    PasswordRequirements.Blocklisted => IdentityActionResult.PasswordBlocklisted,
+                    PasswordRequirements.Predictable => IdentityActionResult.PasswordPredictable,
+                    _ => (IdentityActionResult?)null
+                };
+                if (passwordResult.HasValue)
+                    return passwordResult.Value;
+            }
             return MapResponse(response.StatusCode);
         }
         catch (OperationCanceledException exception)

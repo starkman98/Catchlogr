@@ -4,6 +4,7 @@ using Catchlogr.Mobile.ViewModels;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Catchlogr.Contracts.AuthenticationDTOs;
 
 namespace Catchlogr.Mobile.Tests.ViewModels;
 
@@ -53,6 +54,26 @@ public sealed class ResetPasswordViewModelTests
         sut.NewPassword.Should().BeEmpty();
         sut.ConfirmPassword.Should().BeEmpty();
         sut.StatusMessage.Should().Contain("now sign in");
+        sut.IsBusy.Should().BeFalse();
+    }
+
+    /// <summary>Shows actionable policy errors while preserving the reset code for another attempt.</summary>
+    [Fact]
+    public async Task ResetPasswordCommand_PolicyRejected_PreservesCodeAndShowsError()
+    {
+        var authenticationService = Substitute.For<IAuthenticationService>();
+        authenticationService.ResetPasswordAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new PasswordValidationException([PasswordRequirements.InvalidLength])));
+        var sut = CreateViewModel(authenticationService);
+        sut.Email = "angler@example.com";
+        sut.ResetCode = "reset-code";
+        sut.NewPassword = sut.ConfirmPassword = "short";
+
+        await sut.ResetPasswordCommand.ExecuteAsync(null);
+
+        sut.ErrorMessage.Should().Be(PasswordRequirements.GetErrorMessage(PasswordRequirements.InvalidLength));
+        sut.ResetCode.Should().Be("reset-code");
+        sut.StatusMessage.Should().BeEmpty();
         sut.IsBusy.Should().BeFalse();
     }
 

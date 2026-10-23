@@ -26,6 +26,10 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     public partial string Password { get; set; } = string.Empty;
 
+    /// <summary>Whether the entered password is hidden.</summary>
+    [ObservableProperty]
+    public partial bool HidePassword { get; set; } = true;
+
     /// <summary>A safe, user-facing authentication error.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasErrorMessage))]

@@ -3,6 +3,7 @@
     x:Class="Catchlogr.Mobile.Pages.RegisterPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:auth="clr-namespace:Catchlogr.Contracts.AuthenticationDTOs;assembly=Catchlogr.Contracts"
     xmlns:vm="clr-namespace:Catchlogr.Mobile.ViewModels"
     x:DataType="vm:RegisterViewModel"
     Title="{Binding Title}">
@@ -36,7 +37,9 @@
             <Entry
                 AutomationId="RegisterPasswordEntry"
                 IsEnabled="{Binding IsNotBusy}"
-                IsPassword="True"
+                IsPassword="{Binding HidePassword}"
+                IsTextPredictionEnabled="False"
+                IsSpellCheckEnabled="False"
                 Placeholder="Password"
                 ReturnType="Next"
                 Text="{Binding Password}" />
@@ -44,10 +47,19 @@
             <Entry
                 AutomationId="RegisterConfirmPasswordEntry"
                 IsEnabled="{Binding IsNotBusy}"
-                IsPassword="True"
+                IsPassword="{Binding HidePassword}"
+                IsTextPredictionEnabled="False"
+                IsSpellCheckEnabled="False"
                 Placeholder="Confirm password"
                 ReturnType="Go"
                 Text="{Binding ConfirmPassword}" />
+
+            <Label Text="{x:Static auth:PasswordRequirements.Guidance}" />
+
+            <HorizontalStackLayout Spacing="8">
+                <Switch IsToggled="{Binding HidePassword}" AutomationId="RegisterHidePasswordSwitch" />
+                <Label Text="Hide passwords" VerticalOptions="Center" />
+            </HorizontalStackLayout>
 
             <Label
                 IsVisible="{Binding HasErrorMessage}"
