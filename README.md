@@ -69,7 +69,8 @@ Catchlogr/
 ## Prerequisites
 
 - .NET SDK `10.0.302` or a compatible .NET 10 feature band
-- Docker with Compose v2
+- Docker with Compose v2 (rootless Docker is supported on Linux)
+- PowerShell 7 (`pwsh`) on Linux for repository validation scripts
 - the .NET MAUI workload for mobile development
 - an IDE/toolchain supporting the pinned .NET 10 SDK and chosen MAUI target
 - Xcode on macOS for iOS and Mac Catalyst
@@ -100,6 +101,72 @@ docker compose --env-file deploy/docker/.env `
 The template exposes database `catchlogr_dev` on `localhost:5432` with user
 `catchlogr_user`.
 
+#### Linux server and worktree setup
+
+Keep PostgreSQL credentials outside the checkout so new worktrees can reuse
+one file. Run as the development account, without sudo:
+
+```bash
+mkdir -p ~/.config/catchlogr
+chmod 700 ~/.config/catchlogr
+# First-time setup only; do not overwrite an existing configured file.
+cp deploy/docker/.env.example ~/.config/catchlogr/postgres.env
+chmod 600 ~/.config/catchlogr/postgres.env
+```
+
+Edit that file and replace the example password. Mode `600` allows its owner to
+read and edit it; other users have no access. From each new worktree's root,
+create the ignored link if `deploy/docker/.env` does not already exist:
+
+```bash
+ln -s ~/.config/catchlogr/postgres.env deploy/docker/.env
+
+docker compose --env-file ~/.config/catchlogr/postgres.env \
+  -f deploy/docker/compose.local.yml up -d
+```
+
+The link also satisfies the Compose service's explicit `env_file: .env` entry;
+`--env-file` alone supplies interpolation variables and does not replace that
+entry. Alternatively, with the link in place:
+
+```bash
+cd deploy/docker
+docker compose -f compose.local.yml up -d
+```
+
+Inspect and control the existing container from any directory:
+
+```bash
+docker ps -a
+docker logs --tail 100 -f catchlogr-postgres
+docker stop catchlogr-postgres
+docker start catchlogr-postgres
+```
+
+Use Compose again after configuration changes. Changing `POSTGRES_PASSWORD`
+does not change the password of a database already initialized in the volume.
+
+For rootless Docker, use the development account's rootless context; do not use
+`sudo docker`, which may select another daemon. Inspect it with:
+
+```bash
+docker context show
+docker info --format '{{json .SecurityOptions}}'
+systemctl --user is-active docker
+loginctl show-user "$USER" -p Linger
+```
+
+Security options should include `name=rootless`. Enable the user service and
+lingering when it must survive logout and start at boot. A sandbox may deny
+socket or network access even when the daemon works; request supported approved
+execution rather than changing socket permissions or disabling safeguards.
+
+The local Compose file fixes the container name and host port. Use one shared
+PostgreSQL service across worktrees. For concurrent schema work, provision a
+separate disposable database per worktree and override its connection string
+for that process; do not run competing migrations against a shared database.
+Concurrent API/Web instances also need distinct listening ports.
+
 ### 2. Configure API secrets
 
 The API validates its database, LocationIQ, and email configuration at startup.
@@ -123,6 +190,41 @@ dotnet user-secrets set "Email:PublicWebBaseUrl" "https://localhost:7056" `
 
 The public web URL must be reachable by the email recipient. A loopback URL is
 only suitable when links are opened on the development computer.
+
+#### User secrets across machines and worktrees
+
+Visual Studio's Manage User Secrets uses the same .NET secret store as the CLI.
+The API's committed `UserSecretsId` is
+`b4bcec11-2678-4d51-8359-ad9ef0a0369e`. Its file locations are:
+
+- Windows: `%APPDATA%\Microsoft\UserSecrets\b4bcec11-2678-4d51-8359-ad9ef0a0369e\secrets.json`
+- Linux: `~/.microsoft/usersecrets/b4bcec11-2678-4d51-8359-ad9ef0a0369e/secrets.json`
+
+Worktrees with the same project ID running under the same OS account reuse this
+store automatically in Development. No secret copy or project initialization is
+needed for a new worktree. A different machine or account needs its own store.
+The Web project has a separate ID; API secrets do not automatically configure it.
+
+To migrate development secrets from Windows, transfer the API file privately
+using SSH/SFTP, keeping it outside the checkout. Adapt the server database
+connection string to match its local PostgreSQL credentials and select an email
+Web URL reachable from the recipient's browser. Never copy production credentials
+as a shortcut or paste secret values into agent conversations or logs.
+
+On Linux, protect the store as its owning development account:
+
+```bash
+chmod 700 ~/.microsoft/usersecrets/b4bcec11-2678-4d51-8359-ad9ef0a0369e
+chmod 600 ~/.microsoft/usersecrets/b4bcec11-2678-4d51-8359-ad9ef0a0369e/secrets.json
+```
+
+User Secrets and Docker env files are plaintext development configuration, not
+encrypted vaults. Filesystem permissions restrict other accounts, but agents
+running as the owner can read them. Verify required key presence without printing
+values. The API does not automatically load Docker's env file; its connection
+string must be configured separately using the settings above. For isolated
+worktree databases, a process-specific `ConnectionStrings__DefaultConnection`
+environment variable overrides the shared user-secret value.
 
 ### 3. Apply migrations
 
