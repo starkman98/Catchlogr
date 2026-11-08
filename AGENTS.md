@@ -33,6 +33,12 @@ and avoid loading every workflow. Workflow selection needs no extra approval.
 | Validation or build/test failure diagnosis | [validate-change](.agents/skills/validate-change/SKILL.md) |
 | Documentation changes or affected documented behavior | [maintain-docs](.agents/skills/maintain-docs/SKILL.md) |
 
+## CodeScene MCP
+After changing code, run `code_health_review` on the changed files. If Code
+Health drops, fix the issues, run the review again, and use `code_health_score`
+to confirm the result. Before finishing, run `pre_commit_code_health_safeguard`
+and only stop when it passes.
+
 ## Architecture boundaries
 Application owns business services/validation; Domain owns entities/repository
 interfaces. Contracts owns API DTOs, separate from domain entities; prefer
