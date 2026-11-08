@@ -76,7 +76,7 @@ instructions; offline link validation cannot establish live client behavior.
 | Setup and implemented overview | [README](../README.md) | [SDK](../global.json), [solution](../Catchlogr.slnx), launch settings, Compose |
 | Check selection and test limitations | [Validation](VALIDATION.md) | [Selection helper](../scripts/Validation.psm1), [CI](../.github/workflows/ci.yml), test projects/factories |
 | MVVM, local storage, navigation, UTC examples | [Mobile architecture](MOBILE_ARCHITECTURE.md) | [Mobile composition](../src/Catchlogr.Mobile/MauiProgram.cs), Pages, ViewModels |
-| Backend selection and device addresses | [Mobile configuration](MOBILE_CONFIGURATION.md) | [AppSettings](../src/Catchlogr.Mobile/Configuration/AppSettings.cs), [URL resolver](../src/Catchlogr.Mobile/Configuration/PlatformApiUrl.cs), Mobile project/settings |
+| Backend selection and device addresses | [Mobile configuration](MOBILE_CONFIGURATION.md) | [AppSettings](../src/Catchlogr.Mobile.Core/Configuration/AppSettings.cs), [URL resolver](../src/Catchlogr.Mobile.Core/Configuration/PlatformApiUrl.cs), Mobile project/settings |
 | Reconciliation and photo state | [Sync strategy](SYNC_STRATEGY.md) | [Trip sync](../src/Catchlogr.Sync/Services/FishingTripSyncService.cs), [catch sync](../src/Catchlogr.Sync/Services/CatchSyncService.cs), local repositories |
 | Weather/moon ownership and enrichment | [Weather](WEATHER_INTEGRATION.md) | [Trip service](../src/Catchlogr.Application/Services/FishingTripService.cs), provider adapter/options |
 | Location search behavior | [Location](LOCATION_SEARCH_INTEGRATION.md) | [Endpoint](../src/Catchlogr.Api/Endpoints/LocationEndpoints.cs), [adapter](../src/Catchlogr.Infrastructure/Location/LocationIqLocationSearchService.cs) |

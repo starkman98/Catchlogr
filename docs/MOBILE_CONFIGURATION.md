@@ -11,7 +11,8 @@ configuration. Select the configuration before starting the mobile project.
 | Debug | `appsettings.Development.json` | `https://dev-api.catchlogr.com` | `catchlogr_dev.db3` |
 | Release | `appsettings.json` | `https://api.catchlogr.com` | `catchlogr.db3` |
 
-`AppSettings.Load()` loads exactly one embedded resource. It does not fall
+`MauiProgram` passes the host assembly and build-selected environment to
+`AppSettings.Load(assembly, expectedEnvironment)`, which loads exactly one embedded resource. It does not fall
 back to another environment. Startup fails if the resource is missing, its
 declared `BackendEnvironment` does not match the build, or a non-Local API
 URL does not use HTTPS.

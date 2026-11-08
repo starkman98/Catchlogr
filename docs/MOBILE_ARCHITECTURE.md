@@ -1,15 +1,17 @@
 # Mobile architecture
 
-Catchlogr.Mobile is a .NET MAUI MVVM client. It treats account-scoped SQLite as
-the offline working store and uses `Catchlogr.Sync` to reconcile data with the
-authenticated API.
+Catchlogr.Mobile is the .NET MAUI shell for `Catchlogr.Mobile.Core`, a plain
+`net10.0` library. Core owns ViewModels, presentation, configuration validation,
+authentication, HTTP clients, and SQLite repositories. It treats account-scoped
+SQLite as the offline working store and uses `Catchlogr.Sync` to reconcile data
+with the authenticated API.
 
 ## Boundaries
 
 ```text
-Pages/XAML
+Catchlogr.Mobile: Pages/XAML and platform adapters
     ↓ bindings and commands
-ViewModels
+Catchlogr.Mobile.Core: ViewModels
     ├── local repository abstractions ──> SQLite
     ├── application services
     ├── navigation abstraction
@@ -22,8 +24,9 @@ ViewModels
                 Catchlogr.Api
 ```
 
-ViewModels do not access SQLite or construct `HttpClient` directly. Mobile
-references Application, Contracts, and Sync, but not Infrastructure.
+ViewModels do not access SQLite or construct `HttpClient` directly. Core
+references Application, Contracts, and Sync, but not Infrastructure. The MAUI
+shell references Core; Core and Sync have no MAUI dependencies.
 
 ## Local data and account isolation
 
@@ -63,7 +66,8 @@ later attempt.
 
 `AuthenticationService` registers, signs in, refreshes tokens, requests email
 confirmation and password-reset messages, and reads the current user.
-`SecureTokenStore` keeps access and refresh tokens in platform SecureStorage.
+`SecureTokenStore` keeps access and refresh tokens through `ISecretStorage`;
+`MauiSecretStorage` delegates to platform SecureStorage.
 Registration and password reset show the server's
 [password-policy guidance](IDENTITY_EMAIL.md#password-policy) and recognized policy
 errors. Password entry offers visibility controls; the API owns policy enforcement.
@@ -93,7 +97,7 @@ public partial class ExampleViewModel : BaseViewModel
 }
 ```
 
-`Catchlogr.Mobile.csproj` uses `<LangVersion>preview</LangVersion>` for this
+`Catchlogr.Mobile.Core.csproj` uses `<LangVersion>preview</LangVersion>` for this
 source-generator syntax. Field-based `[ObservableProperty] private T _value;`
 must not be introduced.
 
@@ -114,8 +118,10 @@ private static DateTime ToUtc(DateTime date, TimeSpan time)
 ## Navigation
 
 `AppRoutes` centralizes route names and `IAppNavigator` isolates ViewModels from
-`Shell.Current` for identity navigation. Trip/catch ViewModels also use direct
-Shell navigation; the abstraction is not universal yet. AppShell.xaml defines
+`Shell.Current` for all ViewModel navigation. `IAppInteraction` handles alerts,
+UI dispatch, and external links. The MAUI pages implement `IQueryAttributable`
+and forward Shell query values to Core ViewModels; Core contains no Shell
+interfaces or attributes. AppShell.xaml defines
 login and trip-list Shell content. AppShell.xaml.cs registers relative routes
 for registration/check-email/password flows, trip details/add-edit, and catch
 add-edit. The catch list is embedded in trip details, not a separate Shell page.
@@ -137,7 +143,16 @@ state. Query parameters carry local integer IDs, never internal database objects
 `MauiProgram.cs` loads exactly one embedded environment configuration, resolves
 the platform API URL, configures authenticated typed clients, and registers
 database, repository, sync, authentication, navigation, photo, ViewModel, and
-page services.
+page services. The host passes its assembly and selected environment to
+`AppSettings.Load`, and supplies `FileSystem.AppDataDirectory` as the default
+`DatabaseSettings.RootDirectory`. Other hosts must configure a storage root.
+
+`IConnectivityService`, `IDeviceLocationService`, `IPhotoPicker`, and
+`ISecretStorage` isolate device APIs. Camera capture and secure-storage calls
+remain in MAUI adapters; photo file handling and backend-scoped token logic
+remain in Core so their account-isolation tests run on every host. The location
+adapter translates MAUI permission/feature exceptions into portable exceptions,
+preserving the existing messages displayed by the ViewModel.
 
 See [Mobile Configuration](MOBILE_CONFIGURATION.md) for the environment matrix.
 
@@ -145,10 +160,28 @@ See [Mobile Configuration](MOBILE_CONFIGURATION.md) for the environment matrix.
 
 | Responsibility | Directory |
 | --- | --- |
-| Configuration and URL resolution | `src/Catchlogr.Mobile/Configuration` |
-| SQLite implementation and repositories | `src/Catchlogr.Mobile/Data` |
+| Configuration and URL resolution | `src/Catchlogr.Mobile.Core/Configuration` |
+| SQLite implementation and repositories | `src/Catchlogr.Mobile.Core/Data` |
 | Cross-platform sync abstractions/entities/services | `src/Catchlogr.Sync` |
-| Authentication, API, navigation, location, and photo clients | `src/Catchlogr.Mobile/Services` |
-| Screen state and commands | `src/Catchlogr.Mobile/ViewModels` |
+| Authentication, API clients, device contracts, and photo file handling | `src/Catchlogr.Mobile.Core/Services` |
+| Device, secure storage, Shell, and dialog adapters | `src/Catchlogr.Mobile/Services` |
+| Screen state and commands | `src/Catchlogr.Mobile.Core/ViewModels` |
 | XAML views | `src/Catchlogr.Mobile/Pages` |
-| Weather and moon display formatting | `src/Catchlogr.Mobile/Presentation` |
+| Weather and moon display formatting | `src/Catchlogr.Mobile.Core/Presentation` |
+
+## Portable development and remaining risks
+
+Mobile logic tests build and run on Linux, macOS, or Windows with the .NET SDK;
+no MAUI workload is needed. See [Validation](VALIDATION.md#commands) for commands.
+This removes the Windows runner dependency for those tests and lets server-side
+agents exercise the same implementation used by the app. No CI speedup is
+claimed without runner measurements.
+
+The extraction adds host interfaces and composition wiring that must stay in
+step. Portable tests cover session cleanup, backend/account storage separation,
+photo file ownership, ViewModel interactions, and configuration selection; they
+do not establish XAML binding correctness, Shell query delivery, UI dispatch on
+a real device, secure-storage encryption, or camera/GPS behavior. Build and
+exercise affected platform flows when changing those adapters. The full solution
+still includes MAUI and needs its platform toolchains; build Core or the test
+project directly on a server. A console DevHost is not included.

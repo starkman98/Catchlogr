@@ -65,6 +65,7 @@ providers directly. HTTPS is required except the configured Local mobile backend
 
 | Editing | Read first |
 | --- | --- |
+| Mobile.Core | [Portable Mobile rules](src/Catchlogr.Mobile.Core/AGENTS.md) |
 | Mobile | [Mobile rules](src/Catchlogr.Mobile/AGENTS.md) |
 | Sync | [Sync rules](src/Catchlogr.Sync/AGENTS.md) |
 | API | [API rules](src/Catchlogr.Api/AGENTS.md) |

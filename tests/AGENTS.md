@@ -14,8 +14,8 @@ Applies to this directory and descendants, together with the root instructions.
   isolated EF InMemory, captured email, and temporary private photos. Preserve
   the real authentication pipeline; use separate accounts for ownership checks.
   These tests do not verify PostgreSQL constraints, SQL, or migrations.
-- Mobile tests reference the real MAUI project and require Windows/MAUI. Their
-  passing does not establish Android/iOS UI or device behavior, or an existing
+- Mobile tests reference Mobile.Core and run on plain net10.0 without MAUI. Their
+  passing does not establish MAUI UI or device behavior, or an existing
   SQLite database's upgrade compatibility.
 - Keep tests independent of real credentials and live provider services.
   Preserve temporary-file cleanup and per-test account/database isolation.

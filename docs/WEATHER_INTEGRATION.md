@@ -83,7 +83,7 @@ the trip and formatted by `MoonPhasePresentationFormatter`.
 | Enrichment orchestration | `src/Catchlogr.Application/Services/FishingTripService.cs` |
 | Retry endpoint | `src/Catchlogr.Api/Endpoints/FishingTripEndpoints.cs` |
 | SQLite mapping/retry | `src/Catchlogr.Sync/Services/FishingTripSyncService.cs` |
-| Mobile presentation | `src/Catchlogr.Mobile/Presentation` |
+| Mobile presentation | `src/Catchlogr.Mobile.Core/Presentation` |
 
 ## Verification
 

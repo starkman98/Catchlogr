@@ -15,7 +15,7 @@ establish that either schema needs changing.
   and verify renames, nullable/default transitions, indexes, ownership relationships,
   cascades, and data preservation where affected.
 - For SQLite, read [Mobile rules](../../../src/Catchlogr.Mobile/AGENTS.md) and inspect
-  [LocalDatabase](../../../src/Catchlogr.Mobile/Data/LocalDatabase.cs), Sync entities,
+  [LocalDatabase](../../../src/Catchlogr.Mobile.Core/Data/LocalDatabase.cs), Sync entities,
   and repositories. Existing CreateTableAsync initialization does not establish
   arbitrary upgrade compatibility. Define the upgrade behavior for the changed
   field instead of assuming a fresh database test covers it.
