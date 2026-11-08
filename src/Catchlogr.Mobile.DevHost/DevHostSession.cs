@@ -28,30 +28,38 @@ public sealed class DevHostSession : IAsyncDisposable
     public static DevHostSession Create(DevHostOptions options, Action<IServiceCollection>? configure = null)
     {
         options.Validate();
-        var directory = Path.Combine(Path.GetTempPath(), "Catchlogr.DevHost", Guid.NewGuid().ToString("N"));
-        var services = new ServiceCollection();
-        services.AddMobileCore(new AppSettings
+        var directory = Directory.CreateTempSubdirectory("Catchlogr.DevHost-").FullName;
+        try
         {
-            BackendEnvironment = BackendEnvironment.Local,
-            Database = new DatabaseSettings { RootDirectory = directory, FileName = "catchlogr_devhost.db3" }
-        }, options.ApiBaseUri);
-        services.AddSingleton<ISecretStorage, MemorySecretStorage>();
-        services.AddSingleton<IConnectivityService, DevHostConnectivity>();
-        services.AddSingleton<IDeviceLocationService, FixedDeviceLocationService>();
-        services.AddSingleton<IPhotoPicker, UnavailablePhotoPicker>();
-        services.AddSingleton<DevHostInteraction>();
-        services.AddSingleton<IAppInteraction>(provider => provider.GetRequiredService<DevHostInteraction>());
-        services.AddSingleton<IAppNavigator>(provider => provider.GetRequiredService<DevHostInteraction>());
-        services.AddSingleton<ILogoutDialogService, DevHostLogoutDialog>();
-        // Never follow redirects outside the validated local origin, including login POSTs.
-        services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(
-            () => new HttpClientHandler { AllowAutoRedirect = false }));
-        configure?.Invoke(services);
-        return new DevHostSession(services.BuildServiceProvider(new ServiceProviderOptions
+            var services = new ServiceCollection();
+            services.AddMobileCore(new AppSettings
+            {
+                BackendEnvironment = BackendEnvironment.Local,
+                Database = new DatabaseSettings { RootDirectory = directory, FileName = "catchlogr_devhost.db3" }
+            }, options.ApiBaseUri);
+            services.AddSingleton<ISecretStorage, MemorySecretStorage>();
+            services.AddSingleton<IConnectivityService, DevHostConnectivity>();
+            services.AddSingleton<IDeviceLocationService, FixedDeviceLocationService>();
+            services.AddSingleton<IPhotoPicker, UnavailablePhotoPicker>();
+            services.AddSingleton<DevHostInteraction>();
+            services.AddSingleton<IAppInteraction>(provider => provider.GetRequiredService<DevHostInteraction>());
+            services.AddSingleton<IAppNavigator>(provider => provider.GetRequiredService<DevHostInteraction>());
+            services.AddSingleton<ILogoutDialogService, DevHostLogoutDialog>();
+            // Never follow redirects outside the validated local origin, including login POSTs.
+            services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(
+                () => new HttpClientHandler { AllowAutoRedirect = false }));
+            configure?.Invoke(services);
+            return new DevHostSession(services.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            }), directory);
+        }
+        catch
         {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        }), directory);
+            Directory.Delete(directory, recursive: true);
+            throw;
+        }
     }
 
     /// <summary>Closes SQLite, clears tokens, disposes clients, and removes this run's local files.</summary>

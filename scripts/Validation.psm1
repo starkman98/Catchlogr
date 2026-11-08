@@ -74,6 +74,8 @@ function Get-ValidationPlan {
         @{ Pattern = '^src/Catchlogr\.Sync/(Entities|Abstractions)/'; Checks = @('mobile'); Manual = 'Verify local persisted-field upgrades and Mobile repository/client compatibility where affected.' },
         @{ Pattern = '^src/Catchlogr\.Web/'; Checks = @('unit') },
         @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/'; Checks = @('mobile') },
+        @{ Pattern = '^src/Catchlogr\.Mobile\.DevHost/'; Checks = @('mobile', 'api') },
+        @{ Pattern = '^src/Catchlogr\.Mobile\.Core/MobileCoreServiceCollectionExtensions\.cs$'; Checks = @('mobile', 'api'); Manual = 'Review both MAUI and DevHost composition when shared registration changes.' },
         @{ Pattern = '^src/Catchlogr\.Mobile/.*\.xaml(\.cs)?$|^src/Catchlogr\.Mobile/(Platforms|Resources|Services)/|^src/Catchlogr\.Mobile/MauiProgram\.cs$'; Checks = @('mobile-build'); Manual = 'Build the affected platform target and manually exercise the changed UI/device flow; automated build covers Windows only.' },
         @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/Data/'; Checks = @(); Manual = 'For SQLite schema changes, exercise an upgrade from an existing local database; mocks do not prove compatibility.' },
         @{ Pattern = '^tests/Catchlogr\.Tests/'; Checks = @('unit') },
@@ -86,7 +88,7 @@ function Get-ValidationPlan {
     # Advisory ownership hints, independent of automated check selection.
     $guideRules = @(
         @{ Pattern = '^src/Catchlogr\.Sync/|^src/Catchlogr\.Mobile(\.Core)?/(Data|Services/.*Sync)'; Guides = @('docs/SYNC_STRATEGY.md') },
-        @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/'; Guides = @('docs/MOBILE_ARCHITECTURE.md') },
+        @{ Pattern = '^src/Catchlogr\.Mobile(\.Core|\.DevHost)?/'; Guides = @('docs/MOBILE_ARCHITECTURE.md') },
         @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/Configuration/|^src/Catchlogr\.Mobile/.*appsettings|^src/Catchlogr\.Mobile/Platforms/'; Guides = @('docs/MOBILE_CONFIGURATION.md') },
         @{ Pattern = '^src/.*(Weather|Moon)|^src/Catchlogr\.Application/Services/FishingTripService\.cs$'; Guides = @('docs/WEATHER_INTEGRATION.md') },
         @{ Pattern = '^src/.*(LocationSearch|LocationIq|LocationEndpoints)'; Guides = @('docs/LOCATION_SEARCH_INTEGRATION.md') },

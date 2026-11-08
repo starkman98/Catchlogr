@@ -148,6 +148,8 @@ try {
         @{ Path = 'src/Catchlogr.Contracts/New.cs'; Ids = 'unit,api,mobile' },
         @{ Path = 'Directory.Build.props'; Ids = 'unit,api,mobile' },
         @{ Path = 'src/Catchlogr.Mobile.Core/ViewModels/New.cs'; Ids = 'mobile' },
+        @{ Path = 'src/Catchlogr.Mobile.DevHost/DevHostScenario.cs'; Ids = 'api,mobile' },
+        @{ Path = 'src/Catchlogr.Mobile.Core/MobileCoreServiceCollectionExtensions.cs'; Ids = 'api,mobile' },
         @{ Path = 'src/Catchlogr.Mobile/Services/New.cs'; Ids = 'mobile,mobile-build' },
         @{ Path = 'src/Catchlogr.Mobile/Pages/New.xaml'; Ids = 'mobile,mobile-build' },
         @{ Path = 'src/Catchlogr.Mobile/Pages/New.xaml.cs'; Ids = 'mobile,mobile-build' },

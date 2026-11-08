@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/Catchlogr.Mobile.DevHost/Catchlogr.Mobile.DevHost.csproj" />
     <ProjectReference Include="..\..\src\Catchlogr.Mobile.Core\Catchlogr.Mobile.Core.csproj" />
   </ItemGroup>
 

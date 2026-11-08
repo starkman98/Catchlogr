@@ -31,7 +31,7 @@ public static class MobileCoreServiceCollectionExtensions
         services.AddTransient<IFishingTripLocalRepository, FishingTripLocalRepository>();
         services.AddTransient<ICatchLocalRepository, CatchLocalRepository>();
         services.AddTransient<ISyncMetadataRepository, SyncMetadataRepository>();
-        services.AddTransient<IPhotoCaptureService, PhotoCaptureService>();
+        services.AddSingleton<IPhotoCaptureService, PhotoCaptureService>();
         services.AddSingleton<ITokenStore, SecureTokenStore>();
         services.AddTransient<ILogoutService, LogoutService>();
         services.AddSingleton(TimeProvider.System);
