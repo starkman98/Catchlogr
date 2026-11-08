@@ -83,6 +83,8 @@ The executable mapping lives in [Validation.psm1](../scripts/Validation.psm1):
   Mobile. Mobile.Core and Mobile changes select portable Mobile tests, with a Windows
   app build for XAML, code-behind, resources, platform adapters, and MauiProgram.
 - Contracts, Domain, project/dependency/SDK/build inputs select all three suites.
+- DevHost and shared Core service registration select Mobile and API integration
+  tests. These use the existing isolated API fixture and temporary SQLite.
 - Changes to the helper select its own checks and documentation validation.
 - Workflow/deployment changes select all suites plus documentation validation.
   Unknown paths select these and helper checks, with an explicit review warning.
@@ -286,3 +288,32 @@ remain separate and were not established by these tests.
 
 See [CI/CD](CI-CD.md) for where these checks run and
 [README](../README.md) for local database setup and migration commands.
+
+## DevHost validation
+
+Build the console host without MAUI:
+
+```sh
+dotnet build src/Catchlogr.Mobile.DevHost/Catchlogr.Mobile.DevHost.csproj --configuration Release
+dotnet run --project src/Catchlogr.Mobile.DevHost -- --help
+```
+
+`DevHostOptionsTests` and `DevHostSessionTests` run in the Mobile suite and cover
+loopback endpoint restrictions, credential-argument rejection, temporary storage
+permissions, token/file cleanup, and synthetic GPS. `DevHostScenarioTests` run in
+the API integration suite and use real confirmed-account authentication, Core
+HTTP clients, SQLite, and Sync. They cover successful upload/read-back, separate
+accounts, rejected login, cancellation during upload, and an upload outage that
+must not report success.
+The API fixture substitutes EF InMemory and captured email; these tests need no
+MAUI, Docker, provider keys, or real credentials and do not establish PostgreSQL
+behavior. See [DevHost usage](MOBILE_ARCHITECTURE.md#console-devhost) for a manual
+local API run and its persistent server-side effects.
+
+Observed on Linux with SDK 10.0.302 on 2026-11-08: DevHost built in Release with
+zero warnings/errors; 277 unit tests, 95 Mobile tests, 44 API integration tests,
+and 93 helper assertions passed. CLI help returned 0; a remote endpoint and
+password argument returned 2 without printing the supplied synthetic secret.
+Documentation validation passed. The Windows MAUI app build remained blocked on
+Linux. No Docker/PostgreSQL application smoke run or device verification was
+performed for this DevHost change.

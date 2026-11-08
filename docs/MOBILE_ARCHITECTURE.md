@@ -140,10 +140,10 @@ state. Query parameters carry local integer IDs, never internal database objects
 
 ## Composition root
 
-`MauiProgram.cs` loads exactly one embedded environment configuration, resolves
-the platform API URL, configures authenticated typed clients, and registers
-database, repository, sync, authentication, navigation, photo, ViewModel, and
-page services. The host passes its assembly and selected environment to
+`MauiProgram.cs` loads exactly one embedded environment configuration and resolves
+the platform API URL. `AddMobileCore` registers the shared database, repositories,
+authentication, HTTP clients, synchronization, and ViewModels. MAUI and DevHost
+both call it and supply their own platform adapters. MAUI also registers pages. The host passes its assembly and selected environment to
 `AppSettings.Load`, and supplies `FileSystem.AppDataDirectory` as the default
 `DatabaseSettings.RootDirectory`. Other hosts must configure a storage root.
 
@@ -184,4 +184,96 @@ do not establish XAML binding correctness, Shell query delivery, UI dispatch on
 a real device, secure-storage encryption, or camera/GPS behavior. Build and
 exercise affected platform flows when changing those adapters. The full solution
 still includes MAUI and needs its platform toolchains; build Core or the test
-project directly on a server. A console DevHost is not included.
+project directly on a server. The console DevHost below exercises the portable pipeline.
+
+## Console DevHost
+
+`Catchlogr.Mobile.DevHost` is a plain `net10.0` executable for a local mobile/API
+smoke test on Linux, macOS, or Windows. It uses the shared Core registration,
+real Identity bearer authentication, temporary SQLite, and the real Sync services.
+It does not start Docker, start the API, register accounts, send emails, bypass
+confirmation, or apply migrations.
+
+### Run against your local API
+
+1. Follow [local setup](../README.md#local-setup), including the API's development
+   configuration and database. `compose.local.yml` supplies **PostgreSQL only**;
+   it does not contain an API service. Use a dedicated development database and
+   account: a loopback API can still be configured to use a shared database.
+2. Start the API separately, for example:
+
+   ```sh
+   dotnet run --project src/Catchlogr.Api --launch-profile http
+   ```
+
+3. Use an existing account, with email confirmed when required by the local API.
+   Run the scenario and answer its email and hidden-password prompts:
+
+   ```sh
+   dotnet run --project src/Catchlogr.Mobile.DevHost -- --name "DevHost smoke trip"
+   ```
+
+The default API is `http://127.0.0.1:5001/`. To use the HTTPS launch endpoint:
+
+```sh
+dotnet run --project src/Catchlogr.Mobile.DevHost -- --api https://localhost:7160 --name "HTTPS smoke trip"
+```
+
+Only loopback HTTP/HTTPS origins are accepted; credentials, paths, queries,
+fragments, and remote/LAN hosts are rejected. HTTPS uses normal certificate
+validation; the host never disables trust checks. HTTP redirects are disabled,
+including redirects from login requests.
+
+Automation can supply `CATCHLOGR_DEVHOST_EMAIL` and `CATCHLOGR_DEVHOST_PASSWORD`
+through the process environment. Supply secrets through your runner's secret
+facility or an interactive prompt, not literal shell commands or command-line
+arguments. DevHost never accepts password arguments, prints tokens, enables HTTP
+body logging, or persists credentials. `--help` prints usage without connecting.
+
+### Scenario and results
+
+The host logs in with Core's `AuthenticationService`, activates the account's
+SQLite database, saves a new trip through `AddEditFishingTripViewModel`, runs
+`ISyncOrchestrator`, and reads the trip back through the authenticated API.
+Success requires the local record to have a server GUID, be clean, and match the
+remote trip name. This catches upload failures that Sync deliberately retains
+for retry instead of propagating.
+
+Each invocation creates one trip. A generated unique name is used unless `--name`
+is supplied. **The server trip remains**, even after local cleanup or a later
+failure; a failed or cancelled run can already have uploaded it. Re-running is
+not idempotent. Inspect or remove smoke trips through the normal app/API.
+
+The host uses memory-only secret storage and a fresh private temporary directory
+for SQLite and any downloaded account files. Normal exit, scenario failure, and
+handled cancellation close SQLite, clear tokens, and delete the run's local
+files. A forced kill/crash can leave a `Catchlogr.DevHost-*` directory under the
+system temp directory; no credentials are written there. Cleanup failures cause
+a nonzero exit. Pending local changes are discarded with this disposable session,
+unlike the MAUI app's persistent offline storage.
+
+Location is absent by default, so weather enrichment is not required. Add
+`--with-location` to capture a fixed synthetic location through the device
+adapter; this may invoke the API's configured weather provider. The camera is
+unavailable, navigation is a no-op, and UI callbacks execute inline. Unexpected
+alerts fail the scenario rather than silently accepting validation errors.
+
+Exit codes: `0` verified upload and local cleanup; `1` API, scenario, or cleanup
+failure; `2` invalid arguments or missing credentials; `130` handled cancellation.
+Output deliberately omits exception bodies, private paths, and credentials. For
+login rejection, check email confirmation and credentials; for HTTP failures,
+check API startup, port, database configuration, and HTTPS trust. Local test
+coverage is described in [Validation](VALIDATION.md#devhost-validation).
+
+### Gains and risks
+
+- Gains: agents can exercise the mobile-to-API flow without MAUI or an emulator;
+  shared registration reduces wiring drift; temporary sessions make smoke runs
+  independent of a developer's mobile data.
+- Risks: the scenario writes server data and may download existing account data;
+  use a dedicated local account/database. Temporary cleanup cannot undo an API
+  write. The optional location path can use a live external weather service.
+- Limits: console adapters do not verify Shell, XAML, real UI threading, camera,
+  GPS, secure-storage encryption, database upgrades, or interruption recovery.
+  The isolated API tests use EF InMemory, so PostgreSQL behavior still needs a
+  separate disposable local smoke run.

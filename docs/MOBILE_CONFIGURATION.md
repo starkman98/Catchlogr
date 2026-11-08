@@ -20,6 +20,10 @@ URL does not use HTTPS.
 Changes to these JSON files require rebuilding the mobile app because the
 files are embedded in the application assembly.
 
+The [console DevHost](MOBILE_ARCHITECTURE.md#console-devhost) supplies Local settings
+and a temporary storage root directly; it does not select MAUI build resources.
+Its `--api` option accepts loopback origins only.
+
 ## Local API addresses
 
 The API HTTPS launch profile listens at `https://localhost:7160` and also

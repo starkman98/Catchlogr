@@ -54,6 +54,7 @@ Catchlogr/
 │   ├── Catchlogr.Infrastructure/    EF Core, providers, email, and storage
 │   ├── Catchlogr.Mobile/            .NET MAUI shell and platform adapters
 │   ├── Catchlogr.Mobile.Core/       Portable mobile logic (net10.0)
+│   ├── Catchlogr.Mobile.DevHost/    Console mobile/API smoke host
 │   ├── Catchlogr.Sync/              Platform-neutral synchronization logic
 │   └── Catchlogr.Web/               Identity action Razor Pages
 ├── tests/
@@ -275,6 +276,10 @@ After first-time setup, check API health, register and confirm an account, sign
 in, save a trip/catch offline, then reconnect and sync. Check that switching
 accounts does not expose another account's local rows or photos. This smoke
 check needs a reachable Web origin and configured email delivery.
+
+For mobile login → local trip creation → API sync without an emulator, use the
+[console DevHost](docs/MOBILE_ARCHITECTURE.md#console-devhost). It uses a running
+local API, temporary SQLite, and an existing development account.
 
 Use [Validation](docs/VALIDATION.md) for focused test commands and limitations.
 Pull-request CI runs unit, API integration, Mobile.Core, and documentation
