@@ -1,3 +1,5 @@
+using Catchlogr.Mobile.Core.Services.Authentication;
+
 using Microsoft.Maui.Storage;
 
 namespace Catchlogr.Mobile.Services.Authentication;

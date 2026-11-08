@@ -1,4 +1,4 @@
-using Catchlogr.Mobile.Data;
+using Catchlogr.Mobile.Core.Data;
 
 namespace Catchlogr.Mobile;
 

@@ -1,12 +1,16 @@
-using Catchlogr.Mobile.Configuration;
-using Catchlogr.Mobile.Data;
-using Catchlogr.Mobile.Data.Repositories;
-using Catchlogr.Mobile.Pages;
 using Catchlogr.Mobile.Services;
 using Catchlogr.Mobile.Services.Authentication;
 using Catchlogr.Mobile.Services.Navigation;
 using Catchlogr.Mobile.Services.Photos;
-using Catchlogr.Mobile.ViewModels;
+using Catchlogr.Mobile.Core.Services;
+using Catchlogr.Mobile.Core.Configuration;
+using Catchlogr.Mobile.Core.Data;
+using Catchlogr.Mobile.Core.Data.Repositories;
+using Catchlogr.Mobile.Pages;
+using Catchlogr.Mobile.Core.Services.Authentication;
+using Catchlogr.Mobile.Core.Services.Navigation;
+using Catchlogr.Mobile.Core.Services.Photos;
+using Catchlogr.Mobile.Core.ViewModels;
 using Catchlogr.Sync.Abstractions;
 using Catchlogr.Sync.Services;
 using Microsoft.Extensions.Logging;
@@ -39,16 +43,26 @@ public static class MauiProgram
 #endif
 
 		// Load and register app settings
-		var appSettings = AppSettings.Load();
+		var appSettings = AppSettings.Load(typeof(MauiProgram).Assembly,
+#if LOCAL
+            BackendEnvironment.Local
+#elif DEBUG
+            BackendEnvironment.Development
+#else
+            BackendEnvironment.Production
+#endif
+        );
 		var apiBaseUrl = PlatformApiUrl.Resolve(
 			appSettings.Api.BaseUrl,
 			appSettings.BackendEnvironment,
-			DeviceInfo.Current.Platform,
-			DeviceInfo.Current.DeviceType);
+			DeviceInfo.Current.Platform == DevicePlatform.Android,
+			DeviceInfo.Current.DeviceType == DeviceType.Virtual,
+            DeviceInfo.Current.Platform == DevicePlatform.WinUI);
 		var apiBaseUri = new Uri(apiBaseUrl.TrimEnd('/') + '/');
 		builder.Services.AddSingleton(appSettings);
 		builder.Services.AddSingleton(appSettings.Api);
 		builder.Services.AddSingleton(appSettings.Sync);
+		appSettings.Database.RootDirectory ??= FileSystem.AppDataDirectory;
 		builder.Services.AddSingleton(appSettings.Database);
 
         // --- Local database ---
@@ -67,13 +81,14 @@ public static class MauiProgram
 
         // --- Device capabilities ---
         builder.Services.AddSingleton<IGeolocation>(Geolocation.Default);
-        builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
+        builder.Services.AddSingleton<IConnectivityService, MauiConnectivityService>();
+        builder.Services.AddSingleton<IAppInteraction, MauiAppInteraction>();
         builder.Services.AddSingleton<IDeviceLocationService, DeviceLocationService>();
-        builder.Services.AddSingleton<IMediaPicker>(MediaPicker.Default);
+        builder.Services.AddSingleton<IPhotoPicker, MauiPhotoPicker>();
         builder.Services.AddSingleton<IPhotoCaptureService, PhotoCaptureService>();
 
         // --- Authentication storage ---
-        builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
+        builder.Services.AddSingleton<ISecretStorage, MauiSecretStorage>();
         builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
         builder.Services.AddTransient<ILogoutService, LogoutService>();
         builder.Services.AddSingleton<ILogoutDialogService, ShellLogoutDialogService>();

@@ -1,6 +1,7 @@
-using Catchlogr.Mobile.Services.Authentication;
-using Catchlogr.Mobile.Services.Navigation;
-using Catchlogr.Mobile.ViewModels;
+using Catchlogr.Mobile.Core.Services;
+using Catchlogr.Mobile.Core.Services.Authentication;
+using Catchlogr.Mobile.Core.Services.Navigation;
+using Catchlogr.Mobile.Core.ViewModels;
 using Catchlogr.Sync.Abstractions;
 using Catchlogr.Sync.Entities;
 using FluentAssertions;
@@ -24,6 +25,8 @@ public sealed class FishingTripsViewModelTests
         var logoutDialog = Substitute.For<ILogoutDialogService>();
         var navigator = Substitute.For<IAppNavigator>();
         var sut = new FishingTripsViewModel(
+            Substitute.For<IConnectivityService>(),
+            Substitute.For<IAppInteraction>(),
             Substitute.For<IFishingTripLocalRepository>(),
             Substitute.For<ISyncOrchestrator>(),
             Substitute.For<IApiHealthClient>(),
@@ -61,6 +64,8 @@ public sealed class FishingTripsViewModelTests
             .Returns(LogoutDecision.Cancel);
         var navigator = Substitute.For<IAppNavigator>();
         var sut = new FishingTripsViewModel(
+            Substitute.For<IConnectivityService>(),
+            Substitute.For<IAppInteraction>(),
             Substitute.For<IFishingTripLocalRepository>(),
             Substitute.For<ISyncOrchestrator>(),
             Substitute.For<IApiHealthClient>(),

@@ -1,4 +1,4 @@
-using Catchlogr.Mobile.ViewModels;
+using Catchlogr.Mobile.Core.ViewModels;
 
 namespace Catchlogr.Mobile.Pages;
 

@@ -1,11 +1,11 @@
-using Catchlogr.Mobile.ViewModels;
+using Catchlogr.Mobile.Core.ViewModels;
 
 namespace Catchlogr.Mobile.Pages;
 
 /// <summary>
 /// Code-behind for the fishing trip details page.
 /// </summary>
-public partial class FishingTripDetailsPage : ContentPage
+public partial class FishingTripDetailsPage : ContentPage, IQueryAttributable
 {
     private readonly FishingTripDetailsViewModel _viewModel;
 
@@ -26,5 +26,11 @@ public partial class FishingTripDetailsPage : ContentPage
     {
         base.OnAppearing();
         _ = _viewModel.LoadAsync();
+    }
+    /// <summary>Forwards Shell navigation values to the portable ViewModel.</summary>
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("tripLocalId", out var value))
+            ((FishingTripDetailsViewModel)BindingContext).TripLocalIdQuery = Uri.UnescapeDataString(value.ToString() ?? string.Empty);
     }
 }

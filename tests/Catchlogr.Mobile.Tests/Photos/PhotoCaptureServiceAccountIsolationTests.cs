@@ -1,7 +1,6 @@
-using Catchlogr.Mobile.Data;
-using Catchlogr.Mobile.Services.Photos;
+using Catchlogr.Mobile.Core.Data;
+using Catchlogr.Mobile.Core.Services.Photos;
 using FluentAssertions;
-using Microsoft.Maui.Media;
 using NSubstitute;
 
 namespace Catchlogr.Mobile.Tests.Photos;
@@ -75,7 +74,7 @@ public sealed class PhotoCaptureServiceAccountIsolationTests : IDisposable
         accountStorage.ActiveAccountDirectory.Returns(activeAccountDirectory);
 
         return new PhotoCaptureService(
-            Substitute.For<IMediaPicker>(),
+            Substitute.For<IPhotoPicker>(),
             accountStorage);
     }
 }

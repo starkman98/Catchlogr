@@ -1,8 +1,7 @@
 using System.Globalization;
-using Catchlogr.Mobile.Configuration;
-using Catchlogr.Mobile.Services.Authentication;
+using Catchlogr.Mobile.Core.Configuration;
+using Catchlogr.Mobile.Core.Services.Authentication;
 using FluentAssertions;
-using Microsoft.Maui.Storage;
 using NSubstitute;
 
 namespace Catchlogr.Mobile.Tests.Authentication;
@@ -23,7 +22,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task SaveTokensAsync_ValidTokens_SavesCompleteTokenSet()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         var sut = CreateStore(secureStorage);
         var expiresAt = new DateTimeOffset(2026, 8, 24, 14, 30, 0, TimeSpan.FromHours(2));
 
@@ -43,7 +42,7 @@ public sealed class SecureTokenStoreTests
     [InlineData("access-token", " ")]
     public async Task SaveTokensAsync_BlankToken_ThrowsArgumentException(string accessToken, string refreshToken)
     {
-        var sut = CreateStore(Substitute.For<ISecureStorage>());
+        var sut = CreateStore(Substitute.For<ISecretStorage>());
 
         var action = () => sut.SaveTokensAsync(accessToken, refreshToken, DateTimeOffset.UtcNow);
 
@@ -54,7 +53,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task SaveTokensAsync_StorageFails_ClearsSessionAndRethrows()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         secureStorage
             .SetAsync(ExpiresAtKey, Arg.Any<string>())
             .Returns(Task.FromException(new InvalidOperationException("Storage unavailable.")));
@@ -70,7 +69,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task GetSessionAsync_ValidStoredValues_ReturnsSessionValues()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         var userId = Guid.NewGuid();
         var expiresAt = new DateTimeOffset(2026, 8, 24, 12, 30, 0, TimeSpan.Zero);
         secureStorage.GetAsync(AccessTokenKey).Returns("access-token");
@@ -91,7 +90,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task GetSessionAsync_MissingOrBlankValues_ReturnsNull()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         secureStorage.GetAsync(AccessTokenKey).Returns((string?)null);
         secureStorage.GetAsync(RefreshTokenKey).Returns(" ");
         secureStorage.GetAsync(ExpiresAtKey).Returns(string.Empty);
@@ -113,7 +112,7 @@ public sealed class SecureTokenStoreTests
     [InlineData(UserIdKey, "00000000-0000-0000-0000-000000000000")]
     public async Task GetMetadataAsync_MalformedValue_ClearsSession(string key, string value)
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         secureStorage.GetAsync(key).Returns(value);
         var sut = CreateStore(secureStorage);
 
@@ -129,7 +128,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task GetAccessTokenAsync_StorageThrows_ClearsActiveEnvironmentAndReturnsNull()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         secureStorage
             .GetAsync(AccessTokenKey)
             .Returns(Task.FromException<string?>(new InvalidOperationException("Cannot decrypt.")));
@@ -145,7 +144,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task SaveCurrentUserAsync_ValidUser_SavesNormalizedValues()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         var sut = CreateStore(secureStorage);
         var userId = Guid.NewGuid();
 
@@ -161,7 +160,7 @@ public sealed class SecureTokenStoreTests
     [InlineData("a6334722-5550-4b32-bc28-660552a0fb2f", " ")]
     public async Task SaveCurrentUserAsync_InvalidUser_ThrowsArgumentException(string userIdValue, string email)
     {
-        var sut = CreateStore(Substitute.For<ISecureStorage>());
+        var sut = CreateStore(Substitute.For<ISecretStorage>());
 
         var action = () => sut.SaveCurrentUserAsync(Guid.Parse(userIdValue), email);
 
@@ -172,7 +171,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public void Clear_Always_RemovesEverySessionKey()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         var sut = CreateStore(secureStorage);
 
         sut.Clear();
@@ -184,7 +183,7 @@ public sealed class SecureTokenStoreTests
     [Fact]
     public async Task SaveTokensAsync_DifferentBackends_UsesDifferentKeys()
     {
-        var secureStorage = Substitute.For<ISecureStorage>();
+        var secureStorage = Substitute.For<ISecretStorage>();
         var localStore = CreateStore(secureStorage, BackendEnvironment.Local);
         var developmentStore = CreateStore(
             secureStorage,
@@ -208,7 +207,7 @@ public sealed class SecureTokenStoreTests
     }
 
     private static SecureTokenStore CreateStore(
-        ISecureStorage secureStorage,
+        ISecretStorage secureStorage,
         BackendEnvironment environment = BackendEnvironment.Development)
     {
         return new SecureTokenStore(
@@ -219,7 +218,7 @@ public sealed class SecureTokenStoreTests
             });
     }
 
-    private static void AssertSessionKeysRemoved(ISecureStorage secureStorage)
+    private static void AssertSessionKeysRemoved(ISecretStorage secureStorage)
     {
         secureStorage.Received().Remove(AccessTokenKey);
         secureStorage.Received().Remove(RefreshTokenKey);

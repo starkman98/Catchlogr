@@ -20,6 +20,7 @@
     <Project Path="src/Catchlogr.Infrastructure/Catchlogr.Infrastructure.csproj">
       <BuildType Solution="Local|*" Project="Release" />
     </Project>
+    <Project Path="src/Catchlogr.Mobile.Core/Catchlogr.Mobile.Core.csproj" />
     <Project Path="src/Catchlogr.Mobile/Catchlogr.Mobile.csproj">
       <Deploy Solution="Debug|*" />
       <Deploy Solution="Local|*" />
