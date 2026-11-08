@@ -1,7 +1,7 @@
 # Documentation map
 
 [AGENTS.md](../AGENTS.md) contains shared agent rules.
-[README](../README.md) is the only local setup guide. Read individual guides
+[README](../README.md) is the entry point for local setup. Read individual guides
 when needed; do not load the entire documentation directory for every task.
 
 ## Agent instruction maintenance
@@ -75,6 +75,7 @@ instructions; offline link validation cannot establish live client behavior.
 | --- | --- | --- |
 | Setup and implemented overview | [README](../README.md) | [SDK](../global.json), [solution](../Catchlogr.slnx), launch settings, Compose |
 | Check selection and test limitations | [Validation](VALIDATION.md) | [Selection helper](../scripts/Validation.psm1), [CI](../.github/workflows/ci.yml), test projects/factories |
+| Android emulator setup and Appium UI verification | [Android UI testing](ANDROID_UI_TESTING.md) | [Mobile project](../src/Catchlogr.Mobile/Catchlogr.Mobile.csproj), Pages/AutomationIds, [backend configuration](MOBILE_CONFIGURATION.md), recorded platform verification |
 | MVVM, local storage, navigation, UTC examples | [Mobile architecture](MOBILE_ARCHITECTURE.md) | [Mobile composition](../src/Catchlogr.Mobile/MauiProgram.cs), Pages, ViewModels |
 | Backend selection and device addresses | [Mobile configuration](MOBILE_CONFIGURATION.md) | [AppSettings](../src/Catchlogr.Mobile.Core/Configuration/AppSettings.cs), [URL resolver](../src/Catchlogr.Mobile.Core/Configuration/PlatformApiUrl.cs), Mobile project/settings |
 | Reconciliation and photo state | [Sync strategy](SYNC_STRATEGY.md) | [Trip sync](../src/Catchlogr.Sync/Services/FishingTripSyncService.cs), [catch sync](../src/Catchlogr.Sync/Services/CatchSyncService.cs), local repositories |

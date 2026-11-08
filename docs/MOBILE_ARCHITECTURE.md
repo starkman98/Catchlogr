@@ -187,7 +187,7 @@ still includes MAUI and needs its platform toolchains; build Core or the test
 project directly on a server. The console DevHost below exercises the portable pipeline.
 
 For actual Android screen interaction, see
-[Android emulator and Appium verification](VALIDATION.md#android-emulator-and-appium-verification).
+[Android UI testing](ANDROID_UI_TESTING.md).
 An agent can inspect native controls, enter text, tap buttons, and capture
 screenshots through Appium; the console DevHost does not render these screens.
 
