@@ -1,3 +1,5 @@
+using Catchlogr.Mobile.Core.Services.Authentication;
+
 namespace Catchlogr.Mobile.Services.Authentication;
 
 /// <summary>

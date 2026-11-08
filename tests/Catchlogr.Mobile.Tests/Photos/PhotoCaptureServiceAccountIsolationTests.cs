@@ -1,7 +1,6 @@
-using Catchlogr.Mobile.Data;
-using Catchlogr.Mobile.Services.Photos;
+using Catchlogr.Mobile.Core.Data;
+using Catchlogr.Mobile.Core.Services.Photos;
 using FluentAssertions;
-using Microsoft.Maui.Media;
 using NSubstitute;
 
 namespace Catchlogr.Mobile.Tests.Photos;
@@ -68,6 +67,41 @@ public sealed class PhotoCaptureServiceAccountIsolationTests : IDisposable
         File.Exists(otherPhotoPath).Should().BeTrue();
     }
 
+    /// <summary>Captured bytes are copied into the active account with a normalized extension.</summary>
+    [Fact]
+    public async Task CaptureAsync_HostPhoto_CopiesIntoActiveAccount()
+    {
+        var accountDirectory = Path.Combine(_rootDirectory, "first-account");
+        var accountStorage = Substitute.For<IAccountStorageContext>();
+        accountStorage.ActiveAccountDirectory.Returns(accountDirectory);
+        var photo = Substitute.For<ICapturedPhoto>();
+        photo.FileName.Returns("camera.JPEG");
+        photo.OpenReadAsync().Returns(new MemoryStream([1, 2, 3]));
+        var picker = Substitute.For<IPhotoPicker>();
+        picker.IsCaptureSupported.Returns(true);
+        picker.CapturePhotoAsync().Returns(photo);
+        var sut = new PhotoCaptureService(picker, accountStorage);
+
+        var path = await sut.CaptureAsync(TestContext.Current.CancellationToken);
+
+        Path.GetDirectoryName(path).Should().Be(Path.Combine(accountDirectory, "photos"));
+        Path.GetExtension(path).Should().Be(".jpg");
+        (await File.ReadAllBytesAsync(path!, TestContext.Current.CancellationToken)).Should().Equal(1, 2, 3);
+    }
+
+    /// <summary>Cancelling the host picker does not create account files.</summary>
+    [Fact]
+    public async Task CaptureAsync_CancelledPicker_DoesNotCreateFiles()
+    {
+        var picker = Substitute.For<IPhotoPicker>();
+        picker.IsCaptureSupported.Returns(true);
+        picker.CapturePhotoAsync().Returns((ICapturedPhoto?)null);
+        var sut = new PhotoCaptureService(picker, Substitute.For<IAccountStorageContext>());
+
+        (await sut.CaptureAsync(TestContext.Current.CancellationToken)).Should().BeNull();
+        Directory.Exists(_rootDirectory).Should().BeFalse();
+    }
+
     private static PhotoCaptureService CreateService(
         string activeAccountDirectory)
     {
@@ -75,7 +109,7 @@ public sealed class PhotoCaptureServiceAccountIsolationTests : IDisposable
         accountStorage.ActiveAccountDirectory.Returns(activeAccountDirectory);
 
         return new PhotoCaptureService(
-            Substitute.For<IMediaPicker>(),
+            Substitute.For<IPhotoPicker>(),
             accountStorage);
     }
 }

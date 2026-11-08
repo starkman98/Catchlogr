@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Catchlogr.Contracts.AuthenticationDTOs;
-using Catchlogr.Mobile.Services.Authentication;
+using Catchlogr.Mobile.Core.Services.Authentication;
 using FluentAssertions;
 using NSubstitute;
 

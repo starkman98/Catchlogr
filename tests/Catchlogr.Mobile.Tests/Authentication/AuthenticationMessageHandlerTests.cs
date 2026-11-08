@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
-using Catchlogr.Mobile.Services.Authentication;
+using Catchlogr.Mobile.Core.Services.Authentication;
 using FluentAssertions;
 using NSubstitute;
 

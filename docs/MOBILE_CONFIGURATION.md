@@ -11,13 +11,18 @@ configuration. Select the configuration before starting the mobile project.
 | Debug | `appsettings.Development.json` | `https://dev-api.catchlogr.com` | `catchlogr_dev.db3` |
 | Release | `appsettings.json` | `https://api.catchlogr.com` | `catchlogr.db3` |
 
-`AppSettings.Load()` loads exactly one embedded resource. It does not fall
+`MauiProgram` passes the host assembly and build-selected environment to
+`AppSettings.Load(assembly, expectedEnvironment)`, which loads exactly one embedded resource. It does not fall
 back to another environment. Startup fails if the resource is missing, its
 declared `BackendEnvironment` does not match the build, or a non-Local API
 URL does not use HTTPS.
 
 Changes to these JSON files require rebuilding the mobile app because the
 files are embedded in the application assembly.
+
+The [console DevHost](MOBILE_ARCHITECTURE.md#console-devhost) supplies Local settings
+and a temporary storage root directly; it does not select MAUI build resources.
+Its `--api` option accepts loopback origins only.
 
 ## Local API addresses
 

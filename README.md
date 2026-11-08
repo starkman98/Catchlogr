@@ -52,13 +52,15 @@ Catchlogr/
 │   ├── Catchlogr.Contracts/         API request and response contracts
 │   ├── Catchlogr.Domain/            Domain entities and interfaces
 │   ├── Catchlogr.Infrastructure/    EF Core, providers, email, and storage
-│   ├── Catchlogr.Mobile/            .NET MAUI application
+│   ├── Catchlogr.Mobile/            .NET MAUI shell and platform adapters
+│   ├── Catchlogr.Mobile.Core/       Portable mobile logic (net10.0)
+│   ├── Catchlogr.Mobile.DevHost/    Console mobile/API smoke host
 │   ├── Catchlogr.Sync/              Platform-neutral synchronization logic
 │   └── Catchlogr.Web/               Identity action Razor Pages
 ├── tests/
 │   ├── Catchlogr.Tests/             Unit tests
 │   ├── Catchlogr.Api.IntegrationTests/
-│   └── Catchlogr.Mobile.Tests/      Windows-targeted MAUI tests
+│   └── Catchlogr.Mobile.Tests/      Portable mobile logic tests
 ├── deploy/docker/
 │   ├── compose.local.yml            Local PostgreSQL
 │   └── compose.dev.yml              Development deployment stack
@@ -275,9 +277,13 @@ in, save a trip/catch offline, then reconnect and sync. Check that switching
 accounts does not expose another account's local rows or photos. This smoke
 check needs a reachable Web origin and configured email delivery.
 
+For mobile login → local trip creation → API sync without an emulator, use the
+[console DevHost](docs/MOBILE_ARCHITECTURE.md#console-devhost). It uses a running
+local API, temporary SQLite, and an existing development account.
+
 Use [Validation](docs/VALIDATION.md) for focused test commands and limitations.
-Pull-request CI runs unit/API suites on Linux, Mobile tests on Windows, and
-documentation validation. Routine test runs do not need real provider keys or
+Pull-request CI runs unit, API integration, Mobile.Core, and documentation
+checks on Linux. Routine test runs do not need real provider keys or
 a local PostgreSQL instance; running the application does.
 
 ## Database commands

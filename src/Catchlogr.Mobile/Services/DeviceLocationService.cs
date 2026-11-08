@@ -1,3 +1,5 @@
+using Catchlogr.Mobile.Core.Services;
+
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Devices.Sensors;
 
@@ -24,18 +26,34 @@ public sealed class DeviceLocationService : IDeviceLocationService
     public async Task<DeviceLocationCapture?> GetCurrentLocationAsync(
         CancellationToken cancellationToken = default)
     {
-        var permission = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
-        if (permission != PermissionStatus.Granted)
-            permission = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
+        try
+        {
+            var permission = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (permission != PermissionStatus.Granted)
+                permission = await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
 
-        if (permission != PermissionStatus.Granted)
-            throw new PermissionException("Location permission was not granted.");
+            if (permission != PermissionStatus.Granted)
+                throw new PermissionException("Location permission was not granted.");
 
-        var request = new GeolocationRequest(GeolocationAccuracy.High, LocationTimeout);
-        var location = await _geolocation.GetLocationAsync(request, cancellationToken);
+            var request = new GeolocationRequest(GeolocationAccuracy.High, LocationTimeout);
+            var location = await _geolocation.GetLocationAsync(request, cancellationToken);
 
-        return location is null
-            ? null
-            : new DeviceLocationCapture(location.Latitude, location.Longitude, location.Accuracy);
+            return location is null
+                ? null
+                : new DeviceLocationCapture(location.Latitude, location.Longitude, location.Accuracy);
+        }
+        catch (PermissionException exception)
+        {
+            throw new DevicePermissionException(exception.Message, exception);
+        }
+        catch (FeatureNotEnabledException exception)
+        {
+            throw new DeviceFeatureNotEnabledException(exception.Message, exception);
+        }
+        catch (FeatureNotSupportedException exception)
+        {
+            throw new DeviceFeatureNotSupportedException(exception.Message, exception);
+        }
+
     }
 }

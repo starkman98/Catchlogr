@@ -1,6 +1,6 @@
-using Catchlogr.Mobile.Configuration;
-using Catchlogr.Mobile.Data;
-using Catchlogr.Mobile.Data.Repositories;
+using Catchlogr.Mobile.Core.Configuration;
+using Catchlogr.Mobile.Core.Data;
+using Catchlogr.Mobile.Core.Data.Repositories;
 using Catchlogr.Sync;
 using Catchlogr.Sync.Entities;
 using FluentAssertions;

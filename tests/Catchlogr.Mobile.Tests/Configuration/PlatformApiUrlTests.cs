@@ -1,4 +1,4 @@
-using Catchlogr.Mobile.Configuration;
+using Catchlogr.Mobile.Core.Configuration;
 using FluentAssertions;
 
 namespace Catchlogr.Mobile.Tests.Configuration;
@@ -19,8 +19,9 @@ public sealed class PlatformApiUrlTests
         var result = PlatformApiUrl.Resolve(
             configuredUrl,
             environment,
-            DevicePlatform.Android,
-            DeviceType.Virtual);
+            isAndroid: true,
+            isVirtual: true,
+            isWindows: false);
 
         result.Should().Be(configuredUrl);
     }
@@ -32,8 +33,9 @@ public sealed class PlatformApiUrlTests
         var result = PlatformApiUrl.Resolve(
             "https://localhost:7160",
             BackendEnvironment.Local,
-            DevicePlatform.Android,
-            DeviceType.Virtual);
+            isAndroid: true,
+            isVirtual: true,
+            isWindows: false);
 
         result.Should().Be("http://10.0.2.2:5001");
     }
@@ -45,8 +47,9 @@ public sealed class PlatformApiUrlTests
         var result = PlatformApiUrl.Resolve(
             "http://192.168.1.10:5001",
             BackendEnvironment.Local,
-            DevicePlatform.WinUI,
-            DeviceType.Physical);
+            isAndroid: false,
+            isVirtual: false,
+            isWindows: true);
 
         result.Should().Be("https://localhost:7160");
     }
@@ -60,8 +63,9 @@ public sealed class PlatformApiUrlTests
         var result = PlatformApiUrl.Resolve(
             configuredUrl,
             BackendEnvironment.Local,
-            DevicePlatform.Android,
-            DeviceType.Physical);
+            isAndroid: true,
+            isVirtual: false,
+            isWindows: false);
 
         result.Should().Be(configuredUrl);
     }

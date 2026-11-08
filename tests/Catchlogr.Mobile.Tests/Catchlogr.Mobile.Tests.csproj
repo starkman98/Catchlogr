@@ -1,14 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <DisableResizetizer>true</DisableResizetizer>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,11 +20,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="../../src/Catchlogr.Mobile/appsettings*.json">
+      <LogicalName>Catchlogr.Mobile.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Catchlogr.Mobile\Catchlogr.Mobile.csproj" />
+    <ProjectReference Include="../../src/Catchlogr.Mobile.DevHost/Catchlogr.Mobile.DevHost.csproj" />
+    <ProjectReference Include="..\..\src\Catchlogr.Mobile.Core\Catchlogr.Mobile.Core.csproj" />
   </ItemGroup>
 
 </Project>

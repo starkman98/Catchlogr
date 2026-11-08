@@ -20,6 +20,7 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/Catchlogr.Mobile.DevHost/Catchlogr.Mobile.DevHost.csproj" />
     <ProjectReference Include="..\..\src\Catchlogr.Api\Catchlogr.Api.csproj" />
     <ProjectReference Include="..\..\src\Catchlogr.Contracts\Catchlogr.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Catchlogr.Infrastructure\Catchlogr.Infrastructure.csproj" />

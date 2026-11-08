@@ -61,7 +61,7 @@ normal validation restores them. NuGet connectivity, cached runtime packs,
 generated import correctness, and build/test access remain unverified. Raw
 command output is suppressed; if inspection is blocked, run the indicated version
 or workload command directly and inspect its first actionable error. For the
-observed Mobile import problem, follow [restore recovery](#mobile-restore-and-import-recovery).
+observed Mobile import problem, follow [restore recovery](#historical-maui-restore-and-import-recovery).
 For access failures, use supported approval mechanisms rather than changing policy.
 
 See Microsoft's [SDK selection rules](https://learn.microsoft.com/en-us/dotnet/core/tools/global-json)
@@ -80,9 +80,11 @@ The executable mapping lives in [Validation.psm1](../scripts/Validation.psm1):
 - Application, API, and Infrastructure select unit/API suites; Application
   interfaces also select Mobile. Web selects the unit suite.
 - Sync services select the unit suite; local entities/abstractions also select
-  Mobile. Mobile changes select Mobile tests, with a Windows build for XAML,
-  its code-behind, resources, and platform-directory changes.
+  Mobile. Mobile.Core and Mobile changes select portable Mobile tests, with a Windows
+  app build for XAML, code-behind, resources, platform adapters, and MauiProgram.
 - Contracts, Domain, project/dependency/SDK/build inputs select all three suites.
+- DevHost and shared Core service registration select Mobile and API integration
+  tests. These use the existing isolated API fixture and temporary SQLite.
 - Changes to the helper select its own checks and documentation validation.
 - Workflow/deployment changes select all suites plus documentation validation.
   Unknown paths select these and helper checks, with an explicit review warning.
@@ -106,8 +108,8 @@ The mapping lives alongside check selection in Validation.psm1; the
 
 Run mode executes each selected command once, sequentially, from the Git root
 and reports status and elapsed time. Failed or blocked checks produce exit 1;
-other selected checks still run. Windows and the MAUI Windows workload are
-required for Mobile. It never installs tools/workloads, pushes, deploys, or runs
+other selected checks still run. Mobile tests run on plain net10.0 without MAUI;
+only the MAUI app build requires Windows and the MAUI Windows workload. It never installs tools/workloads, pushes, deploys, or runs
 migrations. Missing/unsupported SDKs and other command errors remain failures.
 Manual database/UI/deployment reviews are not executed or marked passed; exit 0
 means only that selected automated checks passed (or preview succeeded).
@@ -134,7 +136,7 @@ execution policy or filesystem permissions just to avoid an approval.
 | Markdown or agent instructions only | Documentation command below |
 | Business services, validators, provider adapters, Sync, Web client/page logic | Catchlogr.Tests; use a focused filter while iterating |
 | API routes, authentication, ownership | API integration tests plus affected unit tests |
-| Mobile ViewModels, authentication, configuration | Mobile tests on Windows with MAUI |
+| Mobile ViewModels, authentication, configuration | Mobile.Core tests on Linux, macOS, or Windows |
 | XAML or platform behavior | Build the affected target; manually check the affected UI/device flow |
 | Contracts or persisted fields | Affected server, sync, and mobile suites; verify all mappings |
 | PostgreSQL schema | Review migration/snapshot and apply to a disposable local PostgreSQL database |
@@ -149,8 +151,9 @@ execution policy or filesystem permissions just to avoid an approval.
 dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj
 dotnet test tests/Catchlogr.Api.IntegrationTests/Catchlogr.Api.IntegrationTests.csproj
 
-# Windows with the MAUI workload
+# Linux, macOS, or Windows; no MAUI workload
 dotnet test tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
+dotnet build src/Catchlogr.Mobile.Core/Catchlogr.Mobile.Core.csproj
 
 # Example: focus on synchronization while iterating
 dotnet test tests/Catchlogr.Tests/Catchlogr.Tests.csproj --filter "FullyQualifiedName~SyncServiceTests"
@@ -162,32 +165,20 @@ evidence. Use `--no-restore` only when dependencies are already restored; use
 code change. Report missing prerequisites instead of reporting a skipped check
 as passing.
 
-## Mobile restore and import recovery
+## Historical MAUI restore and import recovery
 
-If a normal Mobile test build reports the Windows App SDK
-`CustomBeforeMicrosoftCommonTargets` import error after a diagnostic restore,
-check whether that restore used a global `-p:TargetFrameworks=...` override.
-The test project has a single TargetFramework, while Mobile is multi-targeted.
-That override can leave generated NuGet props conditioned on TargetFramework,
-skipping the test project's early WinUI props import on a subsequent normal build.
-Windows App SDK targets then fail because their required props never ran.
+Before the Core extraction, Mobile tests referenced MAUI and could fail on Windows
+with the Windows App SDK `CustomBeforeMicrosoftCommonTargets` import error.
+A diagnostic restore had used a global `-p:TargetFrameworks=...` override across
+a mixed single/multi-target project graph, leaving incompatible generated imports.
+A normal restore with the original project properties repaired that observed case.
+Current portable Mobile tests have no WinUI imports.
 
-Restore the test project with its normal properties before building again:
-
-```powershell
-dotnet restore tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
-dotnet test tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj --configuration Release --no-restore
-```
-
-This repaired the observed generated imports without editing project files,
-reinstalling workloads, deleting caches, or disabling the SDK's import checks.
-Avoid applying TargetFrameworks overrides to the entire mixed project graph;
-restore with normal properties before returning to normal builds after diagnostics.
-NuGet generates the props/targets under obj; do not patch them manually. See
+Avoid global TargetFrameworks overrides across mixed project graphs. Do not edit
+NuGet-generated props/targets under obj. Missing runtime packs, denied package
+access, and missing platform workloads are separate prerequisites. See
 [NuGet build imports](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files)
 and [restore options](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-restore).
-Missing runtime packs and denied NuGet access are separate prerequisite failures;
-this import recovery is not evidence that those prerequisites exist on a fresh machine.
 
 ## Measured local baseline
 
@@ -221,7 +212,7 @@ The build emitted five XC0025 warnings for bindings with explicit Source whose
 compilation is not enabled; they did not prevent the build or tests from passing.
 No application source, package versions, or build properties changed. This was
 not a cold-cache run; runtime packs downloaded during the earlier attempt remained
-available. See [import recovery](#mobile-restore-and-import-recovery).
+available. See [import recovery](#historical-maui-restore-and-import-recovery).
 
 The helper's own checks take approximately 7 s including disposable Git fixtures
 and child-shell checks; documentation validation takes approximately 0.5 s here.
@@ -235,9 +226,9 @@ Priorities supported by these observations:
 3. Diagnose sandbox/network/runtime prerequisites before blind retries. Reuse
    existing builds only with the configuration/target and freshness rules above.
 
-CI review found separate unit/API jobs, a Windows Mobile job that installs MAUI,
+The earlier CI review found separate unit/API jobs, a Windows Mobile job that installed MAUI,
 and deployment tests that validate the deployed commit again. Their separation
-provides isolation; this change preserves it. Historical runner/queue timings
+provides isolation; the Core extraction keeps separate suites while moving Mobile tests to Linux. Historical runner/queue timings
 were not available locally, so no CI speedup is claimed. Measure those before
 changing job layout, caching, or required checks; deployment tests remain intact.
 
@@ -261,8 +252,21 @@ The sandbox denied rootless socket access and initially blocked NuGet DNS and
 PowerShell cache initialization. Supported approved execution outside the sandbox
 succeeded without changing security settings. Future sessions must still check
 their own permissions and prerequisites. See [local setup](../README.md#local-setup)
-for shared secrets, worktrees, and rootless Docker. Mobile tests still require
-Windows with MAUI; this Linux verification does not cover device behavior.
+for shared secrets, worktrees, and rootless Docker. That backend-only verification did not cover Mobile tests or device behavior.
+The subsequent Mobile.Core verification below covers portable mobile logic.
+
+## Mobile.Core Linux verification
+
+After the Core extraction, on Linux with SDK 10.0.302, all **75 Mobile tests
+passed in Release**, with zero failures or skips. This includes the 65 existing
+tests and ten new cases for configuration resources, trip saving/validation,
+location permissions, offline refresh dispatch, and photo capture file handling.
+The same 75 tests passed in Debug through the branch validation helper. The
+standalone Core Release build completed with zero warnings or errors. The branch
+also passed 277 unit tests, 40 API integration tests, documentation validation,
+and 91 helper assertions. No MAUI workloads were installed. The helper reported
+the Windows MAUI app build as blocked on Linux; camera/GPS/Shell/device UI checks
+remain separate and were not established by these tests.
 
 ## What the tests establish
 
@@ -272,8 +276,8 @@ Windows with MAUI; this Linux verification does not cover device behavior.
   PostgreSQL with EF Core InMemory, email with a capturing sender, and photos
   with temporary private storage. No real database or email credentials are
   needed. These tests do not verify PostgreSQL SQL, constraints, or migrations.
-- Mobile tests target net10.0-windows10.0.19041.0 / win-x64 and reference the MAUI
-  project. Passing them does not validate Android/iOS UI or device behavior.
+- Mobile tests target net10.0 and reference Mobile.Core, without a runtime identifier
+  or MAUI workload. Passing them does not validate MAUI UI or device behavior.
 - Documentation validation is offline and does not check external URLs or
   semantic accuracy. Review changed prose against its owning source files.
   It includes scoped AGENTS.md/CLAUDE.md under src/tests and Copilot instruction
@@ -284,3 +288,32 @@ Windows with MAUI; this Linux verification does not cover device behavior.
 
 See [CI/CD](CI-CD.md) for where these checks run and
 [README](../README.md) for local database setup and migration commands.
+
+## DevHost validation
+
+Build the console host without MAUI:
+
+```sh
+dotnet build src/Catchlogr.Mobile.DevHost/Catchlogr.Mobile.DevHost.csproj --configuration Release
+dotnet run --project src/Catchlogr.Mobile.DevHost -- --help
+```
+
+`DevHostOptionsTests` and `DevHostSessionTests` run in the Mobile suite and cover
+loopback endpoint restrictions, credential-argument rejection, temporary storage
+permissions, token/file cleanup, and synthetic GPS. `DevHostScenarioTests` run in
+the API integration suite and use real confirmed-account authentication, Core
+HTTP clients, SQLite, and Sync. They cover successful upload/read-back, separate
+accounts, rejected login, cancellation during upload, and an upload outage that
+must not report success.
+The API fixture substitutes EF InMemory and captured email; these tests need no
+MAUI, Docker, provider keys, or real credentials and do not establish PostgreSQL
+behavior. See [DevHost usage](MOBILE_ARCHITECTURE.md#console-devhost) for a manual
+local API run and its persistent server-side effects.
+
+Observed on Linux with SDK 10.0.302 on 2026-11-08: DevHost built in Release with
+zero warnings/errors; 277 unit tests, 95 Mobile tests, 44 API integration tests,
+and 93 helper assertions passed. CLI help returned 0; a remote endpoint and
+password argument returned 2 without printing the supplied synthetic secret.
+Documentation validation passed. The Windows MAUI app build remained blocked on
+Linux. No Docker/PostgreSQL application smoke run or device verification was
+performed for this DevHost change.

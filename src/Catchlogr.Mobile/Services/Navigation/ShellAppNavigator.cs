@@ -1,3 +1,5 @@
+using Catchlogr.Mobile.Core.Services.Navigation;
+
 namespace Catchlogr.Mobile.Services.Navigation;
 
 /// <summary>Navigates through the active MAUI Shell.</summary>

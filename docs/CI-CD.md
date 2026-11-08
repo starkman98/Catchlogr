@@ -1,8 +1,8 @@
 # CI/CD
 
-Catchlogr uses two GitHub Actions workflows. Backend and documentation jobs use
-a self-hosted Linux runner labelled `self-hosted`, `linux`, `x64`, and
-`catchlogr`; pull-request Mobile tests use `windows-latest`.
+Catchlogr uses two GitHub Actions workflows. All pull-request test and
+documentation jobs use a self-hosted Linux runner labelled `self-hosted`, `linux`, `x64`, and
+`catchlogr`.
 
 ## Branch flow
 
@@ -27,8 +27,8 @@ job rejects a pull request to `main` unless its source branch is `dev`.
    - builds it in Release; and
    - runs it without rebuilding.
 3. `mobile-tests`
-   - installs SDK 10.0.302 and the maui-windows workload on windows-latest;
-   - restores and runs Catchlogr.Mobile.Tests in Release.
+   - restores and builds the plain net10.0 Catchlogr.Mobile.Tests in Release;
+   - runs it without rebuilding on Linux, with no MAUI workload.
 4. `documentation`
    - runs scripts/validate-docs.ps1 with pwsh;
    - runs the dependency-free validation helper tests with pwsh using disposable
@@ -42,8 +42,9 @@ an in-memory sender, and photo storage with an isolated temporary directory. CI
 therefore does not require a PostgreSQL service.
 
 The self-hosted runner supplies the .NET SDK; its jobs report dotnet --info
-instead of installing an SDK. The Windows job explicitly installs the version
-above. See [Validation](VALIDATION.md) for local commands and test limitations.
+instead of installing an SDK. Mobile tests reference Mobile.Core; CI does not
+build the MAUI shell or validate device UI. See [Validation](VALIDATION.md) for
+local commands and test limitations.
 
 ## Development deployment
 

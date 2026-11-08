@@ -1,9 +1,9 @@
 using System.Net;
 using Catchlogr.Contracts.AuthenticationDTOs;
-using Catchlogr.Mobile.Data;
-using Catchlogr.Mobile.Services.Authentication;
-using Catchlogr.Mobile.Services.Navigation;
-using Catchlogr.Mobile.ViewModels;
+using Catchlogr.Mobile.Core.Data;
+using Catchlogr.Mobile.Core.Services.Authentication;
+using Catchlogr.Mobile.Core.Services.Navigation;
+using Catchlogr.Mobile.Core.ViewModels;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

@@ -73,15 +73,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.10" />
-		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
+
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Catchlogr.Application\Catchlogr.Application.csproj" />
+	  <ProjectReference Include="..\Catchlogr.Mobile.Core\Catchlogr.Mobile.Core.csproj" />
 	  <ProjectReference Include="..\Catchlogr.Contracts\Catchlogr.Contracts.csproj" />
 	  <ProjectReference Include="..\Catchlogr.Sync\Catchlogr.Sync.csproj" />
 	</ItemGroup>

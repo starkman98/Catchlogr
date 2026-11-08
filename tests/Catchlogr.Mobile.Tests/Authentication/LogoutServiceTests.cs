@@ -1,6 +1,6 @@
-using Catchlogr.Mobile.Data;
-using Catchlogr.Mobile.Services;
-using Catchlogr.Mobile.Services.Authentication;
+using Catchlogr.Mobile.Core.Services;
+using Catchlogr.Mobile.Core.Data;
+using Catchlogr.Mobile.Core.Services.Authentication;
 using Catchlogr.Sync.Abstractions;
 using Catchlogr.Sync.Entities;
 using FluentAssertions;
@@ -36,7 +36,7 @@ public sealed class LogoutServiceTests
     public async Task PrepareAsync_PendingChangesOnline_SynchronizesAndReturnsReady()
     {
         var dependencies = CreateDependencies();
-        dependencies.Connectivity.NetworkAccess.Returns(NetworkAccess.Internet);
+        dependencies.Connectivity.IsInternetAvailable.Returns(true);
         dependencies.HealthClient.IsHealthyAsync(Arg.Any<CancellationToken>())
             .Returns(true);
         var readCount = 0;
@@ -59,7 +59,7 @@ public sealed class LogoutServiceTests
     public async Task PrepareAsync_PendingChangesOffline_PreservesPendingCount()
     {
         var dependencies = CreateDependencies();
-        dependencies.Connectivity.NetworkAccess.Returns(NetworkAccess.None);
+        dependencies.Connectivity.IsInternetAvailable.Returns(false);
         dependencies.CatchRepository.GetDirtyAsync(Arg.Any<CancellationToken>())
             .Returns([new CatchLocalEntity { IsDirty = true }]);
         var sut = dependencies.CreateService();
@@ -98,7 +98,7 @@ public sealed class LogoutServiceTests
             Substitute.For<IFishingTripLocalRepository>(),
             Substitute.For<ICatchLocalRepository>(),
             Substitute.For<ISyncOrchestrator>(),
-            Substitute.For<IConnectivity>(),
+            Substitute.For<IConnectivityService>(),
             Substitute.For<IApiHealthClient>(),
             Substitute.For<ILocalDatabase>(),
             Substitute.For<IAuthenticationService>(),
@@ -116,7 +116,7 @@ public sealed class LogoutServiceTests
         IFishingTripLocalRepository TripRepository,
         ICatchLocalRepository CatchRepository,
         ISyncOrchestrator SyncOrchestrator,
-        IConnectivity Connectivity,
+        IConnectivityService Connectivity,
         IApiHealthClient HealthClient,
         ILocalDatabase LocalDatabase,
         IAuthenticationService AuthenticationService,

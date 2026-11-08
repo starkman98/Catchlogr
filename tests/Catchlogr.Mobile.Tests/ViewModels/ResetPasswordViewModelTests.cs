@@ -1,6 +1,6 @@
-using Catchlogr.Mobile.Services.Authentication;
-using Catchlogr.Mobile.Services.Navigation;
-using Catchlogr.Mobile.ViewModels;
+using Catchlogr.Mobile.Core.Services.Authentication;
+using Catchlogr.Mobile.Core.Services.Navigation;
+using Catchlogr.Mobile.Core.ViewModels;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
