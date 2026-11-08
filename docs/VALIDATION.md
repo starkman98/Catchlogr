@@ -241,6 +241,29 @@ provides isolation; this change preserves it. Historical runner/queue timings
 were not available locally, so no CI speedup is claimed. Measure those before
 changing job layout, caching, or required checks; deployment tests remain intact.
 
+## Linux server verification
+
+Observed on 2026-11-08 with user-local SDK 10.0.302, PowerShell 7.6.9, and EF CLI
+10.0.14. The Backend profile restored and built successfully: **277 unit tests
+and 40 API integration tests passed, with zero failures or skips**. Documentation
+validation passed for 41 Markdown files; validation-helper checks passed with
+89 assertions. These are observations, not pinned test counts or guarantees for
+later commits. No live application/provider smoke check was performed.
+
+Rootless Docker 29.1.3 and Compose 2.40.3 were verified separately with
+`hello-world` and a disposable PostgreSQL 16 Compose service. Its health check,
+SQL writes/reads, and host-to-container PostgreSQL protocol handshake passed.
+The temporary container, network, and volume were removed. The Docker user
+service was enabled and active with lingering enabled. This did not validate
+application migrations or existing database upgrades.
+
+The sandbox denied rootless socket access and initially blocked NuGet DNS and
+PowerShell cache initialization. Supported approved execution outside the sandbox
+succeeded without changing security settings. Future sessions must still check
+their own permissions and prerequisites. See [local setup](../README.md#local-setup)
+for shared secrets, worktrees, and rootless Docker. Mobile tests still require
+Windows with MAUI; this Linux verification does not cover device behavior.
+
 ## What the tests establish
 
 - Catchlogr.Tests uses xUnit, FluentAssertions, and NSubstitute. It includes
