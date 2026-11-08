@@ -59,28 +59,27 @@ jobs:
             --no-build
 
   mobile-tests:
-    runs-on: windows-latest
+    runs-on: [self-hosted, linux, x64, catchlogr]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.302
-
-      - name: Install MAUI Windows workload
-        run: dotnet workload install maui-windows
+      - name: Verify .NET
+        run: dotnet --info
 
       - name: Restore mobile tests
         run: dotnet restore tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
+
+      - name: Build mobile tests
+        run: dotnet build tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj --configuration Release --no-restore
 
       - name: Run mobile tests
         run: >
           dotnet test
           tests/Catchlogr.Mobile.Tests/Catchlogr.Mobile.Tests.csproj
           --configuration Release
+          --no-build
 
   documentation:
     runs-on: [self-hosted, linux, x64, catchlogr]

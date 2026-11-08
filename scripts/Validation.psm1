@@ -73,9 +73,9 @@ function Get-ValidationPlan {
         @{ Pattern = '^src/Catchlogr\.Sync/'; Checks = @('unit'); Manual = 'Review Mobile/API mappings and retry, cursor, ordering, and photo-state effects; broaden checks if those boundaries change.' },
         @{ Pattern = '^src/Catchlogr\.Sync/(Entities|Abstractions)/'; Checks = @('mobile'); Manual = 'Verify local persisted-field upgrades and Mobile repository/client compatibility where affected.' },
         @{ Pattern = '^src/Catchlogr\.Web/'; Checks = @('unit') },
-        @{ Pattern = '^src/Catchlogr\.Mobile/'; Checks = @('mobile') },
-        @{ Pattern = '^src/Catchlogr\.Mobile/.*\.xaml(\.cs)?$|^src/Catchlogr\.Mobile/(Platforms|Resources)/'; Checks = @('mobile-build'); Manual = 'Build the affected platform target and manually exercise the changed UI/device flow; automated build covers Windows only.' },
-        @{ Pattern = '^src/Catchlogr\.Mobile/Data/'; Checks = @(); Manual = 'For SQLite schema changes, exercise an upgrade from an existing local database; mocks do not prove compatibility.' },
+        @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/'; Checks = @('mobile') },
+        @{ Pattern = '^src/Catchlogr\.Mobile/.*\.xaml(\.cs)?$|^src/Catchlogr\.Mobile/(Platforms|Resources|Services)/|^src/Catchlogr\.Mobile/MauiProgram\.cs$'; Checks = @('mobile-build'); Manual = 'Build the affected platform target and manually exercise the changed UI/device flow; automated build covers Windows only.' },
+        @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/Data/'; Checks = @(); Manual = 'For SQLite schema changes, exercise an upgrade from an existing local database; mocks do not prove compatibility.' },
         @{ Pattern = '^tests/Catchlogr\.Tests/'; Checks = @('unit') },
         @{ Pattern = '^tests/Catchlogr\.Api\.IntegrationTests/'; Checks = @('api') },
         @{ Pattern = '^tests/Catchlogr\.Mobile\.Tests/'; Checks = @('mobile') },
@@ -85,9 +85,9 @@ function Get-ValidationPlan {
     )
     # Advisory ownership hints, independent of automated check selection.
     $guideRules = @(
-        @{ Pattern = '^src/Catchlogr\.Sync/|^src/Catchlogr\.Mobile/(Data|Services/.*Sync)'; Guides = @('docs/SYNC_STRATEGY.md') },
-        @{ Pattern = '^src/Catchlogr\.Mobile/'; Guides = @('docs/MOBILE_ARCHITECTURE.md') },
-        @{ Pattern = '^src/Catchlogr\.Mobile/Configuration/|^src/Catchlogr\.Mobile/.*appsettings|^src/Catchlogr\.Mobile/Platforms/'; Guides = @('docs/MOBILE_CONFIGURATION.md') },
+        @{ Pattern = '^src/Catchlogr\.Sync/|^src/Catchlogr\.Mobile(\.Core)?/(Data|Services/.*Sync)'; Guides = @('docs/SYNC_STRATEGY.md') },
+        @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/'; Guides = @('docs/MOBILE_ARCHITECTURE.md') },
+        @{ Pattern = '^src/Catchlogr\.Mobile(\.Core)?/Configuration/|^src/Catchlogr\.Mobile/.*appsettings|^src/Catchlogr\.Mobile/Platforms/'; Guides = @('docs/MOBILE_CONFIGURATION.md') },
         @{ Pattern = '^src/.*(Weather|Moon)|^src/Catchlogr\.Application/Services/FishingTripService\.cs$'; Guides = @('docs/WEATHER_INTEGRATION.md') },
         @{ Pattern = '^src/.*(LocationSearch|LocationIq|LocationEndpoints)'; Guides = @('docs/LOCATION_SEARCH_INTEGRATION.md') },
         @{ Pattern = '^src/Catchlogr\.Web/|^src/.*(Identity|Email)|^src/Catchlogr\.Api/Program\.cs$'; Guides = @('docs/IDENTITY_EMAIL.md') },
@@ -167,9 +167,9 @@ function Get-ValidationPlan {
     if (@($checks | Where-Object Command -eq 'dotnet').Count -gt 0 -and -not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
         $prerequisites.Add('Missing dotnet SDK; install the version compatible with global.json.')
     }
-    if ($reasons.ContainsKey('mobile') -or $reasons.ContainsKey('mobile-build')) {
-        if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { $prerequisites.Add('Mobile checks require Windows.') }
-        $prerequisites.Add('Mobile requires the MAUI Windows workload; verified only when running checks.')
+    if ($reasons.ContainsKey('mobile-build')) {
+        if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { $prerequisites.Add('The MAUI app build requires Windows.') }
+        $prerequisites.Add('The MAUI app build requires the MAUI Windows workload; verified only when running checks.')
     }
     [pscustomobject]@{
         RepositoryRoot = $root
@@ -201,8 +201,8 @@ function Invoke-ValidationPlan {
             param($Check)
             if ($Check.Command -ne 'dotnet') { return $null }
             if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { return 'dotnet SDK is missing.' }
-            if ($Check.Id -in @('mobile', 'mobile-build')) {
-                if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { return 'Mobile checks require Windows.' }
+            if ($Check.Id -eq 'mobile-build') {
+                if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { return 'The MAUI app build requires Windows.' }
                 $workloads = & dotnet workload list 2>&1
                 if ($LASTEXITCODE -ne 0) { return 'Could not inspect installed MAUI workloads.' }
                 if (($workloads -join "`n") -notmatch '(?m)^\s*maui(-windows)?\s') { return 'MAUI Windows workload is missing.' }

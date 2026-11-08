@@ -129,7 +129,7 @@ try {
 
     foreach ($case in @(
         @{ Path = 'src/Catchlogr.Api/Endpoints/New.cs'; Guide = 'README.md'; Ids = 'unit,api' },
-        @{ Path = 'src/Catchlogr.Mobile/Configuration/New.cs'; Guide = 'docs/MOBILE_CONFIGURATION.md'; Ids = 'mobile' },
+        @{ Path = 'src/Catchlogr.Mobile.Core/Configuration/New.cs'; Guide = 'docs/MOBILE_CONFIGURATION.md'; Ids = 'mobile' },
         @{ Path = 'src/Catchlogr.Infrastructure/Weather/New.cs'; Guide = 'docs/WEATHER_INTEGRATION.md'; Ids = 'unit,api' },
         @{ Path = '.github/workflows/ownership.yml'; Guide = 'docs/CI-CD.md'; Ids = 'docs,unit,api,mobile' }
     )) {
@@ -147,11 +147,13 @@ try {
         @{ Path = 'src/Catchlogr.Application/Interfaces/INew.cs'; Ids = 'unit,api,mobile' },
         @{ Path = 'src/Catchlogr.Contracts/New.cs'; Ids = 'unit,api,mobile' },
         @{ Path = 'Directory.Build.props'; Ids = 'unit,api,mobile' },
+        @{ Path = 'src/Catchlogr.Mobile.Core/ViewModels/New.cs'; Ids = 'mobile' },
+        @{ Path = 'src/Catchlogr.Mobile/Services/New.cs'; Ids = 'mobile,mobile-build' },
         @{ Path = 'src/Catchlogr.Mobile/Pages/New.xaml'; Ids = 'mobile,mobile-build' },
         @{ Path = 'src/Catchlogr.Mobile/Pages/New.xaml.cs'; Ids = 'mobile,mobile-build' },
         @{ Path = 'src/Catchlogr.Mobile/Resources/Images/new.svg'; Ids = 'mobile,mobile-build' },
         @{ Path = 'src/Catchlogr.Infrastructure/Persistence/New.cs'; Ids = 'unit,api' },
-        @{ Path = 'src/Catchlogr.Mobile/Data/New.cs'; Ids = 'mobile' },
+        @{ Path = 'src/Catchlogr.Mobile.Core/Data/New.cs'; Ids = 'mobile' },
         @{ Path = 'scripts/Validation.psm1'; Ids = 'docs,helper' },
         @{ Path = 'scripts/diagnose-environment.ps1'; Ids = 'docs,helper' },
         @{ Path = 'scripts/Environment.psm1'; Ids = 'docs,helper' },

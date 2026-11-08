@@ -82,4 +82,29 @@ public sealed class FishingTripsViewModelTests
             Arg.Any<string>(),
             Arg.Any<CancellationToken>());
     }
+    /// <summary>Page appearance dispatches the refresh reset and respects offline connectivity.</summary>
+    [Fact]
+    public async Task OnPageAppearing_Offline_DispatchesResetAndKeepsLocalTrips()
+    {
+        var connectivity = Substitute.For<IConnectivityService>();
+        connectivity.IsInternetAvailable.Returns(false);
+        var interaction = Substitute.For<IAppInteraction>();
+        interaction.When(host => host.BeginInvokeOnMainThread(Arg.Any<Action>()))
+            .Do(call => call.Arg<Action>()());
+        var repository = Substitute.For<IFishingTripLocalRepository>();
+        repository.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns([new FishingTripLocalEntity { Name = "Offline trip" }]);
+        var sync = Substitute.For<ISyncOrchestrator>();
+        var sut = new FishingTripsViewModel(connectivity, interaction, repository, sync,
+            Substitute.For<IApiHealthClient>(), Substitute.For<ILogoutService>(),
+            Substitute.For<ILogoutDialogService>(), Substitute.For<IAppNavigator>(),
+            Substitute.For<ILogger<FishingTripsViewModel>>()) { IsRefreshing = true };
+
+        await sut.OnPageAppearingAsync();
+
+        interaction.Received(1).BeginInvokeOnMainThread(Arg.Any<Action>());
+        sut.IsRefreshing.Should().BeFalse();
+        sut.Trips.Should().ContainSingle(trip => trip.Name == "Offline trip");
+        await sync.DidNotReceive().SyncAsync(Arg.Any<CancellationToken>());
+    }
 }
