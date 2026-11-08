@@ -1,21 +1,17 @@
+using Catchlogr.Mobile.Core;
 using Catchlogr.Mobile.Services;
 using Catchlogr.Mobile.Services.Authentication;
 using Catchlogr.Mobile.Services.Navigation;
 using Catchlogr.Mobile.Services.Photos;
 using Catchlogr.Mobile.Core.Services;
 using Catchlogr.Mobile.Core.Configuration;
-using Catchlogr.Mobile.Core.Data;
-using Catchlogr.Mobile.Core.Data.Repositories;
 using Catchlogr.Mobile.Pages;
 using Catchlogr.Mobile.Core.Services.Authentication;
 using Catchlogr.Mobile.Core.Services.Navigation;
 using Catchlogr.Mobile.Core.Services.Photos;
 using Catchlogr.Mobile.Core.ViewModels;
-using Catchlogr.Sync.Abstractions;
-using Catchlogr.Sync.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Devices.Sensors;
-using Microsoft.Maui.Media;
 
 namespace Catchlogr.Mobile;
 
@@ -59,25 +55,8 @@ public static class MauiProgram
 			DeviceInfo.Current.DeviceType == DeviceType.Virtual,
             DeviceInfo.Current.Platform == DevicePlatform.WinUI);
 		var apiBaseUri = new Uri(apiBaseUrl.TrimEnd('/') + '/');
-		builder.Services.AddSingleton(appSettings);
-		builder.Services.AddSingleton(appSettings.Api);
-		builder.Services.AddSingleton(appSettings.Sync);
-		appSettings.Database.RootDirectory ??= FileSystem.AppDataDirectory;
-		builder.Services.AddSingleton(appSettings.Database);
-
-        // --- Local database ---
-        // Singleton: one manager switches the active account connection safely
-        builder.Services.AddSingleton<LocalDatabase>();
-        builder.Services.AddSingleton<ILocalDatabase>(services =>
-            services.GetRequiredService<LocalDatabase>());
-        builder.Services.AddSingleton<IAccountStorageContext>(services =>
-            services.GetRequiredService<LocalDatabase>());
-
-        // --- Local repositories ---
-        // Transient: cheap to create, no state of their own
-        builder.Services.AddTransient<IFishingTripLocalRepository, FishingTripLocalRepository>();
-		builder.Services.AddTransient<ICatchLocalRepository, CatchLocalRepository>();
-		builder.Services.AddTransient<ISyncMetadataRepository, SyncMetadataRepository>();
+        appSettings.Database.RootDirectory ??= FileSystem.AppDataDirectory;
+        builder.Services.AddMobileCore(appSettings, apiBaseUri);
 
         // --- Device capabilities ---
         builder.Services.AddSingleton<IGeolocation>(Geolocation.Default);
@@ -85,70 +64,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAppInteraction, MauiAppInteraction>();
         builder.Services.AddSingleton<IDeviceLocationService, DeviceLocationService>();
         builder.Services.AddSingleton<IPhotoPicker, MauiPhotoPicker>();
-        builder.Services.AddSingleton<IPhotoCaptureService, PhotoCaptureService>();
 
         // --- Authentication storage ---
         builder.Services.AddSingleton<ISecretStorage, MauiSecretStorage>();
-        builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
-        builder.Services.AddTransient<ILogoutService, LogoutService>();
         builder.Services.AddSingleton<ILogoutDialogService, ShellLogoutDialogService>();
-        builder.Services.AddSingleton(TimeProvider.System);
-        builder.Services.AddTransient<AuthenticationMessageHandler>();
         builder.Services.AddSingleton<IAppNavigator, ShellAppNavigator>();
-
-        builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>(client =>
-        {
-            client.BaseAddress = apiBaseUri;
-            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        });
-
-        // --- API client ---
-        // Typed HttpClient: BaseAddress and Timeout come from appsettings
-		builder.Services.AddHttpClient<IFishingTripApiClient, FishingTripApiClient>(client =>
-		{
-			client.BaseAddress = apiBaseUri;
-			client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-		})
-        .AddHttpMessageHandler<AuthenticationMessageHandler>();
-        builder.Services.AddHttpClient<ICatchApiClient, CatchApiClient>(client =>
-        {
-            client.BaseAddress = apiBaseUri;
-            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        })
-        .AddHttpMessageHandler<AuthenticationMessageHandler>();
-        builder.Services.AddHttpClient<IPhotoApiClient, PhotoApiClient>(client =>
-        {
-            client.BaseAddress = apiBaseUri;
-            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        })
-        .AddHttpMessageHandler<AuthenticationMessageHandler>();
-        builder.Services.AddHttpClient<IApiHealthClient, ApiHealthClient>(client =>
-        {
-            client.BaseAddress = apiBaseUri;
-            client.Timeout = TimeSpan.FromSeconds(10);
-        });
-        builder.Services.AddHttpClient<ILocationSearchApiClient, LocationSearchApiClient>(client =>
-        {
-            client.BaseAddress = apiBaseUri;
-            client.Timeout = TimeSpan.FromSeconds(appSettings.Api.Timeout);
-        })
-        .AddHttpMessageHandler<AuthenticationMessageHandler>();
-
-        // --- Sync service ---
-        builder.Services.AddTransient<IFishingTripSyncService, FishingTripSyncService>();
-		builder.Services.AddTransient<ICatchSyncService, CatchSyncService>();
-        builder.Services.AddTransient<ISyncOrchestrator, SyncOrchestrator>();
-
-        // --- ViewModels ---
-        builder.Services.AddTransient<FishingTripsViewModel>();
-        builder.Services.AddTransient<AddEditFishingTripViewModel>();
-        builder.Services.AddTransient<FishingTripDetailsViewModel>();
-        builder.Services.AddTransient<AddEditCatchViewModel>();
-        builder.Services.AddTransient<LoginViewModel>();
-        builder.Services.AddTransient<RegisterViewModel>();
-        builder.Services.AddTransient<CheckEmailViewModel>();
-        builder.Services.AddTransient<ForgotPasswordViewModel>();
-        builder.Services.AddTransient<ResetPasswordViewModel>();
 
         // --- Pages ---
         builder.Services.AddTransient<FishingTripsPage>();
