@@ -1,6 +1,6 @@
 # CI/CD
 
-Catchlogr uses two GitHub Actions workflows. All pull-request test and
+Catchlogr uses three GitHub Actions workflows. The ordinary pull-request test and
 documentation jobs use a self-hosted Linux runner labelled `self-hosted`, `linux`, `x64`, and
 `catchlogr`.
 
@@ -42,9 +42,61 @@ an in-memory sender, and photo storage with an isolated temporary directory. CI
 therefore does not require a PostgreSQL service.
 
 The self-hosted runner supplies the .NET SDK; its jobs report dotnet --info
-instead of installing an SDK. Mobile tests reference Mobile.Core; CI does not
+instead of installing an SDK. Mobile tests reference Mobile.Core; The ordinary CI workflow does not
 build the MAUI shell or validate device UI. See [Validation](VALIDATION.md) for
 local commands and test limitations.
+
+## Android E2E CI
+
+`.github/workflows/e2e.yml` adds a separate `android-e2e` job for pull requests to
+`dev`/`main` whose source repository is this repository, plus manual dispatch.
+Fork pull requests are skipped. It uses only the dedicated `catchlogr-e2e` label,
+a 35-minute timeout, read-only repository permissions, and host-wide workflow
+concurrency without cancelling an active run. It does not change deployment
+conditions or make E2E a required branch check.
+
+The intended machine is **agent-server**, alongside its emulator/Appium tooling.
+The existing **LXC runner** retains its `catchlogr` label and ordinary CI/deployment
+work. The deployed development VM and developer laptop are not E2E backends.
+The workflow provisions disposable backend services and invokes
+`tests/e2e/ci.py`; [Validation](VALIDATION.md#isolated-authentication-and-sync-e2e)
+owns prerequisites, scenarios, ports, isolation, and local commands.
+
+The dedicated runner is not yet installed or registered. Registration requires
+host-owner approval because it lets repository workflows execute code on that
+VM. A reviewable installer is included at `tests/e2e/install_runner.py`. It uses
+an authenticated GitHub CLI with repository admin access, fetches GitHub's runner
+download metadata, verifies SHA-256, and registers `catchlogr-agent-server-e2e`
+with `--no-default-labels --labels catchlogr-e2e`. Omitting default labels prevents
+ordinary generic `self-hosted` jobs from routing to this host. It writes runner
+credentials outside the checkout and installs the user service
+`catchlogr-e2e-runner.service`. It never replaces an existing registration.
+
+After approval, run on agent-server with Python 3.12+ and an authenticated `gh`:
+
+```sh
+python3 tests/e2e/install_runner.py
+systemctl --user status catchlogr-e2e-runner.service
+loginctl show-user "$USER" -p Linger
+```
+
+The user manager must remain active after logout (Linger=yes), and the runner
+user needs Docker access, KVM access, and the Android environment at
+`~/.local/share/catchlogr-android/env.sh`. The installer is specific to this
+repository and existing Linux x64 host. Stop job intake with
+`systemctl --user stop catchlogr-e2e-runner.service`. Removing the runner also
+requires removing its registration in repository Settings → Actions → Runners.
+
+Each job installs the locked Playwright client/browser, loads the existing
+Android host environment, and builds the real E2E APK. The wrapper reuses live
+emulator/Appium processes or starts them when absent. It stops only processes it
+owns. The backend runner disposes the generated stack on success/failure and
+interrupt. Uploaded artifacts contain only result JSON and redacted hierarchy;
+screenshots and raw host/WebDriver logs stay local. Retention is seven days.
+
+No execution through GitHub Actions has been verified yet: this workflow must be committed
+and pushed through the normal review process before GitHub can schedule it.
+Runner installation alone does not publish this working tree.
 
 ## Development deployment
 

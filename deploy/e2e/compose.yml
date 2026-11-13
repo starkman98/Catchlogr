@@ -1,0 +1,97 @@
+x-api-environment: &api-environment
+  ASPNETCORE_ENVIRONMENT: E2E
+  ConnectionStrings__DefaultConnection: Host=db;Database=catchlogr_e2e;Username=catchlogr_e2e;Password=${E2E_DB_PASSWORD:?Runner must supply a disposable password}
+  Email__Provider: Mailpit
+  Email__MailpitBaseUrl: http://mailpit:8025
+  Email__FromAddress: account@catchlogr.test
+  Email__FromName: Catchlogr E2E
+  Email__PublicWebBaseUrl: https://localhost:17056
+  LocationSearch__LocationIQ__ApiKey: unused-e2e
+  LocationSearch__LocationIQ__BaseUri: https://unavailable.invalid
+  Weather__OpenMeteo__ForecastBaseUri: https://unavailable.invalid
+  Weather__OpenMeteo__HistoricalForecastBaseUri: https://unavailable.invalid
+  Weather__OpenMeteo__ArchiveBaseUri: https://unavailable.invalid
+  PhotoStorage__Provider: Local
+  PhotoStorage__Local__Path: /photos
+  Logging__LogLevel__Default: Warning
+  Logging__LogLevel__System.Net.Http.HttpClient: None
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: catchlogr_e2e
+      POSTGRES_USER: catchlogr_e2e
+      POSTGRES_PASSWORD: ${E2E_DB_PASSWORD}
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U catchlogr_e2e -d catchlogr_e2e']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:v1.30.0
+    ports:
+      - 127.0.0.1:18025:8025
+  migrate:
+    image: catchlogr-e2e/migrate:local
+    build:
+      context: ../..
+      dockerfile: deploy/e2e/Dockerfile
+      target: migrate
+    environment: *api-environment
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    image: catchlogr-e2e/api:local
+    build:
+      context: ../..
+      dockerfile: deploy/e2e/Dockerfile
+      target: api
+    environment:
+      <<: *api-environment
+      ASPNETCORE_URLS: http://+:8080;https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /certs/server.crt
+      ASPNETCORE_Kestrel__Certificates__Default__KeyPath: /certs/server.key
+    ports:
+      - 127.0.0.1:15001:8080
+      - 127.0.0.1:17160:8443
+    volumes:
+      - ${E2E_CERT_DIRECTORY:?Runner must supply certificates}:/certs:ro
+      - photo-data:/photos
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+  web:
+    image: catchlogr-e2e/web:local
+    build:
+      context: ../..
+      dockerfile: deploy/e2e/Dockerfile
+      target: web
+    environment:
+      ASPNETCORE_ENVIRONMENT: E2E
+      ASPNETCORE_URLS: https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /certs/server.crt
+      ASPNETCORE_Kestrel__Certificates__Default__KeyPath: /certs/server.key
+      SSL_CERT_FILE: /certs/ca.crt
+      Api__BaseUrl: https://api:8443
+      Logging__LogLevel__Default: Warning
+      Logging__LogLevel__System.Net.Http.HttpClient: None
+    ports:
+      - 127.0.0.1:17056:8443
+    volumes:
+      - ${E2E_CERT_DIRECTORY}:/certs:ro
+    depends_on:
+      api:
+        condition: service_started
+
+# Dedicated project bridge; only the loopback ports above are published.
+# Provider origins are reserved .invalid names and email is captured locally.
+
+# Keep photo bytes across the deliberate API restart, then remove them with down -v.
+volumes:
+  photo-data:

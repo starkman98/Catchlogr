@@ -6,7 +6,7 @@ tokens use Identity's bearer scheme; do not assume JWT format.
 
 ## Configuration
 
-The API validates four Email settings at startup:
+The API defaults to Resend and validates these Email settings at startup:
 
 | Setting | Purpose |
 | --- | --- |
@@ -21,11 +21,27 @@ Local Web is https://localhost:7056; development Web is https://dev.catchlogr.co
 Use the Web origin, not the API origin. Mobile backend selection does not
 configure email links. A local link works only on a device that can reach it.
 
+## Captured email for E2E
+
+The dedicated E2E stack sets `Email:Provider=Mailpit` and
+`Email:MailpitBaseUrl=http://mailpit:8025`. This transport is accepted only when
+the API host environment is exactly `E2E`; Development and Production reject it.
+The inbox origin must be HTTP loopback or the `mailpit` container, with no
+credentials, path, query, or fragment. Resend remains the default provider and
+still requires `ApiKey`; Mailpit does not require a Resend key.
+
+Both transports use the same `IdentityEmailSender` for content and Web link
+rewriting. Email confirmation, Identity token validation, password rules, and
+bearer authentication stay enabled. No account seed or confirmation bypass is
+needed. Provider response bodies and account-action URLs are not logged by the
+sender. See [E2E setup and execution](VALIDATION.md#isolated-authentication-and-sync-e2e)
+for the disposable database, inbox, browser, and Android runner.
+
 ## Flow
 
 1. Registration sends a confirmation link and opens Mobile's check-email page,
    which can resend the message.
-2. ResendIdentityEmailSender rewrites account-action links to Web Razor Pages.
+2. IdentityEmailSender rewrites account-action links to Web Razor Pages.
 3. The user confirms via Web and returns to Mobile to sign in.
 4. Forgot password sends a reset link without revealing whether the account
    exists; the email also includes a code for the mobile reset form.

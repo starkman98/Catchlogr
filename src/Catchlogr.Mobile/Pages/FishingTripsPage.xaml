@@ -10,7 +10,7 @@
     Title="{Binding Title}">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="+" Command="{Binding AddTripCommand}" Order="Primary" Priority="0" />
+        <ToolbarItem AutomationId="AddTripButton" Text="+" Command="{Binding AddTripCommand}" Order="Primary" Priority="0" />
         <ToolbarItem Text="Sign out" Command="{Binding LogoutCommand}" Order="Secondary" Priority="1" />
     </ContentPage.ToolbarItems>
 

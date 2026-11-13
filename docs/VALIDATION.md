@@ -318,13 +318,142 @@ Documentation validation passed. The Windows MAUI app build remained blocked on
 Linux. No Docker/PostgreSQL application smoke run or device verification was
 performed for this DevHost change.
 
+## Isolated authentication and sync E2E
+
+`tests/e2e/run.py` runs on a dedicated Linux Android host (recommended:
+`agent-server`), separate from the deployed development VM and the general CI
+runner. It creates a uniquely named Compose project using
+`deploy/e2e/compose.yml`. PostgreSQL uses tmpfs, migrations run against only that
+project's `catchlogr_e2e` database, and email goes to Mailpit. Photos use a
+project-scoped disposable volume so bytes survive the tested API restart;
+`down --volumes` removes that volume afterward.
+The project uses its own bridge network. Weather/location origins point to
+reserved `.invalid` names and account email goes only to Mailpit. No real provider
+keys are supplied. This is not a network egress firewall; provider enrichment is
+not covered by these scenarios.
+
+Host prerequisites: Docker Engine with Compose v2 and daemon access, the .NET
+SDK selected by global.json, Python 3.10+, Node.js 20+, OpenSSL, and (for the
+Android flow) JDK 21, Android SDK, MAUI Android workload, a booted x86_64 emulator,
+and the localhost Appium service described below. No production credentials or
+Resend key are needed. Install the pinned browser dependency once:
+
+```sh
+npm ci --prefix tests/e2e
+npm exec --prefix tests/e2e -- playwright install chromium
+```
+
+If Chromium reports missing OS libraries, use Playwright's documented
+`playwright install-deps chromium` on the dedicated host; this may require
+administrator access. Do not install a second Appium or Android SDK over an
+existing working host setup.
+
+The runner's cleanup safety checks need no Docker or emulator:
+
+```sh
+python3 -m unittest discover -s tests/e2e -p 'test_*.py'
+```
+
+Run from the repository root:
+
+```sh
+# API + PostgreSQL + captured email + actual Web page in headless Chromium
+python3 tests/e2e/run.py --backend-only
+
+# Android registration, login, data sync and recovery; export JAVA_HOME and ANDROID_HOME first
+python3 tests/e2e/run.py --device emulator-5554
+```
+
+On the existing agent-server installation, load
+`~/.local/share/catchlogr-android/env.sh` and start its emulator script before the Android command. Start Appium with
+`appium --address 127.0.0.1 --port 4723 --log-level warn --log-no-colors` so
+WebDriver command bodies are not written into routine logs. The runner builds and installs its own Local
+Catchlogr E2E APK, resolves the launch activity, and resets only
+`com.catchlogr.e2e`. Keep this emulator dedicated to testing. The runner does
+not start or stop the emulator/Appium, or modify the regular Catchlogr package.
+It currently supports Linux x86_64 Android hosts; Windows execution needs a
+portable runner adaptation.
+
+The full flow registers a unique account through MAUI, observes the check-email
+screen, verifies API and UI rejection before confirmation, finds that recipient's
+email, opens its real Web confirmation URL in Chromium, signs in through MAUI,
+and observes the empty trip list. It also verifies real access/refresh tokens,
+authenticated collection access, and anonymous rejection through the API.
+Backend-only mode performs registration/login through HTTP and omits Android;
+it does not establish UI, synchronization, or camera behavior.
+
+Ports are fixed and bound to loopback: API HTTP **15001** (Android Local
+exception), API HTTPS **17160**, Web HTTPS **17056**, and Mailpit **18025**.
+The runner refuses occupied ports and serializes runs per checkout. Across
+checkouts, the fixed ports still permit only one active stack. The E2E mobile
+package's address is documented in [Mobile configuration](MOBILE_CONFIGURATION.md#dedicated-e2e-package).
+PostgreSQL is not published. Generated TLS certificates last two days and are
+removed after the run; Web trusts only the generated CA for its API calls.
+Only the disposable Chromium context ignores certificate errors and restricts
+requests to this test Web origin. Host trust and production TLS settings are
+not changed.
+
+Normal success/failure and interrupt cleanup removes that generated Compose project's
+containers/network and clears E2E app data. Build images and browser downloads
+are retained for reuse. SIGKILL or a host crash can leave containers: inspect
+`docker compose ls` and remove only the exact `catchlogr-e2e-<run-id>` project.
+Do not reset the ordinary local or deployed database. Run status and, on UI
+failure, a redacted hierarchy and best-effort screenshot go under ignored
+`artifacts/e2e/<run-id>/`. Browser errors are sanitized because they can contain
+confirmation URLs. Do not publish raw Appium logs: command bodies include test
+passwords. Inbox bodies and tokens are not included in runner artifacts.
+
+After authentication, the Android scenario creates a trip and catch through
+MAUI, captures the emulator camera scene, and checks the uploaded API records,
+parent GUID, fields, image bytes, and anonymous photo rejection. It then stops
+only the generated Compose project's API, creates another trip and catch,
+relaunches the app while the API is stopped to verify SQLite persistence, restores
+the API, and returns to the trip list to run the ordinary synchronization flow.
+This simulates backend unavailability; it does not disable the emulator's network.
+
+The scenario clears only the E2E package, signs in again, and verifies both trips
+and their catches download into fresh local storage. A SHA-256 comparison against
+the private photo cache proves image bytes were downloaded. Another sync must
+leave exactly two trips and two catches. A second normally registered/confirmed
+account must see empty collections and receive 404 for the first account's trip,
+catch, and private photo. These checks exercise real PostgreSQL migrations, HTTP,
+Identity, account-scoped SQLite, and the production sync orchestrator.
+
+The test uses stable AutomationIds and Android toolbar navigation. The camera
+selectors target the existing API 36 emulator's `com.android.camera2` app; other
+camera applications need corresponding selectors. It does not establish physical
+camera behavior, photo replacement/deletion, arbitrary interrupted requests,
+conflict resolution, deletion propagation, provider enrichment, or real Resend
+delivery. The known reconciliation limits remain in [Sync strategy](SYNC_STRATEGY.md).
+
+`tests/e2e/ci.py` starts missing emulator/Appium processes with warning-only
+Appium logging, invokes the same runner, and stops only processes it started.
+Existing host processes are reused. Keep this host dedicated and avoid concurrent
+manual E2E runs across checkouts. See [Android E2E CI](CI-CD.md#android-e2e-ci)
+for workflow and runner registration status.
+
+Observed on agent-server on 2026-11-13: the complete scenario passed through
+`tests/e2e/ci.py`, including native camera capture, owner/anonymous photo access,
+API-outage persistence/recovery, fresh app download with matching photo bytes,
+repeat sync without duplicates, and second-account trip/catch/photo rejection.
+Cleanup removed the generated containers, network, and photo volume; the ordinary
+PostgreSQL container remained running. The Mobile suite passed all 97 tests,
+including two new photo-client cache cases; four harness ownership/cleanup checks,
+47-file documentation validation, 93 helper assertions, Compose configuration,
+and workflow YAML validation also passed. Earlier backend validation passed 288
+unit tests and 44 API integration tests. The Windows build remains unavailable
+on Linux; the actual Android target builds with existing XAML warnings. No shared
+database is used or reset. The Actions runner installer remains unexecuted pending
+host-owner approval; this is a local execution of the CI entry point, not a
+completed GitHub Actions job.
+
 ## Android emulator and Appium verification
 
 Appium drives the actual Android MAUI app: agents can inspect its accessibility
 tree, find existing XAML `AutomationId` values, enter text, tap controls, and save
 screenshots. This supplements portable Core/DevHost tests. It does not establish
 physical camera/GPS behavior, all device layouts, or Google Play release readiness.
-These are optional local checks; the validation helper and CI do not run them.
+These ad hoc checks are separate from the automated Android E2E workflow above; the validation helper does not launch a device.
 
 ### Windows prerequisites
 

@@ -54,6 +54,10 @@ public static class MauiProgram
 			DeviceInfo.Current.Platform == DevicePlatform.Android,
 			DeviceInfo.Current.DeviceType == DeviceType.Virtual,
             DeviceInfo.Current.Platform == DevicePlatform.WinUI);
+#if LOCAL && E2E
+        // The separate E2E package uses a disposable backend on its own host port.
+        apiBaseUrl = "http://10.0.2.2:15001";
+#endif
 		var apiBaseUri = new Uri(apiBaseUrl.TrimEnd('/') + '/');
         appSettings.Database.RootDirectory ??= FileSystem.AppDataDirectory;
         builder.Services.AddMobileCore(appSettings, apiBaseUri);

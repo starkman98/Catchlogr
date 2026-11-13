@@ -9,7 +9,7 @@ using Resend;
 namespace Catchlogr.Tests.Email;
 
 /// <summary>Tests the Resend adapter for Identity account-action messages.</summary>
-public sealed class ResendIdentityEmailSenderTests
+public sealed class IdentityEmailSenderTests
 {
     /// <summary>
     /// Verifies that confirmation links use the configured public web origin
@@ -119,9 +119,9 @@ public sealed class ResendIdentityEmailSenderTests
         sentMessage.Subject.Should().Be("Reset your Catchlogr password");
     }
 
-    private static ResendIdentityEmailSender CreateSender(IResend resend)
+    private static IdentityEmailSender CreateSender(IResend resend)
         => new(
-            resend,
+            new ResendEmailTransport(resend),
             Options.Create(new EmailOptions
             {
                 ApiKey = "test-key",
@@ -129,5 +129,5 @@ public sealed class ResendIdentityEmailSenderTests
                 FromName = "Catchlogr",
                 PublicWebBaseUrl = new Uri("https://web.catchlogr.test")
             }),
-            Substitute.For<ILogger<ResendIdentityEmailSender>>());
+            Substitute.For<ILogger<IdentityEmailSender>>());
 }

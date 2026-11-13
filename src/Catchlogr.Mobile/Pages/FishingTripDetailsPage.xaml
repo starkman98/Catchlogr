@@ -172,6 +172,7 @@
 
             <Button
                 Grid.Column="1"
+                AutomationId="AddCatchButton"
                 Command="{Binding AddCatchCommand}"
                 Text="Add Catch" />
         </Grid>
