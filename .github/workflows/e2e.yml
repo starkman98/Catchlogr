@@ -33,6 +33,8 @@ jobs:
         shell: bash
         run: |
           source "$HOME/.local/share/catchlogr-android/env.sh"
+          export DOTNET_ROOT="$HOME/.dotnet"
+          export PATH="$DOTNET_ROOT:$HOME/.local/bin:$PATH"
           python3 tests/e2e/ci.py
       - name: Upload results and redacted hierarchy
         if: always()

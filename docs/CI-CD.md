@@ -62,9 +62,9 @@ The workflow provisions disposable backend services and invokes
 `tests/e2e/ci.py`; [Validation](VALIDATION.md#isolated-authentication-and-sync-e2e)
 owns prerequisites, scenarios, ports, isolation, and local commands.
 
-The dedicated runner is not yet installed or registered. Registration requires
-host-owner approval because it lets repository workflows execute code on that
-VM. A reviewable installer is included at `tests/e2e/install_runner.py`. It uses
+The host owner installed and registered the dedicated runner on 2026-11-13;
+GitHub reported it online. Registration lets repository workflows execute code
+on that VM. The installer is included at `tests/e2e/install_runner.py`. It uses
 an authenticated GitHub CLI with repository admin access, fetches GitHub's runner
 download metadata, verifies SHA-256, and registers `catchlogr-agent-server-e2e`
 with `--no-default-labels --labels catchlogr-e2e`. Omitting default labels prevents
@@ -72,7 +72,7 @@ ordinary generic `self-hosted` jobs from routing to this host. It writes runner
 credentials outside the checkout and installs the user service
 `catchlogr-e2e-runner.service`. It never replaces an existing registration.
 
-After approval, run on agent-server with Python 3.12+ and an authenticated `gh`:
+For a new installation, run on agent-server with Python 3.12+ and an authenticated `gh`:
 
 ```sh
 python3 tests/e2e/install_runner.py
@@ -87,16 +87,19 @@ repository and existing Linux x64 host. Stop job intake with
 `systemctl --user stop catchlogr-e2e-runner.service`. Removing the runner also
 requires removing its registration in repository Settings → Actions → Runners.
 
-Each job installs the locked Playwright client/browser, loads the existing
-Android host environment, and builds the real E2E APK. The wrapper reuses live
+Each job provisions Node.js 24, installs the locked Playwright client/browser,
+loads the existing Android host environment, and builds the real E2E APK. The
+workflow selects the host SDK and MAUI workload under `~/.dotnet` and adds
+`~/.local/bin` to PATH so the service does not depend on an interactive shell. The wrapper reuses live
 emulator/Appium processes or starts them when absent. It stops only processes it
 owns. The backend runner disposes the generated stack on success/failure and
 interrupt. Uploaded artifacts contain only result JSON and redacted hierarchy;
 screenshots and raw host/WebDriver logs stay local. Retention is seven days.
 
-No execution through GitHub Actions has been verified yet: this workflow must be committed
-and pushed through the normal review process before GitHub can schedule it.
-Runner installation alone does not publish this working tree.
+PR #16 triggered the workflow and the dedicated runner accepted its job. Initial
+attempts exposed missing Node.js and user SDK paths in the service environment;
+the workflow now configures these explicitly. A complete passing Actions run
+has not yet been verified.
 
 ## Development deployment
 
