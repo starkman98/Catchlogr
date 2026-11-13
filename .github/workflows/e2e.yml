@@ -1,0 +1,48 @@
+name: Android E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catchlogr-android-e2e
+  cancel-in-progress: false
+
+jobs:
+  android-e2e:
+    # A persistent emulator host executes only code from this repository.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [catchlogr-e2e]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install test client
+        run: |
+          npm ci --prefix tests/e2e
+          npm exec --prefix tests/e2e -- playwright install chromium
+      - name: Run isolated Android E2E
+        shell: bash
+        run: |
+          source "$HOME/.local/share/catchlogr-android/env.sh"
+          export DOTNET_ROOT="$HOME/.dotnet"
+          export PATH="$DOTNET_ROOT:$HOME/.local/bin:$PATH"
+          python3 tests/e2e/ci.py
+      - name: Upload results and redacted hierarchy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e-results
+          path: |
+            artifacts/e2e/*/result.json
+            artifacts/e2e/*/ui.xml
+          if-no-files-found: warn
+          retention-days: 7

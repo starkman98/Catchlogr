@@ -43,7 +43,7 @@ builder.Services.AddDbContext<CatchlogrDbContext>(options =>
     ?? throw new InvalidOperationException("Missing connection string.")));
 
 builder.Services.AddAuthorization();
-builder.Services.AddIdentityEmail(builder.Configuration);
+builder.Services.AddIdentityEmail(builder.Configuration, builder.Environment.EnvironmentName);
 
 builder.Services
     .AddIdentityApiEndpoints<ApplicationUser>(options =>

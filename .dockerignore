@@ -6,3 +6,5 @@
 .env
 **/*.user
 **/*.suo
+**/node_modules/
+artifacts/

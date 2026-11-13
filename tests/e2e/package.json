@@ -1,0 +1,12 @@
+{
+  "name": "catchlogr-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "node auth-smoke.mjs",
+    "backend": "node auth-smoke.mjs --backend-only"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  }
+}

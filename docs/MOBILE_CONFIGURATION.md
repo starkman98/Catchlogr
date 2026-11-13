@@ -49,6 +49,17 @@ policy permits only 10.0.2.2, so a physical Android device also needs trusted HT
 or an intentional local-only network-security change. For routine physical-device
 development, prefer the Debug configuration and the deployed development API.
 
+## Dedicated E2E package
+
+The [E2E runner](VALIDATION.md#isolated-authentication-and-sync-e2e) builds Local with
+`tests/e2e/android-only.targets`. It sets the package to `com.catchlogr.e2e`,
+the title to Catchlogr E2E, and adds the `E2E` compile symbol. Only when both
+`LOCAL` and `E2E` are defined does `MauiProgram` select
+`http://10.0.2.2:15001`. This keeps the E2E backend off the ordinary local API
+port and gives the test package separate Android storage and SecureStorage.
+The normal Local, Debug, and Release builds retain their existing addresses.
+The runner clears only the E2E package on the selected emulator.
+
 ## Local state isolation
 
 Each backend has a different SQLite filename. Authentication values in
