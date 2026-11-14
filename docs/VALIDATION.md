@@ -348,6 +348,17 @@ If Chromium reports missing OS libraries, use Playwright's documented
 administrator access. Do not install a second Appium or Android SDK over an
 existing working host setup.
 
+Recording is off by default. Set `E2E_RECORD_VIDEO=1` before invoking `ci.py`
+or `run.py` to capture Android interactions and the first account's real Web
+confirmation page. The Android host must support `screenrecord --time-limit 0`
+(as the current API 36 emulator does). Recording begins after backend readiness
+and is finalized on success or failure, before app/stack cleanup. Videos are saved
+under `artifacts/e2e/<run-id>/`: `android.mp4` and `confirmation-video/*.webm`.
+Backend-only runs produce only the browser clip. Playwright holds the confirmation
+success page for three seconds; the Mailpit inbox API lookup is not visualized.
+See [Android E2E CI](CI-CD.md#android-e2e-ci) for the manual recording checkbox
+and artifact download. Videos contain unredacted disposable test UI data.
+
 The runner's cleanup safety checks need no Docker or emulator:
 
 ```sh
