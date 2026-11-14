@@ -15,6 +15,24 @@ Trips run first because catches require a parent trip server ID. Both services
 live in the platform-neutral `Catchlogr.Sync` project; Mobile supplies SQLite
 repositories and authenticated typed API clients through dependency injection.
 
+The diagram shows phase order for a normal full sync. Each entity service
+uploads before downloading; the trip service also handles weather retries.
+It does not imply an atomic transaction or that every pending row succeeds.
+
+```mermaid
+flowchart TD
+    Edit["User saves an edit"] --> Local["Persist in account SQLite; mark dirty"]
+    Local --> Trigger["Sync requested: page refresh or logout preparation"]
+    Trigger --> Candidates["Capture eligible existing trip weather-retry candidates"]
+    Candidates --> TripUpload["Upload dirty trips: create, update or delete"]
+    TripUpload --> TripDownload["Download and reconcile trips; store trip cursor"]
+    TripDownload --> Weather["Revalidate candidates and retry missing weather"]
+    Weather --> CatchUpload["Upload dirty catches and pending photo changes"]
+    CatchUpload --> CatchDownload["Download and reconcile catches and photos; store catch cursor"]
+    TripUpload -.-> Pending["Failed uploads stay pending for a later sync"]
+    CatchUpload -.-> Pending
+```
+
 ## Local metadata
 
 Every synchronized row includes:

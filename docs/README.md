@@ -85,6 +85,37 @@ instructions; offline link validation cannot establish live client behavior.
 | CI triggers and deployment | [CI/CD](CI-CD.md) | [CI](../.github/workflows/ci.yml), [deployment](../.github/workflows/deploy-dev.yml), [Compose](../deploy/docker/compose.dev.yml) |
 | Unimplemented product/hardening work | [Roadmap](ROADMAP.md) | Implementation and regression evidence before marking complete |
 
+## Mermaid diagrams
+
+Diagrams live beside their explanations in the owning guides:
+
+| Diagram | Owning section |
+| --- | --- |
+| Mobile runtime boundaries and persistence | [Mobile boundaries](MOBILE_ARCHITECTURE.md#boundaries) |
+| Registration, email confirmation and login | [Identity flow](IDENTITY_EMAIL.md#flow) |
+| Trip/catch synchronization phase order | [Sync components and order](SYNC_STRATEGY.md#components-and-order) |
+| Branches and development deployment | [Branch flow](CI-CD.md#branch-flow) |
+| Android E2E host and disposable backend | [Android E2E CI](CI-CD.md#android-e2e-ci) |
+
+Use fenced `mermaid` blocks in Markdown so GitHub renders the source directly.
+Edit in a text editor or paste the block contents into the
+[Mermaid Live Editor](https://mermaid.live) for a preview. No app dependency or
+new agent skill is required. Prefer basic flowchart and sequence syntax, short
+labels, and one question per diagram; renderer versions can differ across tools.
+
+When related behavior changes, review the owning diagram with its prose and
+source links in the ownership table above, and update both in the same commit.
+Distinguish runtime calls from project references, normal paths from failures,
+and implemented behavior from plans. Keep detailed rules and limitations in
+prose rather than duplicating every branch in a diagram. Do not add credentials,
+account-action codes, or private infrastructure addresses to diagram source.
+
+After editing, run `./scripts/validate-docs.ps1` and render each changed diagram
+in a Mermaid preview. The documentation checker validates links and fences,
+not Mermaid syntax or diagram accuracy. Inspect the rendered labels, arrows and
+layout; review semantic accuracy against executable sources separately. Keep
+Markdown as the maintained source; exported images need not be committed.
+
 ## Maintenance
 - Update the owning guide in the same change as code or workflow changes.
 - Describe current behavior separately from requirements and future work.

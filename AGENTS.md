@@ -104,6 +104,11 @@ Application, Domain, Contracts, and Web use the shared rules and relevant guide.
   Documentation-only work needs documentation validation, not a solution build.
 - Update the existing owning guide in the same change when behavior, routes,
   commands, or configuration change. Keep each fact in one place and link to it.
+- Keep Mermaid diagrams in the existing owning guide updated in the same change
+  when related boundaries, request order, sync phases, workflow triggers, or
+  runner/deployment topology change. Review both diagram and prose against source;
+  diagrams must not imply guarantees the implementation lacks. See the
+  [diagram maintenance instructions](docs/README.md#mermaid-diagrams).
 - Executable source and tests establish current behavior. Flag a discrepancy
   rather than inventing a guarantee or silently changing product behavior.
 - Report what changed, checks actually run, and material limits. Do not claim

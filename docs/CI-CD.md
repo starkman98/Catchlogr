@@ -6,9 +6,14 @@ documentation jobs use a self-hosted Linux runner labelled `self-hosted`, `linux
 
 ## Branch flow
 
-```text
-feature/* ──pull request──> dev ──automatic deployment──> development
-                               └──pull request──> main (future production line)
+```mermaid
+flowchart TD
+    Feature["feature/*"] -->|Pull request and checks| Dev[dev]
+    Dev -->|Eligible push or manual deployment| Deploy["Deploy Dev workflow"]
+    Deploy --> Tests["Unit and API integration tests"]
+    Tests -->|Both pass| VM["Development VM: build, migrate, start services"]
+    VM --> Health["API health check"]
+    Dev -->|Pull request and checks| Main["main: future production line"]
 ```
 
 The CI workflow runs for pull requests targeting `dev` or `main`. A dedicated
@@ -61,6 +66,44 @@ work. The deployed development VM and developer laptop are not E2E backends.
 The workflow provisions disposable backend services and invokes
 `tests/e2e/ci.py`; [Validation](VALIDATION.md#isolated-authentication-and-sync-e2e)
 owns prerequisites, scenarios, ports, isolation, and local commands.
+
+The following is the test topology, not the shared development deployment.
+Appium controls the emulator; the scenario scripts also inspect API results and
+open the real Web confirmation page in Chromium. Backend services are disposable.
+
+```mermaid
+flowchart TD
+    GitHub["GitHub Actions: Android E2E"]
+    subgraph Host["agent-server"]
+        Runner["Runner labelled catchlogr-e2e"]
+        Python["Python: ci.py and run.py"]
+        Scenarios["JavaScript test scenarios"]
+        Appium[Appium]
+        App["Android emulator: Catchlogr E2E app"]
+        Browser["Playwright Chromium"]
+        subgraph Stack["Unique Docker Compose project per run"]
+            API[API]
+            Web["Web confirmation pages"]
+            DB[("PostgreSQL: fresh database")]
+            Mailpit["Mailpit: captured email"]
+        end
+    end
+    GitHub --> Runner
+    Runner --> Python
+    Python -->|Build and install app; prepare hosts| App
+    Python -->|Create, migrate and dispose stack| Stack
+    Python -->|Run| Scenarios
+    Scenarios -->|WebDriver commands| Appium
+    Appium --> App
+    App -->|Authentication and sync| API
+    Scenarios -->|Verify saved data and ownership| API
+    Scenarios -->|Read confirmation email| Mailpit
+    Scenarios --> Browser
+    Browser -->|Open confirmation link| Web
+    Web -->|Validate Identity code| API
+    API --> DB
+    API -->|Send account email| Mailpit
+```
 
 The host owner installed and registered the dedicated runner on 2026-11-13;
 GitHub reported it online. Registration lets repository workflows execute code

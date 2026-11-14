@@ -39,6 +39,35 @@ for the disposable database, inbox, browser, and Android runner.
 
 ## Flow
 
+This sequence shows successful registration and confirmation. Resend delivers
+normal account email; the isolated E2E environment substitutes Mailpit without
+changing Identity validation. The browser can be on a different device from Mobile.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Mobile
+    participant API as API / ASP.NET Core Identity
+    participant Email as Resend or E2E Mailpit
+    participant Browser
+    participant Web as Web Razor Pages
+    User->>Mobile: Register with email and password
+    Mobile->>API: POST /api/auth/register
+    API->>Email: Send confirmation link targeting Web
+    API-->>Mobile: Registration accepted
+    Mobile-->>User: Show check-email page
+    Note over Mobile,API: Login requires confirmed email
+    Email-->>User: Confirmation email
+    User->>Browser: Open confirmation link
+    Browser->>Web: GET /confirm-email
+    Web->>API: GET /api/auth/confirmEmail with Identity code
+    API-->>Web: Confirmation result
+    Web-->>Browser: Display result
+    User->>Mobile: Return and sign in
+    Mobile->>API: POST /api/auth/login
+    API-->>Mobile: Identity access and refresh tokens
+```
+
 1. Registration sends a confirmation link and opens Mobile's check-email page,
    which can resend the message.
 2. IdentityEmailSender rewrites account-action links to Web Razor Pages.
