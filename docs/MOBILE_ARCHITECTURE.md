@@ -8,23 +8,33 @@ with the authenticated API.
 
 ## Boundaries
 
-```text
-Catchlogr.Mobile: Pages/XAML and platform adapters
-    ↓ bindings and commands
-Catchlogr.Mobile.Core: ViewModels
-    ├── local repository abstractions ──> SQLite
-    ├── application services
-    ├── navigation abstraction
-    └── ISyncOrchestrator
-            ↓
-        Catchlogr.Sync
-            ├── local repository abstractions
-            └── typed API abstractions
-                    ↓ authenticated HttpClient
-                Catchlogr.Api
+The arrows below show runtime calls, not project references. SQLite repositories
+and typed API clients are implemented in Core and injected into Sync.
+
+```mermaid
+flowchart TD
+    Pages["Mobile: MAUI pages and platform adapters"]
+    ViewModels["Mobile.Core: ViewModels"]
+    Repositories["Mobile.Core: local repositories"]
+    SQLite[("Account-scoped SQLite")]
+    Sync["Sync: platform-neutral orchestration"]
+    Clients["Mobile.Core: authenticated API clients"]
+    API["API: authenticated endpoints"]
+    Services["Application services and Infrastructure persistence"]
+    Database[(PostgreSQL)]
+    Pages -->|Bindings and commands| ViewModels
+    ViewModels -->|Local reads and writes| Repositories
+    Repositories --> SQLite
+    ViewModels -->|Request synchronization| Sync
+    Sync -->|Repository abstractions| Repositories
+    Sync -->|API abstractions| Clients
+    Clients -->|HTTP| API
+    API --> Services
+    Services --> Database
 ```
 
-ViewModels do not access SQLite or construct `HttpClient` directly. Core
+ViewModels also use application services and navigation abstractions. They do
+not access SQLite or construct `HttpClient` directly. Core
 references Application, Contracts, and Sync, but not Infrastructure. The MAUI
 shell references Core; Core and Sync have no MAUI dependencies.
 
