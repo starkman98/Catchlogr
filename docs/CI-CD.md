@@ -93,8 +93,19 @@ workflow selects the host SDK and MAUI workload under `~/.dotnet` and adds
 `~/.local/bin` to PATH so the service does not depend on an interactive shell. The wrapper reuses live
 emulator/Appium processes or starts them when absent. It stops only processes it
 owns. The backend runner disposes the generated stack on success/failure and
-interrupt. Uploaded artifacts contain only result JSON and redacted hierarchy;
+interrupt. Routine uploaded artifacts contain result JSON and redacted hierarchy;
 screenshots and raw host/WebDriver logs stay local. Retention is seven days.
+
+To request videos, open **Actions → Android E2E → Run workflow**, select the
+branch, and enable **Record Android and email confirmation videos**. The checkbox
+is off by default and automatic pull-request runs never enable recording. GitHub
+must have this workflow on the default branch (`main`) before offering the manual
+run menu; once available, the branch selector can target `dev`.
+After the run, download `android-e2e-videos` from its Artifacts section. Requested
+videos are uploaded even on test failure when available, with seven-day retention.
+The video artifact contains unredacted disposable test UI data; see
+[Validation](VALIDATION.md#isolated-authentication-and-sync-e2e) for recording scope
+and local commands.
 
 PR #16 triggered the workflow and the dedicated runner accepted its job. Initial
 attempts exposed missing Node.js and user SDK paths in the service environment;

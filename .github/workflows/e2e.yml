@@ -2,6 +2,12 @@ name: Android E2E
 
 on:
   workflow_dispatch:
+    inputs:
+      record_videos:
+        description: Record Android and email confirmation videos
+        type: boolean
+        required: false
+        default: false
   pull_request:
     branches: [dev, main]
 
@@ -31,6 +37,8 @@ jobs:
           npm exec --prefix tests/e2e -- playwright install chromium
       - name: Run isolated Android E2E
         shell: bash
+        env:
+          E2E_RECORD_VIDEO: ${{ github.event_name == 'workflow_dispatch' && inputs.record_videos && '1' || '0' }}
         run: |
           source "$HOME/.local/share/catchlogr-android/env.sh"
           export DOTNET_ROOT="$HOME/.dotnet"
@@ -44,5 +52,15 @@ jobs:
           path: |
             artifacts/e2e/*/result.json
             artifacts/e2e/*/ui.xml
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload requested recordings
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.record_videos
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e-videos
+          path: |
+            artifacts/e2e/*/android.mp4
+            artifacts/e2e/*/confirmation-video/*.webm
           if-no-files-found: warn
           retention-days: 7

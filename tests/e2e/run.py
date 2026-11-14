@@ -14,6 +14,7 @@ import uuid
 
 from host import run, certificates, require_free_ports, wait_http
 from android_host import prepare_android
+from recording import record_android
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
@@ -48,7 +49,8 @@ def execute(args, artifacts):
             command = ["node", str(HERE / "auth-smoke.mjs")]
             if args.backend_only:
                 command.append("--backend-only")
-            run(*command, env=env)
+            with record_android(adb, args.device, artifacts, env.get("E2E_RECORD_VIDEO") == "1"):
+                run(*command, env=env)
         finally:
             # Restrict cleanup to the generated project and our separate app package.
             try:

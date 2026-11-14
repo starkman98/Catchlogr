@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+import { join } from 'node:path';
 import { chromium } from 'playwright';
 import { API, WEB, confirmationLink, jsonRequest, login } from './support.mjs';
 import { Android } from './android.mjs';
@@ -48,15 +50,23 @@ async function confirmInBrowser() {
   const link = await confirmationLink(email);
   browser = await chromium.launch({ headless: true });
   // Only this disposable browser context accepts the generated local certificate.
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
-  await context.route('**/*', route => {
-    if (new URL(route.request().url()).origin === WEB) return route.continue();
-    return route.abort();
-  });
-  const page = await context.newPage();
-  await page.goto(link, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  assert.equal(await page.locator('h1').innerText(), 'Email confirmed');
-  await context.close();
+  const recordVideo = process.env.E2E_RECORD_VIDEO === '1'
+    ? { dir: join(process.env.E2E_ARTIFACTS, 'confirmation-video'), size: { width: 1280, height: 720 } }
+    : undefined;
+  const context = await browser.newContext({ ignoreHTTPSErrors: true, recordVideo });
+  try {
+    await context.route('**/*', route => {
+      if (new URL(route.request().url()).origin === WEB) return route.continue();
+      return route.abort();
+    });
+    const page = await context.newPage();
+    await page.goto(link, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    assert.equal(await page.locator('h1').innerText(), 'Email confirmed');
+    // Keep the successful page readable in an explicitly requested walkthrough.
+    if (recordVideo) await delay(3000);
+  } finally {
+    await context.close();
+  }
 }
 
 async function verifyAuthenticatedAccess() {
